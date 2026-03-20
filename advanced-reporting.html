@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Reporting Engine</title>
+  <script src="shared-auth.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+    .nav-tabs { display: flex; background: white; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .nav-tab { flex: 1; padding: 15px 20px; background: #f8f9fa; border: none; cursor: pointer; font-weight: 500; }
+    .nav-tab.active { background: #667eea; color: white; }
+    .tab-content { display: none; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .tab-content.active { display: block; }
+    .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .report-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; margin: 5px; }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-warning { background: #ffc107; color: #212529; }
+    .chart-container { height: 300px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; color: #6c757d; margin: 20px 0; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
+    .table th { background: #f8f9fa; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Advanced Reporting Engine</h1>
+      <p>Business Intelligence & Analytics Dashboard</p>
+      <button onclick="window.location.href='Enhanced_School_Management_Portal.html'" class="btn btn-primary">← Back to Portal</button>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showTab('dashboard')">Analytics Dashboard</button>
+      <button class="nav-tab" onclick="showTab('academic')">Academic Reports</button>
+      <button class="nav-tab" onclick="showTab('financial')">Financial Reports</button>
+      <button class="nav-tab" onclick="showTab('operational')">Operational Reports</button>
+      <button class="nav-tab" onclick="showTab('custom')">Custom Reports</button>
+    </div>
+
+    <!-- Analytics Dashboard -->
+    <div id="dashboard" class="tab-content active">
+      <div class="report-grid">
+        <div class="report-card">
+          <h3>Student Performance Analytics</h3>
+          <div class="chart-container">
+            Student performance trends and analysis charts
+          </div>
+          <button class="btn btn-primary" onclick="generateStudentAnalytics()">Generate Report</button>
+        </div>
+        
+        <div class="report-card">
+          <h3>Financial Performance</h3>
+          <div class="chart-container">
+            Revenue trends and financial metrics
+          </div>
+          <button class="btn btn-primary" onclick="generateFinancialAnalytics()">Generate Report</button>
+        </div>
+        
+        <div class="report-card">
+          <h3>Staff Performance</h3>
+          <div class="chart-container">
+            Staff productivity and performance metrics
+          </div>
+          <button class="btn btn-primary" onclick="generateStaffAnalytics()">Generate Report</button>
+        </div>
+        
+        <div class="report-card">
+          <h3>Operational Efficiency</h3>
+          <div class="chart-container">
+            System usage and efficiency metrics
+          </div>
+          <button class="btn btn-primary" onclick="generateOperationalAnalytics()">Generate Report</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Academic Reports -->
+    <div id="academic" class="tab-content">
+      <div class="report-grid">
+        <div class="report-card">
+          <h3>Class Performance Report</h3>
+          <div class="form-group">
+            <label>Select Class</label>
+            <select id="classSelect">
+              <option value="">All Classes</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date Range</label>
+            <input type="date" id="academicStartDate">
+            <input type="date" id="academicEndDate">
+          </div>
+          <button class="btn btn-primary" onclick="generateClassReport()">Generate Report</button>
+        </div>
+        
+        <div class="report-card">
+          <h3>Student Progress Report</h3>
+          <div class="form-group">
+            <label>Select Student</label>
+            <select id="studentSelect">
+              <option value="">All Students</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="generateStudentProgressReport()">Generate Report</button>
+        </div>
+        
+        <div class="report-card">
+          <h3>Subject Performance Analysis</h3>
+          <div class="form-group">
+            <label>Select Subject</label>
+            <select id="subjectSelect">
+              <option value="">All Subjects</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="generateSubjectReport()">Generate Report</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Reports -->
+    <div id="financial" class="tab-content">
+      <div class="report-grid">
+        <div class="report-card">
+          <h3>Revenue Analysis</h3>
+          <div class="form-group">
+            <label>Report Period</label>
+            <select id="financialPeriod">
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="annually">Annually</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="generateRevenueReport()">Generate Report</button>
+        </div>
+        
+        <div class="report-card">
+          <h3>Payment Collection Report</h3>
+          <div class="form-group">
+            <label>Payment Status</label>
+            <select id="paymentStatus">
+              <option value="all">All Payments</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="generatePaymentReport()">Generate Report</button>
+        </div>
+        
+        <div class="report-card">
+          <h3>Fee Structure Analysis</h3>
+          <button class="btn btn-primary" onclick="generateFeeAnalysis()">Generate Report</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Operational Reports -->
+    <div id="operational" class="tab-content">
+      <div class="report-grid">
+        <div class="report-card">
+          <h3>Attendance Analysis</h3>
+          <div class="form-group">
+            <label>Date Range</label>
+            <input type="date" id="attendanceStartDate">
+            <input type="date" id="attendanceEndDate">
+          </div>
+          <button class="btn btn-primary" onclick="generateAttendanceReport()">Generate Report</button>
+        </div>
+        
+        <div class="report-card">
+          <h3>Staff Activity Report</h3>
+          <div class="form-group">
+            <label>Staff Member</label>
+            <select id="staffSelect">
+              <option value="">All Staff</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="generateStaffActivityReport()">Generate Report</button>
+        </div>
+        
+        <div class="report-card">
+          <h3>System Usage Report</h3>
+          <button class="btn btn-primary" onclick="generateSystemUsageReport()">Generate Report</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Reports -->
+    <div id="custom" class="tab-content">
+      <div class="report-card">
+        <h3>Custom Report Builder</h3>
+        <div class="form-group">
+          <label>Report Type</label>
+          <select id="customReportType">
+            <option value="">Select Report Type</option>
+            <option value="academic">Academic Data</option>
+            <option value="financial">Financial Data</option>
+            <option value="operational">Operational Data</option>
+            <option value="user">User Activity</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Data Fields</label>
+          <div id="dataFields">
+            <!-- Dynamic fields will be loaded here -->
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Filters</label>
+          <div id="customFilters">
+            <!-- Dynamic filters will be loaded here -->
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Sort By</label>
+          <select id="sortBy">
+            <option value="">Select Sort Field</option>
+          </select>
+        </div>
+        
+        <button class="btn btn-primary" onclick="generateCustomReport()">Generate Custom Report</button>
+        <button class="btn btn-success" onclick="saveCustomReport()">Save Report Template</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Advanced Reporting Engine JavaScript
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      if (!checkAuth()) return;
+      
+      initializeReportingEngine();
+      loadReportData();
+    });
+
+    function initializeReportingEngine() {
+      // Initialize reporting data structures
+      if (!localStorage.getItem('customReports')) {
+        localStorage.setItem('customReports', JSON.stringify([]));
+      }
+      if (!localStorage.getItem('reportTemplates')) {
+        localStorage.setItem('reportTemplates', JSON.stringify([]));
+      }
+    }
+
+    function showTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(tabName).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function loadReportData() {
+      // Load data for report generation
+      loadClasses();
+      loadStudents();
+      loadSubjects();
+      loadStaff();
+    }
+
+    function loadClasses() {
+      const classes = JSON.parse(localStorage.getItem('classes') || '[]');
+      const select = document.getElementById('classSelect');
+      if (select) {
+        select.innerHTML = '<option value="">All Classes</option>' +
+          classes.map(cls => `<option value="${cls.id}">${cls.name}</option>`).join('');
+      }
+    }
+
+    function loadStudents() {
+      const students = JSON.parse(localStorage.getItem('students') || '[]');
+      const select = document.getElementById('studentSelect');
+      if (select) {
+        select.innerHTML = '<option value="">All Students</option>' +
+          students.map(student => 
+            `<option value="${student.id}">${student.firstName} ${student.lastName}</option>`
+          ).join('');
+      }
+    }
+
+    function loadSubjects() {
+      const subjects = ['Mathematics', 'English', 'Science', 'History', 'Geography', 'Art', 'Music', 'Physical Education'];
+      const select = document.getElementById('subjectSelect');
+      if (select) {
+        select.innerHTML = '<option value="">All Subjects</option>' +
+          subjects.map(subject => `<option value="${subject}">${subject}</option>`).join('');
+      }
+    }
+
+    function loadStaff() {
+      const staff = JSON.parse(localStorage.getItem('staff') || '[]');
+      const select = document.getElementById('staffSelect');
+      if (select) {
+        select.innerHTML = '<option value="">All Staff</option>' +
+          staff.map(member => 
+            `<option value="${member.id}">${member.firstName} ${member.lastName}</option>`
+          ).join('');
+      }
+    }
+
+    // Report Generation Functions
+    function generateStudentAnalytics() {
+      const students = JSON.parse(localStorage.getItem('students') || '[]');
+      const results = JSON.parse(localStorage.getItem('results') || '[]');
+      
+      const analytics = {
+        totalStudents: students.length,
+        averagePerformance: calculateAveragePerformance(results),
+        performanceDistribution: calculatePerformanceDistribution(results),
+        topPerformers: getTopPerformers(results, 10),
+        needsImprovement: getStudentsNeedingImprovement(results),
+        reportDate: new Date().toISOString()
+      };
+      
+      downloadReport(analytics, 'student_analytics_report.json');
+      alert('Student Analytics Report generated successfully!');
+    }
+
+    function generateFinancialAnalytics() {
+      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const invoices = JSON.parse(localStorage.getItem('invoices') || '[]');
+      
+      const analytics = {
+        totalRevenue: payments.reduce((sum, p) => sum + p.amount, 0),
+        pendingAmount: invoices.filter(inv => inv.status === 'pending')
+          .reduce((sum, inv) => sum + inv.amount, 0),
+        overdueAmount: invoices.filter(inv => inv.status === 'overdue')
+          .reduce((sum, inv) => sum + inv.amount, 0),
+        paymentEfficiency: calculatePaymentEfficiency(payments, invoices),
+        revenueTrends: calculateRevenueTrends(payments),
+        reportDate: new Date().toISOString()
+      };
+      
+      downloadReport(analytics, 'financial_analytics_report.json');
+      alert('Financial Analytics Report generated successfully!');
+    }
+
+    function generateStaffAnalytics() {
+      const staff = JSON.parse(localStorage.getItem('staff') || '[]');
+      const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+      
+      const analytics = {
+        totalStaff: staff.length,
+        activeStaff: staff.filter(s => s.status === 'active').length,
+        averageAttendance: calculateAverageStaffAttendance(attendance),
+        staffPerformance: calculateStaffPerformance(staff),
+        departmentDistribution: calculateDepartmentDistribution(staff),
+        reportDate: new Date().toISOString()
+      };
+      
+      downloadReport(analytics, 'staff_analytics_report.json');
+      alert('Staff Analytics Report generated successfully!');
+    }
+
+    function generateOperationalAnalytics() {
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const auditLogs = JSON.parse(localStorage.getItem('auditLogs') || '[]');
+      
+      const analytics = {
+        totalUsers: users.length,
+        activeUsers: users.filter(u => u.status === 'active').length,
+        systemUsage: calculateSystemUsage(auditLogs),
+        moduleUsage: calculateModuleUsage(auditLogs),
+        errorRates: calculateErrorRates(auditLogs),
+        performanceMetrics: calculatePerformanceMetrics(auditLogs),
+        reportDate: new Date().toISOString()
+      };
+      
+      downloadReport(analytics, 'operational_analytics_report.json');
+      alert('Operational Analytics Report generated successfully!');
+    }
+
+    // Academic Report Functions
+    function generateClassReport() {
+      const classId = document.getElementById('classSelect').value;
+      const startDate = document.getElementById('academicStartDate').value;
+      const endDate = document.getElementById('academicEndDate').value;
+      
+      const report = {
+        classId: classId,
+        dateRange: { start: startDate, end: endDate },
+        classPerformance: calculateClassPerformance(classId, startDate, endDate),
+        attendanceRate: calculateClassAttendance(classId, startDate, endDate),
+        subjectBreakdown: calculateSubjectBreakdown(classId),
+        reportDate: new Date().toISOString()
+      };
+      
+      downloadReport(report, 'class_performance_report.json');
+      alert('Class Performance Report generated successfully!');
+    }
+
+    function generateStudentProgressReport() {
+      const studentId = document.getElementById('studentSelect').value;
+      
+      const report = {
+        studentId: studentId,
+        academicProgress: calculateStudentProgress(studentId),
+        attendanceRecord: calculateStudentAttendance(studentId),
+        performanceTrends: calculatePerformanceTrends(studentId),
+        recommendations: generateRecommendations(studentId),
+        reportDate: new Date().toISOString()
+      };
+      
+      downloadReport(report, 'student_progress_report.json');
+      alert('Student Progress Report generated successfully!');
+    }
+
+    // Financial Report Functions
+    function generateRevenueReport() {
+      const period = document.getElementById('financialPeriod').value;
+      
+      const report = {
+        period: period,
+        revenueData: calculateRevenueData(period),
+        growthRate: calculateGrowthRate(period),
+        projections: calculateRevenueProjections(period),
+        reportDate: new Date().toISOString()
+      };
+      
+      downloadReport(report, 'revenue_report.json');
+      alert('Revenue Report generated successfully!');
+    }
+
+    function generatePaymentReport() {
+      const status = document.getElementById('paymentStatus').value;
+      
+      const report = {
+        paymentStatus: status,
+        paymentData: calculatePaymentData(status),
+        collectionEfficiency: calculateCollectionEfficiency(status),
+        outstandingAmounts: calculateOutstandingAmounts(status),
+        reportDate: new Date().toISOString()
+      };
+      
+      downloadReport(report, 'payment_report.json');
+      alert('Payment Report generated successfully!');
+    }
+
+    // Custom Report Functions
+    function generateCustomReport() {
+      const reportType = document.getElementById('customReportType').value;
+      const sortBy = document.getElementById('sortBy').value;
+      
+      if (!reportType) {
+        alert('Please select a report type');
+        return;
+      }
+      
+      const report = {
+        type: reportType,
+        data: generateCustomData(reportType),
+        sortBy: sortBy,
+        filters: getCustomFilters(),
+        reportDate: new Date().toISOString()
+      };
+      
+      downloadReport(report, `custom_${reportType}_report.json`);
+      alert('Custom Report generated successfully!');
+    }
+
+    function saveCustomReport() {
+      const reportType = document.getElementById('customReportType').value;
+      const template = {
+        id: Date.now().toString(),
+        name: `Custom ${reportType} Report`,
+        type: reportType,
+        fields: getSelectedFields(),
+        filters: getCustomFilters(),
+        sortBy: document.getElementById('sortBy').value,
+        createdAt: new Date().toISOString()
+      };
+      
+      const templates = JSON.parse(localStorage.getItem('reportTemplates') || '[]');
+      templates.push(template);
+      localStorage.setItem('reportTemplates', JSON.stringify(templates));
+      
+      alert('Report template saved successfully!');
+    }
+
+    // Utility Functions
+    function downloadReport(data, filename) {
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    // Calculation Functions (simplified for demo)
+    function calculateAveragePerformance(results) {
+      if (results.length === 0) return 0;
+      const total = results.reduce((sum, result) => sum + (result.score || 0), 0);
+      return (total / results.length).toFixed(2);
+    }
+
+    function calculatePerformanceDistribution(results) {
+      const distribution = {
+        excellent: 0,
+        good: 0,
+        average: 0,
+        below: 0
+      };
+      
+      results.forEach(result => {
+        const score = result.score || 0;
+        if (score >= 90) distribution.excellent++;
+        else if (score >= 80) distribution.good++;
+        else if (score >= 70) distribution.average++;
+        else distribution.below++;
+      });
+      
+      return distribution;
+    }
+
+    function getTopPerformers(results, limit) {
+      return results
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
+        .slice(0, limit);
+    }
+
+    function getStudentsNeedingImprovement(results) {
+      return results.filter(result => (result.score || 0) < 70);
+    }
+
+    function calculatePaymentEfficiency(payments, invoices) {
+      if (invoices.length === 0) return 0;
+      const paidInvoices = invoices.filter(inv => inv.status === 'paid').length;
+      return ((paidInvoices / invoices.length) * 100).toFixed(2);
+    }
+
+    function calculateRevenueTrends(payments) {
+      // Simplified revenue trend calculation
+      const monthlyRevenue = {};
+      payments.forEach(payment => {
+        const month = new Date(payment.date).toISOString().slice(0, 7);
+        monthlyRevenue[month] = (monthlyRevenue[month] || 0) + payment.amount;
+      });
+      return monthlyRevenue;
+    }
+
+    function calculateAverageStaffAttendance(attendance) {
+      if (attendance.length === 0) return 0;
+      const presentDays = attendance.filter(a => a.status === 'present').length;
+      return ((presentDays / attendance.length) * 100).toFixed(2);
+    }
+
+    function calculateStaffPerformance(staff) {
+      return staff.map(member => ({
+        id: member.id,
+        name: `${member.firstName} ${member.lastName}`,
+        role: member.role,
+        performance: Math.random() * 100 // Simplified performance calculation
+      }));
+    }
+
+    function calculateDepartmentDistribution(staff) {
+      const departments = {};
+      staff.forEach(member => {
+        const dept = member.department || 'General';
+        departments[dept] = (departments[dept] || 0) + 1;
+      });
+      return departments;
+    }
+
+    function calculateSystemUsage(auditLogs) {
+      const usage = {};
+      auditLogs.forEach(log => {
+        const action = log.action || 'unknown';
+        usage[action] = (usage[action] || 0) + 1;
+      });
+      return usage;
+    }
+
+    function calculateModuleUsage(auditLogs) {
+      const modules = {};
+      auditLogs.forEach(log => {
+        const module = log.module || 'unknown';
+        modules[module] = (modules[module] || 0) + 1;
+      });
+      return modules;
+    }
+
+    function calculateErrorRates(auditLogs) {
+      const errors = auditLogs.filter(log => log.status === 'error').length;
+      return ((errors / auditLogs.length) * 100).toFixed(2);
+    }
+
+    function calculatePerformanceMetrics(auditLogs) {
+      return {
+        totalActions: auditLogs.length,
+        successfulActions: auditLogs.filter(log => log.status === 'success').length,
+        averageResponseTime: '150ms', // Simplified
+        uptime: '99.9%' // Simplified
+      };
+    }
+
+    // Additional calculation functions for specific reports
+    function calculateClassPerformance(classId, startDate, endDate) {
+      // Simplified class performance calculation
+      return {
+        averageScore: Math.random() * 100,
+        attendanceRate: Math.random() * 100,
+        improvementRate: Math.random() * 20
+      };
+    }
+
+    function calculateClassAttendance(classId, startDate, endDate) {
+      return Math.random() * 100;
+    }
+
+    function calculateSubjectBreakdown(classId) {
+      return {
+        mathematics: Math.random() * 100,
+        english: Math.random() * 100,
+        science: Math.random() * 100
+      };
+    }
+
+    function calculateStudentProgress(studentId) {
+      // Get real student data from localStorage
+      const students = JSON.parse(localStorage.getItem('students') || '[]');
+      const student = students.find(s => s.id === studentId);
+      
+      if (!student) {
+        return {
+          currentGrade: 'N/A',
+          improvement: 'N/A',
+          subjects: []
+        };
+      }
+      
+      return {
+        currentGrade: student.grade || 'N/A',
+        improvement: student.improvement || 'N/A',
+        subjects: student.subjects || []
+      };
+    }
+
+    function calculateStudentAttendance(studentId) {
+      // Get real attendance data from localStorage
+      const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+      const studentAttendance = attendance.filter(a => a.studentId === studentId);
+      
+      if (studentAttendance.length === 0) {
+        return 0;
+      }
+      
+      const presentDays = studentAttendance.filter(a => a.status === 'present').length;
+      return (presentDays / studentAttendance.length) * 100;
+    }
+
+    function calculatePerformanceTrends(studentId) {
+      // Get real performance data from localStorage
+      const performance = JSON.parse(localStorage.getItem('performance') || '[]');
+      const studentPerformance = performance.filter(p => p.studentId === studentId);
+      
+      if (studentPerformance.length < 2) {
+        return {
+          trend: 'insufficient data',
+          change: 'N/A',
+          period: 'N/A'
+        };
+      }
+      
+      // Calculate trend based on recent performance
+      const recent = studentPerformance.slice(-3);
+      const older = studentPerformance.slice(-6, -3);
+      
+      const recentAvg = recent.reduce((sum, p) => sum + p.score, 0) / recent.length;
+      const olderAvg = older.reduce((sum, p) => sum + p.score, 0) / older.length;
+      
+      const change = recentAvg - olderAvg;
+      const trend = change > 0 ? 'improving' : change < 0 ? 'declining' : 'stable';
+      
+      return {
+        trend: trend,
+        change: `${change > 0 ? '+' : ''}${change.toFixed(1)}%`,
+        period: 'last 3 months'
+      };
+    }
+
+    function generateRecommendations(studentId) {
+      // Get real student data and generate recommendations
+      const students = JSON.parse(localStorage.getItem('students') || '[]');
+      const student = students.find(s => s.id === studentId);
+      
+      if (!student) {
+        return ['No data available for recommendations'];
+      }
+      
+      const recommendations = [];
+      
+      // Generate recommendations based on available data
+      if (student.attendance && student.attendance < 80) {
+        recommendations.push('Improve attendance rate');
+      }
+      
+      if (student.grade && student.grade === 'F') {
+        recommendations.push('Seek additional academic support');
+      }
+      
+      if (student.subjects && student.subjects.length > 0) {
+        recommendations.push('Focus on core subjects');
+      }
+      
+      if (recommendations.length === 0) {
+        recommendations.push('Continue current academic performance');
+      }
+      
+      return recommendations;
+    }
+
+    function calculateRevenueData(period) {
+      // Get real payment data from localStorage
+      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const currentPeriod = new Date();
+      const previousPeriod = new Date(currentPeriod.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+      
+      const currentPayments = payments.filter(p => new Date(p.date) >= currentPeriod);
+      const previousPayments = payments.filter(p => {
+        const paymentDate = new Date(p.date);
+        return paymentDate >= previousPeriod && paymentDate < currentPeriod;
+      });
+      
+      const currentTotal = currentPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+      const previousTotal = previousPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+      
+      const growth = previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal) * 100 : 0;
+      
+      return {
+        current: currentTotal,
+        previous: previousTotal,
+        growth: growth
+      };
+    }
+
+    function calculateGrowthRate(period) {
+      // Calculate growth rate based on real data
+      const revenueData = calculateRevenueData(period);
+      return revenueData.growth;
+    }
+
+    function calculateRevenueProjections(period) {
+      // Calculate projections based on historical data
+      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const monthlyAverages = [];
+      
+      // Calculate monthly averages for the last 12 months
+      for (let i = 0; i < 12; i++) {
+        const monthStart = new Date();
+        monthStart.setMonth(monthStart.getMonth() - i);
+        monthStart.setDate(1);
+        
+        const monthEnd = new Date(monthStart);
+        monthEnd.setMonth(monthEnd.getMonth() + 1);
+        monthEnd.setDate(0);
+        
+        const monthPayments = payments.filter(p => {
+          const paymentDate = new Date(p.date);
+          return paymentDate >= monthStart && paymentDate <= monthEnd;
+        });
+        
+        const monthTotal = monthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+        monthlyAverages.push(monthTotal);
+      }
+      
+      const averageMonthly = monthlyAverages.reduce((sum, avg) => sum + avg, 0) / monthlyAverages.length;
+      
+      return {
+        nextMonth: averageMonthly * 1.05, // 5% growth assumption
+        nextQuarter: averageMonthly * 3 * 1.05,
+        nextYear: averageMonthly * 12 * 1.05
+      };
+    }
+
+    function calculatePaymentData(status) {
+      // Get real payment data from localStorage
+      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const filteredPayments = status ? payments.filter(p => p.status === status) : payments;
+      
+      const total = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+      const count = filteredPayments.length;
+      const average = count > 0 ? total / count : 0;
+      
+      return {
+        total: total,
+        count: count,
+        average: average
+      };
+    }
+
+    function calculateCollectionEfficiency(status) {
+      // Calculate collection efficiency based on real data
+      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const totalPayments = payments.length;
+      const successfulPayments = payments.filter(p => p.status === 'completed').length;
+      
+      return totalPayments > 0 ? (successfulPayments / totalPayments) * 100 : 0;
+    }
+
+    function calculateOutstandingAmounts(status) {
+      // Calculate outstanding amounts from real data
+      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const outstandingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
+      
+      return outstandingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    }
+
+    function generateCustomData(reportType) {
+      // Get real data based on report type
+      switch (reportType) {
+        case 'students':
+          return JSON.parse(localStorage.getItem('students') || '[]');
+        case 'payments':
+          return JSON.parse(localStorage.getItem('payments') || '[]');
+        case 'attendance':
+          return JSON.parse(localStorage.getItem('attendance') || '[]');
+        case 'users':
+          return JSON.parse(localStorage.getItem('users') || '[]');
+        default:
+          return [];
+      }
+    }
+
+    function getCustomFilters() {
+      // Get custom filters from form
+      return {
+        dateRange: {
+          start: document.getElementById('academicStartDate').value,
+          end: document.getElementById('academicEndDate').value
+        }
+      };
+    }
+
+    function getSelectedFields() {
+      // Get selected fields from form
+      return ['id', 'name', 'value', 'date'];
+    }
+  </script>
+</body>
+</html> 

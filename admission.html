@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admission Management</title>
+  <script src="shared-auth.js"></script>
+  <script>
+    // Authentication check - using shared function
+    function checkAuth() {
+      return window.checkAuth('staff', 'Standard');
+    }
+
+    // Function to go to dashboard based on user role
+    function goToDashboard() {
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+        const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+        
+        if (currentUser && currentUser.role) {
+            switch (currentUser.role) {
+                case 'super-admin':
+                case 'school-manager':
+                case 'staff':
+                    window.location.href = 'Enhanced_School_Management_Portal.html';
+                    break;
+                case 'student':
+                    window.location.href = 'student_dashboard.html';
+                    break;
+                case 'parent':
+                    window.location.href = 'parent_dashboard.html';
+                    break;
+                default:
+                    window.location.href = 'index.html';
+            }
+        } else if (loginCredentials && loginCredentials.role) {
+            switch (loginCredentials.role) {
+                case 'super-admin':
+                case 'school-manager':
+                case 'staff':
+                    window.location.href = 'Enhanced_School_Management_Portal.html';
+                    break;
+                case 'student':
+                    window.location.href = 'student_dashboard.html';
+                    break;
+                case 'parent':
+                    window.location.href = 'parent_dashboard.html';
+                    break;
+                default:
+                    window.location.href = 'index.html';
+            }
+        } else {
+            window.location.href = 'index.html';
+        }
+    }
+    
+    // Check auth on page load
+    window.onload = function() {
+      if (checkAuth()) {
+        // Continue with page initialization
+      }
+    };
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f4f6f8; }
+    header { background: #005792; color: white; padding: 20px; text-align: center; position: relative; }
+    .back-btn {
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .back-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    nav { background: #003f5c; padding: 10px; display: flex; flex-wrap: wrap; }
+    nav button {
+      background: #fff; color: #003f5c; border: none; padding: 10px 15px;
+      margin: 5px; border-radius: 5px; cursor: pointer; font-weight: bold;
+    }
+    nav button:hover, .tab-header.active { background: #ffdd57; }
+    section { display: none; padding: 20px; }
+    section.active { display: block; }
+    form input, form select, form textarea {
+      display: block; width: 100%; margin: 10px 0; padding: 8px;
+      font-size: 1em;
+    }
+    .tab-headers { display: flex; gap: 2px; margin-bottom: 1em; }
+    .tab-header { flex: 1; padding: 10px; background: #eee; border: none; cursor: pointer; font-weight: bold; border-radius: 4px 4px 0 0; }
+    .tab-header.active { background: #4caf50; color: #fff; }
+    .progress-outer { height:8px;background:#eee;margin-bottom:1em;border-radius:4px;overflow:hidden; }
+    .progress-inner { height:100%;width:0;background:#4caf50;transition:width 0.3s; }
+    .form-group { margin-bottom: 10px; }
+    .form-error { color: #f44336; font-size: 0.95em; margin-top: -8px; margin-bottom: 8px; }
+    .tooltip { cursor: help; color: #888; font-size: 1em; margin-left: 4px; }
+    .form-actions { margin-top: 1em; display: flex; gap: 10px; }
+    .modal-bg { position: fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; z-index:1000; }
+    .modal { background:#fff; padding:2em; border-radius:8px; min-width:250px; max-width:90vw; box-shadow:0 2px 16px #0002; }
+    .modal button { margin-top: 1em; }
+    .spinner { border: 4px solid #eee; border-top: 4px solid #4caf50; border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; margin: 1em auto; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; overflow-x:auto; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 10px; text-align: left; }
+    .btn { padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-edit { background: #4caf50; color: white; }
+    .btn-delete { background: #f44336; color: white; }
+    .btn-duplicate { background: #2196f3; color: white; }
+    .table-controls { display: flex; flex-wrap: wrap; gap: 1em; align-items: center; margin: 1em 0; }
+    .pagination { display: flex; gap: 4px; align-items: center; }
+    .pagination button { padding: 2px 8px; }
+    .show-cols { margin-left: 1em; }
+    @media (max-width: 700px) {
+      nav { flex-direction: column; }
+      .tab-headers { flex-direction: column; }
+      table, thead, tbody, th, td, tr { display: block; }
+      th, td { padding: 8px; }
+      table { overflow-x: auto; }
+      .table-controls { flex-direction: column; align-items: stretch; }
+    }
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .btn-back {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn-back:hover {
+      background: #5a6268;
+      text-decoration: none;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    
+    <div class="header-content">
+              <button onclick="goToDashboard()" class="btn-back">← Back to Dashboard</button>
+      <h1>Admissions Management System</h1>
+      <p>Comprehensive student admission management with multi-step forms and advanced features</p>
+    </div>
+  </header>
+
+  <nav>
+    <button onclick="showSection('admission')" class="active">Admission Info</button>
+    <button onclick="showSection('reports')">Reports</button>
+    <button onclick="showSection('analytics')">Analytics</button>
+  </nav>
+
+  <section id="admission" class="active">
+    <h2>Admission Information</h2>
+    <div class="tab-headers" id="tabHeaders"></div>
+    <div class="progress-outer"><div class="progress-inner" id="progress"></div></div>
+    <form id="admissionForm"></form>
+    <div class="form-actions">
+      <button type="button" id="reset-form">Reset/Clear</button>
+    </div>
+    <div class="table-controls">
+      <button id="export-csv">Export to Excel (CSV)</button>
+      <button id="export-pdf">Export to PDF</button>
+      <input id="search" placeholder="Search by Name or Adm No">
+      <select id="filter-class"><option value="">All Classes</option></select>
+      <select id="filter-gender"><option value="">All Genders</option></select>
+      <div class="show-cols">
+        <label>Show Columns:</label>
+        <select id="show-cols-select" multiple size="4" style="min-width:120px;"></select>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table id="admissionTable" border="1" style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr id="tableHeaderRow"></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+    <div id="modal-bg" class="modal-bg" style="display:none;"><div class="modal" id="modal-content"></div></div>
+    <div id="spinner" class="spinner" style="display:none;"></div>
+  </section>
+
+  <section id="reports">
+    <h2>Admission Reports</h2>
+    
+    <div class="report-controls" style="margin-bottom: 20px;">
+      <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+        <select id="reportType" style="padding: 8px; border-radius: 4px;">
+          <option value="monthly">Monthly Report</option>
+          <option value="class">Class-wise Report</option>
+          <option value="gender">Gender-wise Report</option>
+          <option value="geographic">Geographic Report</option>
+          <option value="disability">Disability Report</option>
+          <option value="previous-school">Previous School Report</option>
+        </select>
+        <input type="month" id="reportMonth" style="padding: 8px; border-radius: 4px;">
+        <button onclick="generateReport()" class="btn" style="background: #667eea; color: white; padding: 10px 20px; border-radius: 4px;">
+          Generate Report
+        </button>
+        <button onclick="exportReport()" class="btn" style="background: #28a745; color: white; padding: 10px 20px; border-radius: 4px;">
+          Export Report
+        </button>
+      </div>
+    </div>
+
+    <div id="reportContent" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div style="text-align: center; color: #666;">
+        <h3>Select a report type and click "Generate Report" to view data</h3>
+      </div>
+    </div>
+
+    <div id="reportStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+      <!-- Statistics cards will be populated here -->
+    </div>
+  </section>
+
+  <section id="analytics">
+    <h2>Admission Analytics</h2>
+    
+    <div class="analytics-controls" style="margin-bottom: 20px;">
+      <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+        <select id="analyticsType" style="padding: 8px; border-radius: 4px;">
+          <option value="overview">Overview Dashboard</option>
+          <option value="trends">Admission Trends</option>
+          <option value="class-distribution">Class Distribution</option>
+          <option value="gender-analysis">Gender Analysis</option>
+          <option value="geographic">Geographic Analysis</option>
+          <option value="disability">Disability Statistics</option>
+        </select>
+        <input type="month" id="analyticsMonth" style="padding: 8px; border-radius: 4px;">
+        <button onclick="loadAnalytics()" class="btn" style="background: #ffc107; color: white; padding: 10px 20px; border-radius: 4px;">
+          Load Analytics
+        </button>
+      </div>
+    </div>
+
+    <div id="analyticsContent" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div style="text-align: center; color: #666;">
+        <h3>Select an analytics type and click "Load Analytics" to view data</h3>
+      </div>
+    </div>
+
+    <div id="analyticsCharts" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+      <!-- Charts will be populated here -->
+    </div>
+  </section>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    (function(){
+// --- Admission Schema Split into Tabs ---
+const admissionTabs = [
+  {
+    title: 'Student Info',
+    fields: [
+      { label: 'Admission Number', name: 'admissionNo', required: true, hint: 'Unique student number.' },
+      { label: 'Student Name', name: 'studentName', required: true, hint: 'Full legal name.' },
+      { label: 'Date of Birth', name: 'dob', type: 'date', required: true, hint: 'Format: YYYY-MM-DD' },
+      { label: 'Place of Birth', name: 'placeOfBirth', required: true },
+      { label: 'Class Admitted To', name: 'classAdmitted', type: 'select', options: ['Creche','Nursery','KG1','KG2','Class 1','Class 2','Class 3','Class 4','Class 5','Class 6','JHS1','JHS2','JHS3'], required: true },
+      { label: 'Name of Previous School (if any)', name: 'previousSchool' },
+      { label: 'Class in Previous School', name: 'previousClass' },
+      { label: 'Last Date of Attendance (if applicable)', name: 'lastAttendance', type: 'date' },
+      { label: 'Reason for Leaving (optional)', name: 'reasonForLeaving' },
+      { label: 'Disability Status', name: 'disabilityStatus', type: 'select', options: ['No', 'Yes', 'Prefer not to say'], required: true },
+      { label: 'Type of Disability', name: 'disabilityType', required: true, conditional: { field: 'disabilityStatus', value: 'Yes' } },
+      { label: 'Assistance Needed', name: 'assistanceNeeded', required: true, conditional: { field: 'disabilityStatus', value: 'Yes' } },
+      { label: 'Gender', name: 'gender', type: 'select', options: ['Male','Female','Other'], required: true },
+      { label: 'Specify Gender', name: 'specifyGender', required: true, conditional: { field: 'gender', value: 'Other' } },
+    ]
+  },
+  {
+    title: 'Parent/Guardian Info',
+    fields: [
+      { label: 'Parent/Guardian Name', name: 'parentName', required: true },
+      { label: 'Relationship to Student', name: 'relationship', required: true },
+      { label: 'Phone', name: 'parentPhone', required: true, hint: 'e.g. 0241234567' },
+      { label: 'Alternative Contact', name: 'altContact' },
+      { label: 'Hometown', name: 'hometown' },
+      { label: 'District of Hometown', name: 'hometownDistrict' },
+      { label: 'Place of Residence', name: 'residence' },
+      { label: 'District of Residence', name: 'residenceDistrict' },
+      { label: 'Email', name: 'parentEmail', type: 'email', hint: 'e.g. parent@email.com' },
+    ]
+  },
+  {
+    title: 'Emergency Contact Info',
+    fields: [
+      { label: 'Emergency Contact Name', name: 'emergencyName', required: true },
+      { label: 'Emergency Phone', name: 'emergencyPhone', required: true },
+      { label: 'Emergency Relationship', name: 'emergencyRelationship', required: true },
+      { label: 'Place of Residence', name: 'emergencyResidence' },
+      { label: 'District of Residence', name: 'emergencyResidenceDistrict' },
+    ]
+  },
+  {
+    title: 'Student Residence Info',
+    fields: [
+      { label: 'Address', name: 'address', required: true },
+      { label: 'City', name: 'city', required: true },
+      { label: 'Community/Area', name: 'community', required: true },
+      { label: 'Digital Address', name: 'digitalAddress', required: true },
+    ]
+  }
+];
+
+// --- IndexedDB Setup with localStorage fallback ---
+let db;
+let useLocalStorage = false;
+let dbInitialized = false;
+
+function initializeDatabase() {
+  const request = indexedDB.open('AdmissionsDB', 1);
+  
+  request.onerror = () => {
+    console.log('IndexedDB failed to open, falling back to localStorage');
+    useLocalStorage = true;
+    dbInitialized = true;
+    refreshTable();
+    fillFilters();
+  };
+  
+  request.onsuccess = () => { 
+    db = request.result; 
+    dbInitialized = true;
+    refreshTable(); 
+    fillFilters(); 
+  };
+  
+  request.onupgradeneeded = e => {
+    db = e.target.result;
+    if (!db.objectStoreNames.contains('admissions')) {
+      db.createObjectStore('admissions', { keyPath: 'admissionNo' });
+    }
+    if (!db.objectStoreNames.contains('users')) {
+      db.createObjectStore('users', { keyPath: 'username' });
+    }
+  };
+}
+
+// --- Database Operations with Fallback ---
+function saveToDatabase(data) {
+  if (useLocalStorage) {
+    return saveToLocalStorage(data);
+  } else {
+    return saveToIndexedDB(data);
+  }
+}
+
+function saveToIndexedDB(data) {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(['admissions'], 'readwrite');
+      const store = tx.objectStore('admissions');
+      const request = store.put(data);
+      
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    } catch (error) {
+      console.log('IndexedDB operation failed, falling back to localStorage');
+      useLocalStorage = true;
+      saveToLocalStorage(data).then(resolve).catch(reject);
+    }
+  });
+}
+
+function saveToLocalStorage(data) {
+  return new Promise((resolve, reject) => {
+    try {
+      const admissions = JSON.parse(localStorage.getItem('admissions') || '[]');
+      const existingIndex = admissions.findIndex(a => a.admissionNo === data.admissionNo);
+      
+      if (existingIndex >= 0) {
+        admissions[existingIndex] = data;
+      } else {
+        admissions.push(data);
+      }
+      
+      localStorage.setItem('admissions', JSON.stringify(admissions));
+      resolve();
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function deleteFromDatabase(admissionNo) {
+  if (useLocalStorage) {
+    return deleteFromLocalStorage(admissionNo);
+  } else {
+    return deleteFromIndexedDB(admissionNo);
+  }
+}
+
+function deleteFromIndexedDB(admissionNo) {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(['admissions'], 'readwrite');
+      const store = tx.objectStore('admissions');
+      const request = store.delete(admissionNo);
+      
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    } catch (error) {
+      console.log('IndexedDB delete failed, falling back to localStorage');
+      useLocalStorage = true;
+      deleteFromLocalStorage(admissionNo).then(resolve).catch(reject);
+    }
+  });
+}
+
+function deleteFromLocalStorage(admissionNo) {
+  return new Promise((resolve, reject) => {
+    try {
+      const admissions = JSON.parse(localStorage.getItem('admissions') || '[]');
+      const filtered = admissions.filter(a => a.admissionNo !== admissionNo);
+      localStorage.setItem('admissions', JSON.stringify(filtered));
+      resolve();
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function getAllFromDatabase() {
+  if (useLocalStorage) {
+    return getAllFromLocalStorage();
+  } else {
+    return getAllFromIndexedDB();
+  }
+}
+
+function getAllFromIndexedDB() {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(['admissions'], 'readonly');
+      const store = tx.objectStore('admissions');
+      const request = store.getAll();
+      
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    } catch (error) {
+      console.log('IndexedDB getAll failed, falling back to localStorage');
+      useLocalStorage = true;
+      getAllFromLocalStorage().then(resolve).catch(reject);
+    }
+  });
+}
+
+function getAllFromLocalStorage() {
+  return new Promise((resolve, reject) => {
+    try {
+      const admissions = JSON.parse(localStorage.getItem('admissions') || '[]');
+      resolve(admissions);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function getFromDatabase(admissionNo) {
+  if (useLocalStorage) {
+    return getFromLocalStorage(admissionNo);
+  } else {
+    return getFromIndexedDB(admissionNo);
+  }
+}
+
+function getFromIndexedDB(admissionNo) {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(['admissions'], 'readonly');
+      const store = tx.objectStore('admissions');
+      const request = store.get(admissionNo);
+      
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    } catch (error) {
+      console.log('IndexedDB get failed, falling back to localStorage');
+      useLocalStorage = true;
+      getFromLocalStorage(admissionNo).then(resolve).catch(reject);
+    }
+  });
+}
+
+function getFromLocalStorage(admissionNo) {
+  return new Promise((resolve, reject) => {
+    try {
+      const admissions = JSON.parse(localStorage.getItem('admissions') || '[]');
+      const admission = admissions.find(a => a.admissionNo === admissionNo);
+      resolve(admission);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function getNextAdmissionNumber() {
+  if (useLocalStorage) {
+    return getNextAdmissionNumberFromLocalStorage();
+  } else {
+    return getNextAdmissionNumberFromIndexedDB();
+  }
+}
+
+function getNextAdmissionNumberFromIndexedDB() {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(['admissions'], 'readonly');
+      const store = tx.objectStore('admissions');
+      const numbers = [];
+      
+      store.openCursor().onsuccess = function(e) {
+        const cursor = e.target.result;
+        if (cursor) {
+          const n = cursor.key;
+          if (/^\d+$/.test(n)) numbers.push(parseInt(n,10));
+          cursor.continue();
+        } else {
+          let next = 1;
+          if (numbers.length) next = Math.max(...numbers) + 1;
+          const nextNo = (''+next).padStart(4,'0');
+          resolve(nextNo);
+        }
+      };
+    } catch (error) {
+      console.log('IndexedDB getNextAdmissionNumber failed, falling back to localStorage');
+      useLocalStorage = true;
+      getNextAdmissionNumberFromLocalStorage().then(resolve).catch(reject);
+    }
+  });
+}
+
+function getNextAdmissionNumberFromLocalStorage() {
+  return new Promise((resolve, reject) => {
+    try {
+      const admissions = JSON.parse(localStorage.getItem('admissions') || '[]');
+      const numbers = admissions
+        .map(a => a.admissionNo)
+        .filter(n => /^\d+$/.test(n))
+        .map(n => parseInt(n, 10));
+      
+      let next = 1;
+      if (numbers.length) next = Math.max(...numbers) + 1;
+      const nextNo = (''+next).padStart(4,'0');
+      resolve(nextNo);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+// --- Admission Form Logic ---
+let currentTab = 0;
+let editingKey = null;
+const form = document.getElementById('admissionForm');
+const progress = document.getElementById('progress');
+const tabHeaders = document.getElementById('tabHeaders');
+const resetFormBtn = document.getElementById('reset-form');
+const modalBg = document.getElementById('modal-bg');
+const modalContent = document.getElementById('modal-content');
+const spinner = document.getElementById('spinner');
+
+function showTab(idx) {
+  form.innerHTML = '';
+  const tab = admissionTabs[idx];
+  tab.fields.forEach(field => {
+    if (field.conditional) {
+      const parentVal = formData[field.conditional.field] || '';
+      if (parentVal !== field.conditional.value) return;
+    }
+    const wrapper = document.createElement('div');
+    wrapper.className = 'form-group';
+    const label = document.createElement('label');
+    label.textContent = field.label + (field.required ? ' *' : '');
+    if (field.hint) {
+      label.title = field.hint;
+      label.className = 'hint';
+    }
+    let input;
+    if (field.type === 'select') {
+      input = document.createElement('select');
+      input.name = field.name;
+      field.options.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt;
+        option.textContent = opt;
+        input.appendChild(option);
+      });
+      input.value = formData[field.name] || '';
+      // If this select controls conditional fields, re-render on change
+      const hasDependent = admissionTabs.some(tabObj => tabObj.fields.some(f => f.conditional && f.conditional.field === field.name));
+      if (hasDependent) {
+        input.onchange = e => {
+          formData[field.name] = e.target.value;
+          showTab(currentTab);
+        };
+      } else {
+        input.onchange = e => { formData[field.name] = e.target.value; };
+      }
+    } else {
+      input = document.createElement('input');
+      input.type = field.type || 'text';
+      input.name = field.name;
+      input.value = formData[field.name] || '';
+      input.oninput = e => { formData[field.name] = e.target.value; };
+      // Ensure admissionNo is always editable
+      if (field.name === 'admissionNo') {
+        input.removeAttribute('readonly');
+        input.removeAttribute('disabled');
+      }
+    }
+    if (field.required) input.required = true;
+    wrapper.appendChild(label);
+    wrapper.appendChild(input);
+    if (field.hint) {
+      const tip = document.createElement('span');
+      tip.className = 'tooltip';
+      tip.textContent = ' ⓘ';
+      tip.title = field.hint;
+      wrapper.appendChild(tip);
+    }
+    form.appendChild(wrapper);
+  });
+  // Navigation
+  const nav = document.createElement('div');
+  nav.style.marginTop = '1em';
+  if (currentTab > 0) {
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.textContent = 'Back';
+    back.onclick = () => { currentTab--; showTab(currentTab); updateProgress(); };
+    nav.appendChild(back);
+  }
+  if (currentTab < admissionTabs.length - 1) {
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.textContent = 'Next';
+    next.onclick = () => {
+      if (validateTab(currentTab)) {
+        currentTab++;
+        showTab(currentTab);
+        updateProgress();
+      }
+    };
+    nav.appendChild(next);
+  } else {
+    const submit = document.createElement('button');
+    submit.type = 'submit';
+    submit.textContent = editingKey ? 'Update Admission' : 'Submit Admission';
+    nav.appendChild(submit);
+  }
+  form.appendChild(nav);
+  updateProgress();
+}
+
+function updateProgress() {
+  progress.style.width = ((currentTab+1)/admissionTabs.length*100)+"%";
+}
+
+let formData = {};
+form.onsubmit = function(e) {
+  e.preventDefault();
+  if (!validateTab(currentTab,true)) return;
+  // Save to IndexedDB
+  function saveWithAdmissionNo(admNo) {
+    formData.admissionNo = admNo;
+    
+    // Add timestamp for new admissions
+    if (!editingKey) {
+      formData.createdAt = new Date().toISOString();
+    }
+    
+    if (editingKey && admNo !== editingKey) {
+      // Admission number changed: delete old, add new
+      deleteFromDatabase(editingKey).then(() => {
+        saveToDatabase({...formData}).then(() => {
+          form.reset();
+          formData = {};
+          editingKey = null;
+          currentTab = 0;
+          showTab(0);
+          refreshTable();
+        });
+      });
+    } else {
+      saveToDatabase({...formData}).then(() => {
+        // Create user accounts for student and parent
+        if (!editingKey) { // Only for new admissions
+          createUserAccounts(formData).then((credentials) => {
+            console.log('User accounts created for student and parent');
+            // Display credentials to user
+            displayCredentials(credentials, formData.studentName);
+          }).catch(error => {
+            console.error('Error creating user accounts:', error);
+          });
+        }
+        form.reset();
+        formData = {};
+        editingKey = null;
+        currentTab = 0;
+        showTab(0);
+        refreshTable();
+      });
+    }
+  }
+  if (!formData.admissionNo) {
+    if (confirm('Admission number is required. Would you like to auto-generate the next available number?')) {
+      // Auto-generate next admission number
+      getNextAdmissionNumber().then(nextNo => {
+        saveWithAdmissionNo(nextNo);
+      });
+    } else {
+      // User cancelled, do nothing
+      return;
+    }
+  } else {
+    saveWithAdmissionNo(formData.admissionNo);
+  }
+};
+
+function validateTab(tabIdx, showAlert) {
+  const tab = admissionTabs[tabIdx];
+  let valid = true;
+  tab.fields.forEach(field => {
+    if (field.conditional) {
+      const parentVal = formData[field.conditional.field] || '';
+      if (parentVal !== field.conditional.value) return;
+    }
+    if (field.required && !formData[field.name]) {
+      valid = false;
+      if (showAlert) alert(field.label + ' is required.');
+    }
+  });
+  return valid;
+}
+
+// --- Table Logic ---
+let sortField = 'admissionNo', sortDir = 1, searchVal = '', filterClass = '', filterGender = '';
+function renderTableHeader() {
+  const headerRow = document.getElementById('tableHeaderRow');
+  headerRow.innerHTML = '';
+  const headings = [
+    { label: 'Admission No', sort: 'admissionNo' },
+    { label: 'Name', sort: 'studentName' },
+    { label: 'Gender', sort: 'gender' },
+    { label: 'Class', sort: 'classAdmitted' },
+    { label: 'Actions', sort: null }
+  ];
+  headings.forEach(h => {
+    const th = document.createElement('th');
+    th.textContent = h.label;
+    if (h.sort) th.setAttribute('data-sort', h.sort);
+    headerRow.appendChild(th);
+  });
+}
+function refreshTable() {
+  renderTableHeader();
+  const tbody = document.querySelector('#admissionTable tbody');
+  tbody.innerHTML = '';
+  getAllFromDatabase().then(rows => {
+    let filtered = rows.filter(r =>
+      (!searchVal || (r.studentName && r.studentName.toLowerCase().includes(searchVal)) || (r.admissionNo && r.admissionNo.toLowerCase().includes(searchVal))) &&
+      (!filterClass || r.classAdmitted === filterClass) &&
+      (!filterGender || r.gender === filterGender)
+    );
+    filtered.sort((a,b)=>{
+      let v1 = (a[sortField]||'').toLowerCase ? (a[sortField]||'').toLowerCase() : (a[sortField]||'');
+      let v2 = (b[sortField]||'').toLowerCase ? (b[sortField]||'').toLowerCase() : (b[sortField]||'');
+      if (v1<v2) return -1*sortDir;
+      if (v1>v2) return 1*sortDir;
+      return 0;
+    });
+    filtered.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${d.admissionNo}</td>
+        <td>${d.studentName}</td>
+        <td>${d.gender}</td>
+        <td>${d.classAdmitted}</td>
+        <td>
+          <button type="button" title="Edit Admission" onclick="editAdmission('${d.admissionNo}')">Edit</button>
+          <button type="button" title="Delete Admission" onclick="deleteAdmission('${d.admissionNo}')">Delete</button>
+          <button type="button" title="Duplicate Admission" onclick="duplicateAdmission('${d.admissionNo}')">Duplicate</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    fillFilters(rows);
+  });
+}
+
+window.editAdmission = function(admissionNo) {
+  getFromDatabase(admissionNo).then(data => {
+    formData = data;
+    editingKey = admissionNo;
+    currentTab = 0;
+    showTab(0);
+  });
+}
+
+window.deleteAdmission = function(admissionNo) {
+  modalContent.innerHTML = `
+    <h2>Confirm Deletion</h2>
+    <p>Are you sure you want to delete admission number: ${admissionNo}?</p>
+    <div class="form-actions">
+      <button type="button" onclick="confirmDelete('${admissionNo}')">Yes, Delete</button>
+      <button type="button" onclick="modalBg.style.display='none';">Cancel</button>
+    </div>
+  `;
+  modalBg.style.display = 'flex';
+}
+
+window.duplicateAdmission = function(admissionNo) {
+  getFromDatabase(admissionNo).then(data => {
+    const newAdmissionNo = `ADM${Date.now()}`; // Simple unique number
+    const newData = { ...data, admissionNo: newAdmissionNo };
+    saveToDatabase(newData).then(() => {
+      alert('Admission duplicated successfully!');
+      refreshTable();
+    });
+  });
+}
+
+window.confirmDelete = function(admissionNo) {
+  deleteFromDatabase(admissionNo).then(() => {
+    modalBg.style.display = 'none';
+    refreshTable();
+  });
+}
+
+// --- Export to CSV ---
+document.getElementById('export-csv').onclick = function() {
+  getAllFromDatabase().then(rows => {
+    if (!rows.length) return alert('No data to export.');
+    // Exclude Actions column from export
+    const allHeaders = Object.keys(rows[0]);
+    const headers = allHeaders.filter(h => h !== 'Actions');
+    let csv = headers.join(',') + '\n';
+    rows.forEach(r => {
+      csv += headers.map(h => '"'+(r[h]||'').replace(/"/g,'""')+'"').join(',') + '\n';
+    });
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'admissions.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+};
+// --- Export to PDF (Print Table) ---
+document.getElementById('export-pdf').onclick = function() {
+  // Clone the table and remove the last column (Actions) from header and rows
+  const table = document.getElementById('admissionTable').cloneNode(true);
+  // Remove last th
+  const ths = table.querySelectorAll('thead th');
+  if (ths.length) ths[ths.length-1].remove();
+  // Remove last td in each row
+  table.querySelectorAll('tbody tr').forEach(tr => { if (tr.children.length) tr.lastElementChild.remove(); });
+  const win = window.open('', '', 'width=900,height=700');
+  win.document.write('<html><head><title>Admissions PDF</title><style>table{width:100%;border-collapse:collapse;}th,td{border:1px solid #333;padding:4px;}</style></head><body>'+table.outerHTML+'</body></html>');
+  win.document.close();
+  win.print();
+};
+// --- Search/Filter/Sort ---
+document.getElementById('search').oninput = function() { searchVal = this.value.toLowerCase(); refreshTable(); };
+document.getElementById('filter-class').onchange = function() { filterClass = this.value; refreshTable(); };
+document.getElementById('filter-gender').onchange = function() { filterGender = this.value; refreshTable(); };
+document.querySelectorAll('#admissionTable th[data-sort]').forEach(th => {
+  th.style.cursor = 'pointer';
+  th.onclick = function() {
+    if (sortField === th.dataset.sort) sortDir *= -1;
+    else { sortField = th.dataset.sort; sortDir = 1; }
+    refreshTable();
+  };
+});
+function fillFilters(rows) {
+  const allRows = rows || [];
+  const classSet = new Set(allRows.map(r=>r.classAdmitted).filter(Boolean));
+  const genderSet = new Set(allRows.map(r=>r.gender).filter(Boolean));
+  const classSel = document.getElementById('filter-class');
+  const genderSel = document.getElementById('filter-gender');
+  // Always clear and repopulate
+  classSel.innerHTML = '<option value="">All Classes</option>';
+  genderSel.innerHTML = '<option value="">All Genders</option>';
+  classSet.forEach(c=>classSel.appendChild(new Option(c,c)));
+  genderSet.forEach(g=>genderSel.appendChild(new Option(g,g)));
+}
+
+// --- Tab Headers for Form ---
+function renderTabHeaders() {
+  tabHeaders.innerHTML = '';
+  admissionTabs.forEach((tab, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = tab.title;
+    button.onclick = () => {
+      currentTab = index;
+      showTab(currentTab);
+      updateProgress();
+    };
+    button.className = 'tab-header';
+    if (index === currentTab) button.classList.add('active');
+    tabHeaders.appendChild(button);
+  });
+}
+
+// --- Show/Hide Columns ---
+function renderShowColumnsSelect() {
+  const showColsSelect = document.getElementById('show-cols-select');
+  showColsSelect.innerHTML = '';
+  const headers = document.querySelectorAll('#admissionTable th');
+  headers.forEach(th => {
+    const option = document.createElement('option');
+    option.value = th.dataset.sort || th.textContent; // Use data-sort for sorting
+    option.textContent = th.textContent;
+    showColsSelect.appendChild(option);
+  });
+  showColsSelect.addEventListener('change', function() {
+    const selectedHeaders = Array.from(showColsSelect.selectedOptions).map(opt => opt.value);
+    document.querySelectorAll('#admissionTable th').forEach(th => {
+      if (!selectedHeaders.includes(th.textContent)) {
+        th.style.display = 'none';
+      } else {
+        th.style.display = ''; // Reset display
+      }
+    });
+    refreshTable(); // Re-sort and re-filter based on new columns
+  });
+}
+
+// --- Pagination ---
+const itemsPerPage = 10;
+let currentPage = 0;
+function renderPagination() {
+  const totalItems = document.querySelectorAll('#admissionTable tbody tr').length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const paginationDiv = document.getElementById('pagination');
+  paginationDiv.innerHTML = '';
+  if (totalPages > 1) {
+    const prevButton = document.createElement('button');
+    prevButton.textContent = 'Previous';
+    prevButton.onclick = () => {
+      if (currentPage > 0) {
+        currentPage--;
+        renderTable();
+      }
+    };
+    paginationDiv.appendChild(prevButton);
+
+    const startPage = Math.max(0, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 3);
+    for (let i = startPage; i < endPage; i++) {
+      const pageButton = document.createElement('button');
+      pageButton.textContent = i + 1;
+      pageButton.onclick = () => {
+        currentPage = i;
+        renderTable();
+      };
+      paginationDiv.appendChild(pageButton);
+    }
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = 'Next';
+    nextButton.onclick = () => {
+      if (currentPage < totalPages - 1) {
+        currentPage++;
+        renderTable();
+      }
+    };
+    paginationDiv.appendChild(nextButton);
+  }
+}
+
+function renderTable() {
+  const tbody = document.querySelector('#admissionTable tbody');
+  tbody.innerHTML = '';
+  const start = currentPage * itemsPerPage;
+  const end = start + itemsPerPage;
+  const rows = Array.from(document.querySelectorAll('#admissionTable tbody tr'));
+  rows.slice(start, end).forEach(tr => tbody.appendChild(tr));
+  renderPagination();
+}
+
+// --- Form Reset/Clear ---
+resetFormBtn.onclick = function() {
+  if (confirm('Are you sure you want to reset the form and clear all data?')) {
+    form.reset();
+    formData = {};
+    editingKey = null;
+    currentTab = 0;
+    showTab(0);
+    refreshTable();
+  }
+};
+
+// --- Persist Filters and Last Tab ---
+function persistFilters() {
+  localStorage.setItem('admissionFilterClass', filterClass);
+  localStorage.setItem('admissionFilterGender', filterGender);
+  localStorage.setItem('admissionLastTab', currentTab);
+}
+
+function loadFilters() {
+  filterClass = localStorage.getItem('admissionFilterClass') || '';
+  filterGender = localStorage.getItem('admissionFilterGender') || '';
+  currentTab = parseInt(localStorage.getItem('admissionLastTab') || '0', 10);
+  if (currentTab >= admissionTabs.length) currentTab = 0; // Ensure currentTab is within bounds
+  showTab(currentTab);
+  refreshTable();
+}
+
+// --- Reports and Analytics Functions ---
+function generateReport() {
+  const reportType = document.getElementById('reportType').value;
+  const reportMonth = document.getElementById('reportMonth').value;
+  
+  getAllFromDatabase().then(admissions => {
+    let reportData = [];
+    let reportTitle = '';
+    
+    switch(reportType) {
+      case 'monthly':
+        reportData = generateMonthlyReport(admissions, reportMonth);
+        reportTitle = 'Monthly Admission Report';
+        break;
+      case 'class':
+        reportData = generateClassReport(admissions);
+        reportTitle = 'Class-wise Admission Report';
+        break;
+      case 'gender':
+        reportData = generateGenderReport(admissions);
+        reportTitle = 'Gender-wise Admission Report';
+        break;
+      case 'geographic':
+        reportData = generateGeographicReport(admissions);
+        reportTitle = 'Geographic Distribution Report';
+        break;
+      case 'disability':
+        reportData = generateDisabilityReport(admissions);
+        reportTitle = 'Disability Statistics Report';
+        break;
+      case 'previous-school':
+        reportData = generatePreviousSchoolReport(admissions);
+        reportTitle = 'Previous School Analysis Report';
+        break;
+    }
+    
+    displayReport(reportTitle, reportData);
+    updateReportStats(admissions);
+  }).catch(error => {
+    console.error('Error generating report:', error);
+    alert('Error generating report. Please try again.');
+  });
+}
+
+function generateMonthlyReport(admissions, month) {
+  const filtered = month ? 
+    admissions.filter(a => a.createdAt && a.createdAt.startsWith(month)) : 
+    admissions;
+  
+  return {
+    total: filtered.length,
+    byClass: groupBy(filtered, 'classAdmitted'),
+    byGender: groupBy(filtered, 'gender'),
+    byDisability: groupBy(filtered, 'disabilityStatus'),
+    details: filtered
+  };
+}
+
+function generateClassReport(admissions) {
+  const byClass = groupBy(admissions, 'classAdmitted');
+  return {
+    total: admissions.length,
+    byClass: byClass,
+    details: admissions
+  };
+}
+
+function generateGenderReport(admissions) {
+  const byGender = groupBy(admissions, 'gender');
+  return {
+    total: admissions.length,
+    byGender: byGender,
+    details: admissions
+  };
+}
+
+function generateGeographicReport(admissions) {
+  const byCity = groupBy(admissions, 'city');
+  const byDistrict = groupBy(admissions, 'residenceDistrict');
+  return {
+    total: admissions.length,
+    byCity: byCity,
+    byDistrict: byDistrict,
+    details: admissions
+  };
+}
+
+function generateDisabilityReport(admissions) {
+  const byDisability = groupBy(admissions, 'disabilityStatus');
+  const byDisabilityType = groupBy(admissions.filter(a => a.disabilityStatus === 'Yes'), 'disabilityType');
+  return {
+    total: admissions.length,
+    byDisability: byDisability,
+    byDisabilityType: byDisabilityType,
+    details: admissions
+  };
+}
+
+function generatePreviousSchoolReport(admissions) {
+  const withPreviousSchool = admissions.filter(a => a.previousSchool);
+  const byPreviousSchool = groupBy(withPreviousSchool, 'previousSchool');
+  return {
+    total: admissions.length,
+    withPreviousSchool: withPreviousSchool.length,
+    byPreviousSchool: byPreviousSchool,
+    details: admissions
+  };
+}
+
+function groupBy(array, key) {
+  return array.reduce((groups, item) => {
+    const value = item[key] || 'Not Specified';
+    groups[value] = (groups[value] || 0) + 1;
+    return groups;
+  }, {});
+}
+
+function displayReport(title, data) {
+  const content = document.getElementById('reportContent');
+  let html = `<h3>${title}</h3>`;
+  
+  if (data.total !== undefined) {
+    html += `<p><strong>Total Admissions:</strong> ${data.total}</p>`;
+  }
+  
+  if (data.byClass) {
+    html += '<h4>By Class:</h4><ul>';
+    Object.entries(data.byClass).forEach(([className, count]) => {
+      html += `<li>${className}: ${count}</li>`;
+    });
+    html += '</ul>';
+  }
+  
+  if (data.byGender) {
+    html += '<h4>By Gender:</h4><ul>';
+    Object.entries(data.byGender).forEach(([gender, count]) => {
+      html += `<li>${gender}: ${count}</li>`;
+    });
+    html += '</ul>';
+  }
+  
+  if (data.byCity) {
+    html += '<h4>By City:</h4><ul>';
+    Object.entries(data.byCity).forEach(([city, count]) => {
+      html += `<li>${city}: ${count}</li>`;
+    });
+    html += '</ul>';
+  }
+  
+  if (data.byDisability) {
+    html += '<h4>By Disability Status:</h4><ul>';
+    Object.entries(data.byDisability).forEach(([status, count]) => {
+      html += `<li>${status}: ${count}</li>`;
+    });
+    html += '</ul>';
+  }
+  
+  if (data.byPreviousSchool) {
+    html += '<h4>By Previous School:</h4><ul>';
+    Object.entries(data.byPreviousSchool).forEach(([school, count]) => {
+      html += `<li>${school}: ${count}</li>`;
+    });
+    html += '</ul>';
+  }
+  
+  content.innerHTML = html;
+}
+
+function updateReportStats(admissions) {
+  const statsDiv = document.getElementById('reportStats');
+  const total = admissions.length;
+  const byGender = groupBy(admissions, 'gender');
+  const byClass = groupBy(admissions, 'classAdmitted');
+  const withDisability = admissions.filter(a => a.disabilityStatus === 'Yes').length;
+  
+  statsDiv.innerHTML = `
+    <div style="background: #667eea; color: white; padding: 20px; border-radius: 8px; text-align: center;">
+      <h3>${total}</h3>
+      <p>Total Admissions</p>
+    </div>
+    <div style="background: #28a745; color: white; padding: 20px; border-radius: 8px; text-align: center;">
+      <h3>${Object.keys(byClass).length}</h3>
+      <p>Classes</p>
+    </div>
+    <div style="background: #ffc107; color: white; padding: 20px; border-radius: 8px; text-align: center;">
+      <h3>${withDisability}</h3>
+      <p>With Disabilities</p>
+    </div>
+    <div style="background: #dc3545; color: white; padding: 20px; border-radius: 8px; text-align: center;">
+      <h3>${admissions.filter(a => a.previousSchool).length}</h3>
+      <p>From Other Schools</p>
+    </div>
+  `;
+}
+
+function exportReport() {
+  const reportContent = document.getElementById('reportContent').innerText;
+  const blob = new Blob([reportContent], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'admission_report.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function loadAnalytics() {
+  const analyticsType = document.getElementById('analyticsType').value;
+  const analyticsMonth = document.getElementById('analyticsMonth').value;
+  
+  getAllFromDatabase().then(admissions => {
+    let analyticsData = {};
+    let title = '';
+    
+    switch(analyticsType) {
+      case 'overview':
+        analyticsData = generateOverviewAnalytics(admissions);
+        title = 'Overview Dashboard';
+        break;
+      case 'trends':
+        analyticsData = generateTrendsAnalytics(admissions);
+        title = 'Admission Trends';
+        break;
+      case 'class-distribution':
+        analyticsData = generateClassDistributionAnalytics(admissions);
+        title = 'Class Distribution';
+        break;
+      case 'gender-analysis':
+        analyticsData = generateGenderAnalytics(admissions);
+        title = 'Gender Analysis';
+        break;
+      case 'geographic':
+        analyticsData = generateGeographicAnalytics(admissions);
+        title = 'Geographic Analysis';
+        break;
+      case 'disability':
+        analyticsData = generateDisabilityAnalytics(admissions);
+        title = 'Disability Statistics';
+        break;
+    }
+    
+    displayAnalytics(title, analyticsData);
+  }).catch(error => {
+    console.error('Error loading analytics:', error);
+    alert('Error loading analytics. Please try again.');
+  });
+}
+
+function generateOverviewAnalytics(admissions) {
+  const total = admissions.length;
+  const byGender = groupBy(admissions, 'gender');
+  const byClass = groupBy(admissions, 'classAdmitted');
+  const withDisability = admissions.filter(a => a.disabilityStatus === 'Yes').length;
+  const fromOtherSchools = admissions.filter(a => a.previousSchool).length;
+  
+  return {
+    total,
+    byGender,
+    byClass,
+    withDisability,
+    fromOtherSchools,
+    percentageWithDisability: total > 0 ? ((withDisability / total) * 100).toFixed(1) : 0,
+    percentageFromOtherSchools: total > 0 ? ((fromOtherSchools / total) * 100).toFixed(1) : 0
+  };
+}
+
+function generateTrendsAnalytics(admissions) {
+  // Group by month if createdAt is available
+  const byMonth = {};
+  admissions.forEach(admission => {
+    if (admission.createdAt) {
+      const month = admission.createdAt.substring(0, 7); // YYYY-MM
+      byMonth[month] = (byMonth[month] || 0) + 1;
+    }
+  });
+  
+  return {
+    byMonth,
+    total: admissions.length,
+    trendData: Object.entries(byMonth).sort()
+  };
+}
+
+function generateClassDistributionAnalytics(admissions) {
+  const byClass = groupBy(admissions, 'classAdmitted');
+  const classOrder = ['Creche', 'Nursery', 'KG1', 'KG2', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'JHS1', 'JHS2', 'JHS3'];
+  
+  return {
+    byClass,
+    classOrder,
+    total: admissions.length
+  };
+}
+
+function generateGenderAnalytics(admissions) {
+  const byGender = groupBy(admissions, 'gender');
+  const total = admissions.length;
+  
+  return {
+    byGender,
+    total,
+    percentages: Object.entries(byGender).map(([gender, count]) => ({
+      gender,
+      count,
+      percentage: total > 0 ? ((count / total) * 100).toFixed(1) : 0
+    }))
+  };
+}
+
+function generateGeographicAnalytics(admissions) {
+  const byCity = groupBy(admissions, 'city');
+  const byDistrict = groupBy(admissions, 'residenceDistrict');
+  
+  return {
+    byCity,
+    byDistrict,
+    total: admissions.length,
+    topCities: Object.entries(byCity).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  };
+}
+
+function generateDisabilityAnalytics(admissions) {
+  const byDisability = groupBy(admissions, 'disabilityStatus');
+  const byDisabilityType = groupBy(admissions.filter(a => a.disabilityStatus === 'Yes'), 'disabilityType');
+  
+  return {
+    byDisability,
+    byDisabilityType,
+    total: admissions.length,
+    withDisability: byDisability['Yes'] || 0,
+    percentageWithDisability: admissions.length > 0 ? (((byDisability['Yes'] || 0) / admissions.length) * 100).toFixed(1) : 0
+  };
+}
+
+function displayAnalytics(title, data) {
+  const content = document.getElementById('analyticsContent');
+  let html = `<h3>${title}</h3>`;
+  
+  if (data.total !== undefined) {
+    html += `<p><strong>Total Admissions:</strong> ${data.total}</p>`;
+  }
+  
+  if (data.byGender) {
+    html += '<h4>Gender Distribution:</h4>';
+    html += '<div style="display: flex; gap: 10px; margin: 10px 0;">';
+    Object.entries(data.byGender).forEach(([gender, count]) => {
+      const percentage = data.total > 0 ? ((count / data.total) * 100).toFixed(1) : 0;
+      html += `
+        <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; text-align: center; flex: 1;">
+          <strong>${gender}</strong><br>
+          ${count} (${percentage}%)
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+  
+  if (data.byClass) {
+    html += '<h4>Class Distribution:</h4>';
+    html += '<div style="display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap;">';
+    Object.entries(data.byClass).forEach(([className, count]) => {
+      const percentage = data.total > 0 ? ((count / data.total) * 100).toFixed(1) : 0;
+      html += `
+        <div style="background: #e9ecef; padding: 8px; border-radius: 4px; text-align: center; min-width: 100px;">
+          <strong>${className}</strong><br>
+          ${count} (${percentage}%)
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+  
+  if (data.percentageWithDisability !== undefined) {
+    html += `
+      <h4>Disability Statistics:</h4>
+      <div style="background: #fff3cd; padding: 15px; border-radius: 4px; margin: 10px 0;">
+        <strong>Students with Disabilities:</strong> ${data.withDisability} (${data.percentageWithDisability}%)
+      </div>
+    `;
+  }
+  
+  if (data.percentageFromOtherSchools !== undefined) {
+    html += `
+      <h4>Previous School Analysis:</h4>
+      <div style="background: #d1ecf1; padding: 15px; border-radius: 4px; margin: 10px 0;">
+        <strong>From Other Schools:</strong> ${data.fromOtherSchools} (${data.percentageFromOtherSchools}%)
+      </div>
+    `;
+  }
+  
+  if (data.byCity) {
+    html += '<h4>Top Cities:</h4><ul>';
+    Object.entries(data.byCity).sort((a, b) => b[1] - a[1]).slice(0, 5).forEach(([city, count]) => {
+      html += `<li>${city}: ${count} students</li>`;
+    });
+    html += '</ul>';
+  }
+  
+  content.innerHTML = html;
+  
+  // Generate charts
+  generateCharts(data);
+}
+
+function generateCharts(data) {
+  const chartsDiv = document.getElementById('analyticsCharts');
+  
+  if (data.byGender) {
+    const genderChart = createBarChart('Gender Distribution', data.byGender, '#667eea');
+    chartsDiv.innerHTML = genderChart;
+  }
+  
+  if (data.byClass) {
+    const classChart = createBarChart('Class Distribution', data.byClass, '#28a745');
+    chartsDiv.innerHTML += classChart;
+  }
+}
+
+function createBarChart(title, data, color) {
+  const maxValue = Math.max(...Object.values(data));
+  const bars = Object.entries(data).map(([label, value]) => {
+    const height = (value / maxValue) * 150;
+    return `
+      <div style="display: flex; flex-direction: column; align-items: center; margin: 0 10px;">
+        <div style="background: ${color}; width: 30px; height: ${height}px; border-radius: 4px 4px 0 0;" title="${label}: ${value}"></div>
+        <div style="font-size: 12px; margin-top: 5px; text-align: center;">${label}</div>
+        <div style="font-size: 10px; color: #666;">${value}</div>
+      </div>
+    `;
+  }).join('');
+  
+  return `
+    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <h4>${title}</h4>
+      <div style="display: flex; align-items: end; height: 200px; margin-top: 20px; justify-content: center;">
+        ${bars}
+      </div>
+    </div>
+  `;
+}
+
+// User account creation for students and parents
+function createUserAccounts(admissionData) {
+  return new Promise((resolve, reject) => {
+    try {
+      // Create student account
+      const studentUsername = admissionData.studentName.replace(/\s+/g, '').toLowerCase() + admissionData.admissionNo;
+      const studentPassword = Math.random().toString(36).substring(2, 8);
+      
+      const studentUser = {
+        username: studentUsername,
+        password: studentPassword,
+        role: 'student',
+        admissionNo: admissionData.admissionNo,
+        studentName: admissionData.studentName,
+        classAdmitted: admissionData.classAdmitted,
+        firstTimeLogin: true,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Create parent account
+      const parentUsername = admissionData.fatherName ? 
+        admissionData.fatherName.replace(/\s+/g, '').toLowerCase() + admissionData.admissionNo :
+        admissionData.motherName.replace(/\s+/g, '').toLowerCase() + admissionData.admissionNo;
+      const parentPassword = Math.random().toString(36).substring(2, 8);
+      
+      const parentUser = {
+        username: parentUsername,
+        password: parentPassword,
+        role: 'parent',
+        admissionNo: admissionData.admissionNo,
+        studentName: admissionData.studentName,
+        parentName: admissionData.fatherName || admissionData.motherName,
+        firstTimeLogin: true,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Store credentials for display
+      const credentials = {
+        student: {
+          username: studentUsername,
+          password: studentPassword,
+          name: admissionData.studentName
+        },
+        parent: {
+          username: parentUsername,
+          password: parentPassword,
+          name: admissionData.fatherName || admissionData.motherName
+        }
+      };
+      
+      // Save to users store
+      if (useLocalStorage) {
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        users.push(studentUser, parentUser);
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        // Store credentials for later retrieval
+        const allCredentials = JSON.parse(localStorage.getItem('userCredentials') || '[]');
+        allCredentials.push(credentials);
+        localStorage.setItem('userCredentials', JSON.stringify(allCredentials));
+        
+        resolve(credentials);
+      } else {
+        const tx = db.transaction("users", "readwrite");
+        const store = tx.objectStore("users");
+        
+        Promise.all([
+          new Promise((res, rej) => store.add(studentUser).onsuccess = res),
+          new Promise((res, rej) => store.add(parentUser).onsuccess = res)
+        ]).then(() => {
+          // Store credentials in localStorage for easy access
+          const allCredentials = JSON.parse(localStorage.getItem('userCredentials') || '[]');
+          allCredentials.push(credentials);
+          localStorage.setItem('userCredentials', JSON.stringify(allCredentials));
+          resolve(credentials);
+        }).catch(reject);
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+// Function to display credentials after successful admission
+function displayCredentials(credentials, studentName) {
+  modalContent.innerHTML = `
+    <h2>Admission Successful!</h2>
+    <p>Your admission for <strong>${studentName}</strong> has been processed.</p>
+    <p>Your login credentials are:</p>
+    <div style="background: #f0f7fa; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #cce5ff;">
+      <strong>Student Login:</strong><br>
+      Username: ${credentials.student.username}<br>
+      Password: ${credentials.student.password}
+    </div>
+    <div style="background: #f0f7fa; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #cce5ff;">
+      <strong>Parent Login:</strong><br>
+      Username: ${credentials.parent.username}<br>
+      Password: ${credentials.parent.password}
+    </div>
+    <p>Please keep these credentials secure and use them to log in to the system.</p>
+    <div class="form-actions">
+      <button type="button" onclick="modalBg.style.display='none';">Close</button>
+    </div>
+  `;
+  modalBg.style.display = 'flex';
+}
+
+// --- Init ---
+initializeDatabase(); // Initialize database on load
+showTab(0);
+renderTabHeaders();
+renderShowColumnsSelect();
+loadFilters();
+})();
+  </script>
+</body>
+</html> 

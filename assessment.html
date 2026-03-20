@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Assessment Management</title>
+  <script src="shared-auth.js"></script>
+  <script>
+          // Authentication check - using shared function
+      function checkAuth() {
+        return window.checkAuth('staff', 'Standard');
+      }
+    
+    // Check auth on page load
+    window.onload = checkAuth;
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1400px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .back-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 16px;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .back-btn:hover {
+      background: #5a6fd8;
+    }
+    h2, h3 {
+      color: #333;
+    }
+    form, .filters {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      margin-bottom: 20px;
+    }
+    input, select, textarea, button {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+    canvas {
+      max-width: 400px;
+    }
+    .actions button {
+      margin: 2px;
+    }
+    .student-info {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .student-info h4 {
+      margin: 0 0 10px 0;
+      color: #495057;
+    }
+    .student-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+    }
+    .detail-label {
+      font-weight: bold;
+      color: #6c757d;
+    }
+    .detail-value {
+      color: #495057;
+    }
+    .info {
+      background: #e9ecef;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .btn-back {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn-back:hover {
+      background: #5a6268;
+      text-decoration: none;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      
+      <div class="header-content">
+        <button onclick="goToDashboard()" class="btn-back">← Back to Dashboard</button>
+        <h2>Assessment Management</h2>
+      </div>
+    </div>
+
+    <form id="assessmentForm">
+      <select id="student" required></select>
+      <input type="text" id="class" placeholder="Class" required />
+      <input type="text" id="term" placeholder="Term" required />
+      <input type="text" id="subject" placeholder="Subject" required />
+      <select id="type" required>
+        <option value="">--Type--</option>
+        <option value="Exam">Exam</option>
+        <option value="Homework">Homework</option>
+        <option value="Project">Project</option>
+        <option value="Exercise">Exercise</option>
+        <option value="Quiz">Quiz</option>
+        <option value="Assignment">Assignment</option>
+      </select>
+      <input type="number" id="score" placeholder="Score" min="0" required />
+      <input type="number" id="outOf" placeholder="Out of" min="1" required />
+      <input type="text" id="remark" placeholder="Remark" />
+      <button type="submit" id="submitBtn">Add Assessment</button>
+    </form>
+
+    <div class="filters">
+      <select id="filterStudent"><option value="">All Students</option></select>
+      <input type="text" id="filterClass" placeholder="Filter by Class" />
+      <input type="text" id="filterTerm" placeholder="Filter by Term" />
+      <input type="text" id="filterSubject" placeholder="Filter by Subject" />
+      <button onclick="renderTable()">Apply Filter</button>
+      <button onclick="generateReport()">Generate Report</button>
+      <button onclick="exportAssessmentCSV()">Export CSV</button>
+    </div>
+
+    <div id="studentInfoContainer"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Student</th><th>Class</th><th>Term</th><th>Subject</th>
+          <th>Type</th><th>Score</th><th>Out Of</th><th>%</th><th>Remark</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="assessmentTable"></tbody>
+    </table>
+
+    <div>
+      <h3>Subject Performance</h3>
+      <canvas id="subjectChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    // Function to go to dashboard based on user role
+    function goToDashboard() {
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+        const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+        
+        if (currentUser && currentUser.role) {
+            switch (currentUser.role) {
+                case 'super-admin':
+                case 'school-manager':
+                case 'staff':
+                    window.location.href = 'Enhanced_School_Management_Portal.html';
+                    break;
+                case 'student':
+                    window.location.href = 'student_dashboard.html';
+                    break;
+                case 'parent':
+                    window.location.href = 'parent_dashboard.html';
+                    break;
+                default:
+                    window.location.href = 'index.html';
+            }
+        } else if (loginCredentials && loginCredentials.role) {
+            switch (loginCredentials.role) {
+                case 'super-admin':
+                case 'school-manager':
+                case 'staff':
+                    window.location.href = 'Enhanced_School_Management_Portal.html';
+                    break;
+                case 'student':
+                    window.location.href = 'student_dashboard.html';
+                    break;
+                case 'parent':
+                    window.location.href = 'parent_dashboard.html';
+                    break;
+                default:
+                    window.location.href = 'index.html';
+            }
+        } else {
+            window.location.href = 'index.html';
+        }
+    }
+
+    // --- IndexedDB/localStorage Fallback Setup ---
+    let db, useLocalStorage = false, dbInitialized = false;
+    function initializeDatabase() {
+      const request = indexedDB.open("SchoolDB", 2);
+      request.onerror = () => { useLocalStorage = true; dbInitialized = true; loadAll(); };
+      request.onsuccess = e => { db = e.target.result; dbInitialized = true; loadAll(); };
+      request.onupgradeneeded = e => {
+        db = e.target.result;
+        if (!db.objectStoreNames.contains("admissions")) db.createObjectStore("admissions", { keyPath: "admissionNo" });
+        if (!db.objectStoreNames.contains("attendance")) db.createObjectStore("attendance", { keyPath: "id", autoIncrement: true });
+        if (!db.objectStoreNames.contains("assessments")) db.createObjectStore("assessments", { keyPath: "id", autoIncrement: true });
+      };
+    }
+    function getAllFromStore(storeName) {
+      return new Promise((resolve, reject) => {
+        if (useLocalStorage) {
+          const data = JSON.parse(localStorage.getItem(storeName) || '[]');
+          resolve(data);
+        } else {
+          try {
+            const tx = db.transaction(storeName, "readonly");
+            const store = tx.objectStore(storeName);
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+          } catch (e) { useLocalStorage = true; resolve(JSON.parse(localStorage.getItem(storeName) || '[]')); }
+        }
+      });
+    }
+    function saveAssessment(assessment) {
+      return new Promise((resolve, reject) => {
+        if (useLocalStorage) {
+          const arr = JSON.parse(localStorage.getItem('assessments') || '[]');
+          arr.push(assessment);
+          localStorage.setItem('assessments', JSON.stringify(arr));
+          resolve();
+        } else {
+          try {
+            const tx = db.transaction("assessments", "readwrite");
+            const store = tx.objectStore("assessments");
+            store.add(assessment).onsuccess = () => resolve();
+          } catch (e) { useLocalStorage = true; saveAssessment(assessment).then(resolve); }
+        }
+      });
+    }
+    function updateAssessment(assessment, index) {
+      return new Promise((resolve, reject) => {
+        if (useLocalStorage) {
+          const arr = JSON.parse(localStorage.getItem('assessments') || '[]');
+          arr[index] = assessment;
+          localStorage.setItem('assessments', JSON.stringify(arr));
+          resolve();
+        } else {
+          try {
+            const tx = db.transaction("assessments", "readwrite");
+            const store = tx.objectStore("assessments");
+            store.put(assessment).onsuccess = () => resolve();
+          } catch (e) { useLocalStorage = true; updateAssessment(assessment, index).then(resolve); }
+        }
+      });
+    }
+    function deleteAssessment(index) {
+      return new Promise((resolve, reject) => {
+        if (useLocalStorage) {
+          const arr = JSON.parse(localStorage.getItem('assessments') || '[]');
+          arr.splice(index, 1);
+          localStorage.setItem('assessments', JSON.stringify(arr));
+          resolve();
+        } else {
+          try {
+            const tx = db.transaction("assessments", "readwrite");
+            const store = tx.objectStore("assessments");
+            store.delete(index).onsuccess = () => resolve();
+          } catch (e) { useLocalStorage = true; deleteAssessment(index).then(resolve); }
+        }
+      });
+    }
+
+    // --- Data and UI Logic ---
+    let assessments = [], attendanceData = [], admissionsData = [], editIndex = null;
+    let studentList = [];
+
+    function loadAll() {
+      Promise.all([
+        getAllFromStore('assessments'),
+        getAllFromStore('attendance'),
+        getAllFromStore('admissions')
+      ]).then(([assess, attend, admis]) => {
+        assessments = assess;
+        attendanceData = attend;
+        admissionsData = admis;
+        
+        // Extract unique students from attendance data
+        const uniqueStudents = new Set();
+        attendanceData.forEach(record => {
+          if (record.attendanceDetails) {
+            record.attendanceDetails.forEach(detail => {
+              uniqueStudents.add(JSON.stringify({
+                studentId: detail.studentId,
+                studentName: detail.studentName,
+                class: detail.class
+              }));
+            });
+          }
+        });
+        
+        studentList = Array.from(uniqueStudents).map(s => JSON.parse(s));
+        
+        populateStudentDropdowns();
+        renderTable();
+      });
+    }
+
+    function populateStudentDropdowns() {
+    const studentSel = document.getElementById("student");
+    const filterStudent = document.getElementById("filterStudent");
+
+      // Clear existing options
+      studentSel.innerHTML = '<option value="">Select Student</option>';
+      filterStudent.innerHTML = '<option value="">All Students</option>';
+      
+      studentList.forEach(student => {
+        const opt = new Option(`${student.studentName} (${student.studentId})`, student.studentId);
+      studentSel.appendChild(opt.cloneNode(true));
+      filterStudent.appendChild(opt.cloneNode(true));
+    });
+    }
+
+    function onStudentChange() {
+      const studentId = document.getElementById("student").value;
+      if (!studentId) {
+        document.getElementById("studentInfoContainer").innerHTML = '';
+        return;
+      }
+      
+      const student = studentList.find(s => s.studentId === studentId);
+      if (student) {
+        // Auto-populate class from student data
+        document.getElementById("class").value = student.class;
+        
+        // Show student information
+        const studentInfo = admissionsData.find(a => a.admissionNo === studentId);
+        let html = '<div class="student-info">';
+        html += '<h4>Student Information</h4>';
+        html += '<div class="student-details">';
+        html += `<div class="detail-item"><span class="detail-label">Name:</span><span class="detail-value">${student.studentName}</span></div>`;
+        html += `<div class="detail-item"><span class="detail-label">Class:</span><span class="detail-value">${student.class}</span></div>`;
+        if (studentInfo) {
+          html += `<div class="detail-item"><span class="detail-label">Parent:</span><span class="detail-value">${studentInfo.fatherName || studentInfo.motherName || 'N/A'}</span></div>`;
+          html += `<div class="detail-item"><span class="detail-label">Contact:</span><span class="detail-value">${studentInfo.contactNumber || 'N/A'}</span></div>`;
+        }
+        html += '</div></div>';
+        document.getElementById("studentInfoContainer").innerHTML = html;
+      }
+    }
+
+    document.getElementById("student").addEventListener("change", onStudentChange);
+
+    document.getElementById("assessmentForm").addEventListener("submit", e => {
+      e.preventDefault();
+
+      const studentId = document.getElementById("student").value;
+      const student = studentList.find(s => s.studentId === studentId);
+      
+      if (!student) {
+        alert('Please select a valid student.');
+        return;
+      }
+
+      const data = {
+        studentId: studentId,
+        studentName: student.studentName,
+        class: document.getElementById("class").value,
+        term: document.getElementById("term").value,
+        subject: document.getElementById("subject").value,
+        type: document.getElementById("type").value,
+        score: +document.getElementById("score").value,
+        outOf: +document.getElementById("outOf").value,
+        remark: document.getElementById("remark").value,
+        createdAt: new Date().toISOString()
+      };
+      data.percent = ((data.score / data.outOf) * 100).toFixed(2);
+
+      if (editIndex !== null) {
+        updateAssessment(data, editIndex).then(() => {
+        editIndex = null;
+          document.getElementById("assessmentForm").reset();
+          document.getElementById("submitBtn").textContent = "Add Assessment";
+          renderTable();
+        });
+      } else {
+        saveAssessment(data).then(() => {
+          document.getElementById("assessmentForm").reset();
+          renderTable();
+        });
+      }
+    });
+
+    function renderTable() {
+      const table = document.getElementById("assessmentTable");
+      table.innerHTML = "";
+      const fs = document.getElementById("filterStudent").value;
+      const fc = document.getElementById("filterClass").value.trim().toLowerCase();
+      const ft = document.getElementById("filterTerm").value.trim().toLowerCase();
+      const fsub = document.getElementById("filterSubject").value.trim().toLowerCase();
+
+      const filtered = assessments.filter(a =>
+        (!fs || a.studentId === fs) &&
+        (!fc || a.class.toLowerCase().includes(fc)) &&
+        (!ft || a.term.toLowerCase().includes(ft)) &&
+        (!fsub || a.subject.toLowerCase().includes(fsub))
+      );
+
+      filtered.forEach((a, i) => {
+        const row = table.insertRow();
+        row.innerHTML = `
+          <td>${a.studentName}</td><td>${a.class}</td><td>${a.term}</td><td>${a.subject}</td>
+          <td>${a.type}</td><td>${a.score}</td><td>${a.outOf}</td>
+          <td>${a.percent}%</td><td>${a.remark || ''}</td>
+          <td>
+            <button onclick="editAssessment(${i})">Edit</button>
+            <button onclick="deleteAssessmentRecord(${i})" style="background:red;">Delete</button>
+          </td>`;
+      });
+
+      drawChart(filtered);
+    }
+
+    function editAssessment(index) {
+      const a = assessments[index];
+      document.getElementById("student").value = a.studentId;
+      document.getElementById("class").value = a.class;
+      document.getElementById("term").value = a.term;
+      document.getElementById("subject").value = a.subject;
+      document.getElementById("type").value = a.type;
+      document.getElementById("score").value = a.score;
+      document.getElementById("outOf").value = a.outOf;
+      document.getElementById("remark").value = a.remark || '';
+      editIndex = index;
+      document.getElementById("submitBtn").textContent = "Update Assessment";
+      onStudentChange();
+    }
+
+    function deleteAssessmentRecord(index) {
+      if (confirm("Delete this assessment record?")) {
+        deleteAssessment(index).then(() => {
+        renderTable();
+        });
+      }
+    }
+
+    function generateReport() {
+      const studentId = document.getElementById("filterStudent").value;
+      if (!studentId) return alert("Select a student first!");
+      
+      const student = studentList.find(s => s.studentId === studentId);
+      const rows = assessments.filter(a => a.studentId === studentId);
+      
+      if (rows.length === 0) {
+        alert("No assessment records found for this student.");
+        return;
+      }
+      
+      let html = `<h3>Assessment Report for ${student.studentName}</h3>`;
+      html += `<p><strong>Student ID:</strong> ${studentId} | <strong>Class:</strong> ${student.class}</p>`;
+      html += `<table border="1" style="width:100%; border-collapse:collapse;">`;
+      html += `<tr><th>Subject</th><th>Type</th><th>Term</th><th>Score</th><th>Out Of</th><th>%</th><th>Remark</th></tr>`;
+      
+      rows.forEach(r => {
+        html += `<tr><td>${r.subject}</td><td>${r.type}</td><td>${r.term}</td><td>${r.score}</td>
+        <td>${r.outOf}</td><td>${r.percent}%</td><td>${r.remark || ''}</td></tr>`;
+      });
+      
+      html += "</table>";
+      
+      // Calculate averages
+      const subjects = {};
+      rows.forEach(r => {
+        if (!subjects[r.subject]) subjects[r.subject] = [];
+        subjects[r.subject].push(parseFloat(r.percent));
+      });
+      
+      html += "<h4>Subject Averages:</h4><ul>";
+      Object.entries(subjects).forEach(([subject, scores]) => {
+        const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2);
+        html += `<li><strong>${subject}:</strong> ${avg}%</li>`;
+      });
+      html += "</ul>";
+      
+      const win = window.open("", "", "width=800,height=600");
+      win.document.write(html);
+      win.document.close();
+    }
+
+    function exportAssessmentCSV() {
+      const fs = document.getElementById("filterStudent").value;
+      const fc = document.getElementById("filterClass").value.trim().toLowerCase();
+      const ft = document.getElementById("filterTerm").value.trim().toLowerCase();
+      const fsub = document.getElementById("filterSubject").value.trim().toLowerCase();
+
+      const filtered = assessments.filter(a =>
+        (!fs || a.studentId === fs) &&
+        (!fc || a.class.toLowerCase().includes(fc)) &&
+        (!ft || a.term.toLowerCase().includes(ft)) &&
+        (!fsub || a.subject.toLowerCase().includes(fsub))
+      );
+
+      if (filtered.length === 0) {
+        alert("No data to export.");
+        return;
+      }
+
+      let csv = "Student Name,Class,Term,Subject,Type,Score,Out Of,Percentage,Remark\n";
+      filtered.forEach(a => {
+        csv += `"${a.studentName}","${a.class}","${a.term}","${a.subject}","${a.type}",${a.score},${a.outOf},${a.percent}%,"${a.remark || ''}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'assessment_data.csv';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    // Chart.js (Inline version, minimal)
+    const chartCanvas = document.getElementById("subjectChart");
+    let chart;
+    function drawChart(data) {
+      const subjects = {};
+      data.forEach(a => {
+        if (!subjects[a.subject]) subjects[a.subject] = [];
+        subjects[a.subject].push(+a.percent);
+      });
+
+      const labels = Object.keys(subjects);
+      const values = labels.map(s => {
+        const total = subjects[s].reduce((a, b) => a + b, 0);
+        return (total / subjects[s].length).toFixed(2);
+      });
+
+      if (chart) chart.destroy();
+      
+      // Chart rendering implementation
+      const ctx = chartCanvas.getContext('2d');
+      ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+      
+      if (labels.length > 0) {
+        ctx.fillStyle = '#007bff';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        
+        const barWidth = 60;
+        const barSpacing = 20;
+        const startX = 50;
+        const startY = chartCanvas.height - 50;
+        
+        labels.forEach((label, i) => {
+          const x = startX + i * (barWidth + barSpacing);
+          const height = (values[i] / 100) * (startY - 50);
+          
+          ctx.fillStyle = `hsl(${i * 60}, 70%, 50%)`;
+          ctx.fillRect(x, startY - height, barWidth, height);
+          
+          ctx.fillStyle = '#000';
+          ctx.fillText(label, x + barWidth/2, startY + 20);
+          ctx.fillText(values[i] + '%', x + barWidth/2, startY - height - 10);
+        });
+      }
+    }
+
+    // Initialize
+    initializeDatabase();
+  </script>
+</body>
+</html>

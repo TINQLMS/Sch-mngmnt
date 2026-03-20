@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Attendance Management</title>
+  <script src="shared-auth.js"></script>
+  <script>
+    // Authentication check - using shared function
+    function checkAuth() {
+      return window.checkAuth('staff', 'Standard');
+    }
+    
+    // Check auth on page load
+    window.onload = function() {
+      if (checkAuth()) {
+        // Continue with page initialization
+      }
+    };
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+    .container { max-width: 1200px; margin: 30px auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 30px; }
+    h1, h2 { color: #667eea; }
+    .header { display: flex; justify-content: space-between; align-items: center; }
+    .back-btn { background: #667eea; color: white; border: none; border-radius: 4px; padding: 8px 16px; text-decoration: none; font-size: 14px; }
+    .role-select { margin-bottom: 20px; }
+    .attendance-form { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+    .attendance-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .attendance-table th, .attendance-table td { padding: 10px; border-bottom: 1px solid #dee2e6; text-align: left; }
+    .attendance-table th { background: #f8f9fa; }
+    .btn { padding: 8px 18px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; transition: all 0.3s; }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-primary:hover { background: #5a6fd8; }
+    .status-present { color: #28a745; font-weight: bold; }
+    .status-absent { color: #dc3545; font-weight: bold; }
+    .info { background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+    .student-info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0; }
+    .student-info h4 { margin: 0 0 10px 0; color: #495057; }
+    .student-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .detail-item { display: flex; justify-content: space-between; }
+    .detail-label { font-weight: bold; color: #6c757d; }
+    .detail-value { color: #495057; }
+    .warning-info { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
+    .update-info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 8px; border-radius: 4px; margin-top: 5px; font-size: 12px; }
+    .user-role-display { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 15px; border-radius: 6px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .user-role-display strong { color: #f8f9fa; }
+    .user-role-display span { font-weight: 500; }
+    @media (max-width: 600px) { .container { padding: 10px; } }
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .btn-back {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn-back:hover {
+      background: #5a6268;
+      text-decoration: none;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      
+      <div class="header-content">
+        <button onclick="goToDashboard()" class="btn-back">← Back to Dashboard</button>
+        <h1>Attendance Management</h1>
+      </div>
+    </div>
+    <div class="role-select">
+      <div id="userRoleDisplay" class="user-role-display">
+        <strong>Current User:</strong> <span id="userRoleText">Loading...</span>
+      </div>
+      <span id="teacherSelectContainer" style="display:none;">
+        <label for="teacherId">Select Teacher: </label>
+        <select id="teacherId" onchange="onTeacherChange()"></select>
+      </span>
+    </div>
+    <form class="attendance-form" id="attendanceForm" onsubmit="submitAttendance(event)">
+      <div id="classSelectContainer">
+        <label for="classSelect">Class: </label>
+        <select id="classSelect" required onchange="onClassChange()"></select>
+      </div>
+      <div id="dateContainer" style="margin-top:10px;">
+        <label for="attendanceDate">Date: </label>
+        <input type="date" id="attendanceDate" required onchange="onDateChange()" />
+      </div>
+      <div id="studentsContainer" style="margin-top:20px;"></div>
+      <button type="submit" class="btn btn-primary" style="margin-top:20px;">Save Attendance</button>
+    </form>
+    <div id="attendanceRecords"></div>
+  </div>
+  <script>
+    // Function to go to dashboard based on user role
+    function goToDashboard() {
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+        const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+        
+        if (currentUser && currentUser.role) {
+            switch (currentUser.role) {
+                case 'super-admin':
+                case 'school-manager':
+                case 'staff':
+                    window.location.href = 'Enhanced_School_Management_Portal.html';
+                    break;
+                case 'student':
+                    window.location.href = 'student_dashboard.html';
+                    break;
+                case 'parent':
+                    window.location.href = 'parent_dashboard.html';
+                    break;
+                default:
+                    window.location.href = 'index.html';
+            }
+        } else if (loginCredentials && loginCredentials.role) {
+            switch (loginCredentials.role) {
+                case 'super-admin':
+                case 'school-manager':
+                case 'staff':
+                    window.location.href = 'Enhanced_School_Management_Portal.html';
+                    break;
+                case 'student':
+                    window.location.href = 'student_dashboard.html';
+                    break;
+                case 'parent':
+                    window.location.href = 'parent_dashboard.html';
+                    break;
+                default:
+                    window.location.href = 'index.html';
+            }
+        } else {
+            window.location.href = 'index.html';
+        }
+    }
+
+    // --- IndexedDB/localStorage Fallback Setup ---
+    let db, useLocalStorage = false, dbInitialized = false;
+    function initializeDatabase() {
+      const request = indexedDB.open("SchoolDB", 2);
+      request.onerror = () => { useLocalStorage = true; dbInitialized = true; loadAll(); };
+      request.onsuccess = e => { db = e.target.result; dbInitialized = true; loadAll(); };
+      request.onupgradeneeded = e => {
+        db = e.target.result;
+        if (!db.objectStoreNames.contains("admissions")) db.createObjectStore("admissions", { keyPath: "admissionNo" });
+        if (!db.objectStoreNames.contains("staff")) db.createObjectStore("staff", { keyPath: "staffId" });
+        if (!db.objectStoreNames.contains("attendance")) db.createObjectStore("attendance", { keyPath: "id", autoIncrement: true });
+      };
+    }
+    function getAllFromStore(storeName) {
+      return new Promise((resolve, reject) => {
+        if (useLocalStorage) {
+          const data = JSON.parse(localStorage.getItem(storeName) || '[]');
+          resolve(data);
+        } else {
+          try {
+            const tx = db.transaction(storeName, "readonly");
+            const store = tx.objectStore(storeName);
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+          } catch (e) { useLocalStorage = true; resolve(JSON.parse(localStorage.getItem(storeName) || '[]')); }
+        }
+      });
+    }
+    function saveAttendanceRecord(record) {
+      return new Promise((resolve, reject) => {
+        // First check if attendance already exists for this class and date
+        getAllFromStore('attendance').then(existingRecords => {
+          const existingRecord = existingRecords.find(r => 
+            r.class === record.class && r.date === record.date
+          );
+          
+          if (existingRecord) {
+            // Check if any student already has attendance for this date
+            const duplicateStudents = [];
+            Object.keys(record.statuses).forEach(admissionNo => {
+              if (existingRecord.statuses[admissionNo]) {
+                duplicateStudents.push(admissionNo);
+              }
+            });
+            
+            if (duplicateStudents.length > 0) {
+              const studentNames = duplicateStudents.map(admNo => {
+                const student = admissions.find(a => a.admissionNo === admNo);
+                return student ? student.studentName : admNo;
+              }).join(', ');
+              
+              alert(`Attendance already exists for ${record.date} in ${record.class}. The following students already have attendance records: ${studentNames}. Please update the existing record instead.`);
+              reject(new Error('Duplicate attendance record'));
+              return;
+            }
+          }
+          
+          // If no duplicates, proceed with saving
+          if (useLocalStorage) {
+            const arr = JSON.parse(localStorage.getItem('attendance') || '[]');
+            arr.push(record);
+            localStorage.setItem('attendance', JSON.stringify(arr));
+            resolve();
+          } else {
+            try {
+              const tx = db.transaction("attendance", "readwrite");
+              const store = tx.objectStore("attendance");
+              store.add(record).onsuccess = () => resolve();
+            } catch (e) { 
+              useLocalStorage = true; 
+              saveAttendanceRecord(record).then(resolve); 
+            }
+          }
+        }).catch(reject);
+      });
+    }
+    
+    function updateAttendanceRecord(record) {
+      return new Promise((resolve, reject) => {
+        getAllFromStore('attendance').then(existingRecords => {
+          const existingRecord = existingRecords.find(r => 
+            r.class === record.class && r.date === record.date
+          );
+          
+          if (!existingRecord) {
+            reject(new Error('No existing record to update'));
+            return;
+          }
+          
+          // Merge the new statuses with existing ones
+          const updatedRecord = {
+            ...existingRecord,
+            statuses: { ...existingRecord.statuses, ...record.statuses },
+            attendanceDetails: [...existingRecord.attendanceDetails, ...record.attendanceDetails],
+            updatedAt: new Date().toISOString(),
+            updatedBy: currentRole === 'teacher' && currentUser ? currentUser.staffId : 'admin'
+          };
+          
+          if (useLocalStorage) {
+            const arr = JSON.parse(localStorage.getItem('attendance') || '[]');
+            const index = arr.findIndex(r => r.class === record.class && r.date === record.date);
+            if (index !== -1) {
+              arr[index] = updatedRecord;
+              localStorage.setItem('attendance', JSON.stringify(arr));
+              resolve();
+            } else {
+              reject(new Error('Record not found for update'));
+            }
+          } else {
+            try {
+              const tx = db.transaction("attendance", "readwrite");
+              const store = tx.objectStore("attendance");
+              store.put(updatedRecord).onsuccess = () => resolve();
+            } catch (e) { 
+              useLocalStorage = true; 
+              updateAttendanceRecord(record).then(resolve); 
+            }
+          }
+        }).catch(reject);
+      });
+    }
+    
+    // --- UI/Logic ---
+    let admissions = [], staff = [], currentUser = null, currentRole = 'admin';
+    function loadAll() {
+      Promise.all([
+        getAllFromStore('admissions'),
+        getAllFromStore('staff')
+      ]).then(([adms, stf]) => {
+        admissions = adms;
+        staff = stf;
+        setupRoleUI();
+        populateTeacherSelect();
+        populateClassDropdown();
+        onClassChange();
+        loadAttendanceRecords();
+      });
+    }
+    function setupRoleUI() {
+      // Get user role from session storage
+      const selectedRole = sessionStorage.getItem('selectedRole');
+      const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || '{}');
+      
+      // Determine the user's role based on session data
+      let userRole = 'Unknown';
+      let displayName = loginCredentials.username || 'Unknown User';
+      
+      if (selectedRole === 'super-admin') {
+        userRole = 'Super Admin';
+        currentRole = 'admin';
+      } else if (selectedRole === 'school-manager') {
+        userRole = 'School Manager';
+        currentRole = 'admin';
+      } else if (selectedRole === 'staff') {
+        userRole = 'Teacher';
+        currentRole = 'teacher';
+        // For teachers, try to get their assigned class
+        getAllFromStore('staff').then(staffList => {
+          const teacher = staffList.find(s => s.username === loginCredentials.username);
+          if (teacher && teacher.class) {
+            displayName = `${teacher.fullName} (${teacher.class})`;
+            document.getElementById('userRoleText').textContent = `${displayName} - ${userRole}`;
+            // Auto-assign teacher's class
+            populateClassDropdown([teacher.class]);
+            document.getElementById('classSelect').value = teacher.class;
+            document.getElementById('classSelect').disabled = true;
+            onClassChange();
+          } else {
+            displayName = teacher ? teacher.fullName : loginCredentials.username;
+            document.getElementById('userRoleText').textContent = `${displayName} - ${userRole} (No class assigned)`;
+            // Show warning for teachers without assigned class
+            const container = document.getElementById('studentsContainer');
+            container.innerHTML = '<div class="warning-info"><strong>⚠️ No Class Assigned</strong><br>You do not have an assigned class. Please contact the administrator to assign you to a class.</div>';
+          }
+        });
+      } else {
+        userRole = 'Admin';
+        currentRole = 'admin';
+      }
+      
+      // Update the display
+      if (selectedRole !== 'staff') {
+        document.getElementById('userRoleText').textContent = `${displayName} - ${userRole}`;
+      }
+      
+      // Show/hide teacher selection based on role
+      document.getElementById('teacherSelectContainer').style.display = (currentRole === 'admin') ? '' : 'none';
+      document.getElementById('classSelectContainer').style.display = '';
+      
+      if (currentRole === 'teacher') {
+        document.getElementById('attendanceDate').valueAsDate = new Date();
+      }
+    }
+    function populateTeacherSelect() {
+      const teacherSelect = document.getElementById('teacherId');
+      const teachers = staff.filter(s => s.role === 'Teacher' && s.class);
+      teacherSelect.innerHTML = '<option value="">Select Teacher</option>' + teachers.map(t => `<option value="${t.staffId}">${t.fullName} (${t.class})</option>`).join('');
+    }
+    function onRoleChange() {
+      // This function is no longer needed since role is determined automatically
+      // But we'll keep it for compatibility and call setupRoleUI
+      setupRoleUI();
+      
+      if (currentRole === 'teacher') {
+        // Teacher class assignment is now handled in setupRoleUI
+        // Just ensure the class dropdown is populated
+        populateClassDropdown();
+      } else {
+        populateClassDropdown();
+        onClassChange();
+      }
+    }
+    function onTeacherChange() {
+      const teacherId = document.getElementById('teacherId').value;
+      if (!teacherId) return;
+      
+      currentUser = staff.find(s => s.staffId === teacherId);
+      if (currentUser && currentUser.class) {
+        populateClassDropdown([currentUser.class]);
+        document.getElementById('classSelect').value = currentUser.class;
+        document.getElementById('classSelect').disabled = true;
+        onClassChange();
+      }
+    }
+    function populateClassDropdown(classList) {
+      const classSelect = document.getElementById('classSelect');
+      let classes = classList || [...new Set(staff.filter(s => s.role === 'Teacher' && s.class).map(s => s.class))];
+      
+      if (currentRole === 'admin') {
+        // Add all classes from admissions
+        const admissionClasses = [...new Set(admissions.map(a => a.classAdmitted))];
+        classes = Array.from(new Set([...classes, ...admissionClasses]));
+      } else if (currentRole === 'teacher') {
+        // For teachers, only show their assigned class
+        const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || '{}');
+        const teacher = staff.find(s => s.username === loginCredentials.username);
+        if (teacher && teacher.class) {
+          classes = [teacher.class];
+          // Auto-select the teacher's class
+          setTimeout(() => {
+            document.getElementById('classSelect').value = teacher.class;
+            document.getElementById('classSelect').disabled = true;
+            onClassChange();
+          }, 100);
+        }
+      }
+      
+      classSelect.innerHTML = '<option value="">Select Class</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
+      classSelect.disabled = (currentRole === 'teacher');
+    }
+    function onClassChange() {
+      const className = document.getElementById('classSelect').value;
+      const date = document.getElementById('attendanceDate').value;
+      const students = admissions.filter(a => a.classAdmitted === className);
+      const container = document.getElementById('studentsContainer');
+      
+      if (!className) { 
+        container.innerHTML = '<div class="info">Select a class to view students.</div>'; 
+        return; 
+      }
+      
+      if (students.length === 0) { 
+        container.innerHTML = '<div class="info">No students found for this class. Please add students through the Admissions module first.</div>'; 
+        return; 
+      }
+      
+      // Auto-populate student information from admissions
+      let html = '<div class="student-info">';
+      html += '<h4>Students in ' + className + ' (' + students.length + ' students)</h4>';
+      html += '<div class="student-details">';
+      students.forEach((student, index) => {
+        html += `<div class="detail-item">
+          <span class="detail-label">Student ${index + 1}:</span>
+          <span class="detail-value">${student.studentName} (${student.admissionNo})</span>
+        </div>`;
+      });
+      html += '</div></div>';
+      
+      html += '<table class="attendance-table"><thead><tr><th>Admission No</th><th>Student Name</th><th>Parent/Guardian</th><th>Contact</th><th>Status</th></tr></thead><tbody>';
+      students.forEach(s => {
+        html += `<tr>
+          <td>${s.admissionNo}</td>
+          <td>${s.studentName}</td>
+          <td>${s.fatherName || s.motherName || 'N/A'}</td>
+          <td>${s.contactNumber || 'N/A'}</td>
+          <td>
+            <select name="status_${s.admissionNo}" required>
+              <option value="Present">Present</option>
+              <option value="Absent">Absent</option>
+              <option value="Late">Late</option>
+              <option value="Excused">Excused</option>
+            </select>
+          </td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+      
+      // Load existing attendance if date is selected
+      if (date) {
+        loadExistingAttendance(className, date);
+      }
+    }
+    
+    function onDateChange() {
+      const className = document.getElementById('classSelect').value;
+      const date = document.getElementById('attendanceDate').value;
+      
+      if (className && date) {
+        loadExistingAttendance(className, date);
+      }
+    }
+    
+    function loadExistingAttendance(className, date) {
+      getAllFromStore('attendance').then(records => {
+        const existingRecord = records.find(r => r.class === className && r.date === date);
+        
+        if (existingRecord) {
+          // Update the form with existing attendance data
+          Object.entries(existingRecord.statuses).forEach(([admissionNo, status]) => {
+            const statusSelect = document.querySelector(`[name='status_${admissionNo}']`);
+            if (statusSelect) {
+              statusSelect.value = status;
+            }
+          });
+          
+          // Show info about existing record
+          const container = document.getElementById('studentsContainer');
+          const infoDiv = document.createElement('div');
+          infoDiv.className = 'warning-info';
+          infoDiv.innerHTML = `
+            <strong>⚠️ Existing Attendance Found</strong><br>
+            Date: ${date} | Class: ${className} | Taken By: ${existingRecord.takenBy}<br>
+            <small>You can modify the attendance below and save to update the existing record.</small>
+          `;
+          container.insertBefore(infoDiv, container.firstChild);
+        }
+      }).catch(error => {
+        console.error('Error loading existing attendance:', error);
+      });
+    }
+    function submitAttendance(e) {
+      e.preventDefault();
+      console.log('Form submission started');
+      
+      const className = document.getElementById('classSelect').value;
+      const date = document.getElementById('attendanceDate').value;
+      const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || '{}');
+      
+      console.log('Form data:', { className, date, currentRole, loginCredentials });
+      
+      if (!className || !date) { 
+        alert('Class and date are required.'); 
+        return; 
+      }
+      
+      // Check if teacher has assigned class
+      if (currentRole === 'teacher') {
+        const teacher = staff.find(s => s.username === loginCredentials.username);
+        console.log('Teacher data:', teacher);
+        if (!teacher || !teacher.class) {
+          alert('You do not have an assigned class. Please contact the administrator.');
+          return;
+        }
+        if (className !== teacher.class) {
+          alert('You can only mark attendance for your assigned class: ' + teacher.class);
+          return;
+        }
+      }
+      
+      const students = admissions.filter(a => a.classAdmitted === className);
+      console.log('Students found:', students.length);
+      
+      if (students.length === 0) {
+        alert('No students found for this class. Please add students through the Admissions module first.');
+        return;
+      }
+      
+      const statuses = {};
+      const attendanceDetails = [];
+      
+      students.forEach(s => {
+        const statusElement = document.querySelector(`[name='status_${s.admissionNo}']`);
+        if (!statusElement) {
+          console.error('Status element not found for student:', s.admissionNo);
+          return;
+        }
+        const status = statusElement.value;
+        statuses[s.admissionNo] = status;
+        
+        // Create detailed attendance record for assessment module
+        attendanceDetails.push({
+          studentId: s.admissionNo,
+          studentName: s.studentName,
+          class: className,
+          date: date,
+          status: status,
+          parentName: s.fatherName || s.motherName,
+          contactNumber: s.contactNumber,
+          createdAt: new Date().toISOString()
+        });
+      });
+      
+      console.log('Attendance data prepared:', { statuses, attendanceDetails });
+      
+      const record = { 
+        class: className, 
+        date, 
+        statuses, 
+        attendanceDetails,
+        takenBy: currentRole === 'teacher' ? (currentUser ? currentUser.staffId : loginCredentials.username) : 'admin',
+        createdAt: new Date().toISOString()
+      };
+      
+      // Check if attendance already exists for this class and date
+      getAllFromStore('attendance').then(existingRecords => {
+        console.log('Existing records found:', existingRecords.length);
+        
+        const existingRecord = existingRecords.find(r => 
+          r.class === className && r.date === date
+        );
+        
+        if (existingRecord) {
+          console.log('Existing record found:', existingRecord);
+          // Check for duplicate students
+          const duplicateStudents = [];
+          Object.keys(statuses).forEach(admissionNo => {
+            if (existingRecord.statuses[admissionNo]) {
+              duplicateStudents.push(admissionNo);
+            }
+          });
+          
+          if (duplicateStudents.length > 0) {
+            const studentNames = duplicateStudents.map(admNo => {
+              const student = admissions.find(a => a.admissionNo === admNo);
+              return student ? student.studentName : admNo;
+            }).join(', ');
+            
+            const updateChoice = confirm(
+              `Attendance already exists for ${date} in ${className}. The following students already have attendance records: ${studentNames}.\n\nWould you like to update the existing record with new attendance data?`
+            );
+            
+            if (updateChoice) {
+              console.log('Updating existing record');
+              updateAttendanceRecord(record).then(() => {
+                alert('Attendance updated successfully!');
+                loadAttendanceRecords();
+              }).catch(error => {
+                console.error('Error updating attendance:', error);
+                alert('Error updating attendance: ' + error.message);
+              });
+            }
+          } else {
+            // No duplicates, can save new record
+            console.log('Saving new record (no duplicates)');
+            saveAttendanceRecord(record).then(() => {
+              alert('Attendance saved successfully!');
+              loadAttendanceRecords();
+            }).catch(error => {
+              console.error('Error saving attendance:', error);
+              if (error.message !== 'Duplicate attendance record') {
+                alert('Error saving attendance: ' + error.message);
+              }
+            });
+          }
+        } else {
+          // No existing record, save new one
+          console.log('Saving new record (no existing record)');
+          saveAttendanceRecord(record).then(() => {
+            alert('Attendance saved successfully!');
+            loadAttendanceRecords();
+          }).catch(error => {
+            console.error('Error saving attendance:', error);
+            if (error.message !== 'Duplicate attendance record') {
+              alert('Error saving attendance: ' + error.message);
+            }
+          });
+        }
+      }).catch(error => {
+        console.error('Error checking existing attendance:', error);
+        alert('Error checking existing attendance: ' + error.message);
+      });
+    }
+    function loadAttendanceRecords() {
+      getAllFromStore('attendance').then(records => {
+        const className = document.getElementById('classSelect').value;
+        const date = document.getElementById('attendanceDate').value;
+        let filtered = records;
+        if (className) filtered = filtered.filter(r => r.class === className);
+        if (date) filtered = filtered.filter(r => r.date === date);
+        
+        let html = '<h2>Attendance Records</h2>';
+        if (filtered.length === 0) { 
+          html += '<div class="info">No records found for this class/date.</div>'; 
+        } else {
+          filtered.forEach(r => {
+            const updateInfo = r.updatedAt ? 
+              `<div class="update-info"><strong>Last Updated:</strong> ${new Date(r.updatedAt).toLocaleString()} by ${r.updatedBy}</div>` : '';
+            
+            html += `<div style="margin-bottom:20px; padding:15px; border:1px solid #dee2e6; border-radius:8px;">
+              <strong>Date:</strong> ${r.date} | <strong>Class:</strong> ${r.class} | <strong>Taken By:</strong> ${r.takenBy}${updateInfo}
+              <br><strong>Total Students:</strong> ${Object.keys(r.statuses).length}
+              <br><strong>Present:</strong> ${Object.values(r.statuses).filter(s => s === 'Present').length} | 
+              <strong>Absent:</strong> ${Object.values(r.statuses).filter(s => s === 'Absent').length} |
+              <strong>Late:</strong> ${Object.values(r.statuses).filter(s => s === 'Late').length} |
+              <strong>Excused:</strong> ${Object.values(r.statuses).filter(s => s === 'Excused').length}
+              <br><table class="attendance-table"><thead><tr><th>Admission No</th><th>Student Name</th><th>Status</th></tr></thead><tbody>`;
+            
+            Object.entries(r.statuses).forEach(([admNo, status]) => {
+              const student = admissions.find(a => a.admissionNo === admNo);
+              const studentName = student ? student.studentName : 'Unknown';
+              html += `<tr><td>${admNo}</td><td>${studentName}</td><td class="status-${status.toLowerCase()}">${status}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+          });
+        }
+        document.getElementById('attendanceRecords').innerHTML = html;
+      });
+    }
+    
+    // --- Init ---
+    initializeDatabase();
+  </script>
+</body>
+</html> 

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Termly Report Card</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="shared-auth.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .report-card {
+      background: #fff;
+      padding: 20px;
+      border: 1px solid #ccc;
+      max-width: 1000px;
+      margin: auto;
+    }
+    h2 {
+      text-align: center;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .section {
+      margin-top: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #000;
+      padding: 5px;
+      text-align: center;
+    }
+    .no-border td {
+      border: none;
+      padding: 3px;
+    }
+    .remarks-section textarea {
+      width: 100%;
+      height: 60px;
+      margin-top: 5px;
+    }
+    .signature {
+      margin-top: 30px;
+    }
+    button {
+      margin: 10px 5px;
+      padding: 10px 20px;
+      font-size: 14px;
+    }
+    @media print {
+      button {
+        display: none;
+      }
+    }
+    
+    /* Access Control Styles */
+    .access-control {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .access-control h3 {
+      color: #856404;
+      margin-bottom: 15px;
+    }
+    
+    .access-control p {
+      color: #856404;
+      margin-bottom: 15px;
+    }
+    
+    .access-control button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    
+    .access-control button:hover {
+      background: #5a67d8;
+    }
+    
+    .user-info {
+      background: #e3f2fd;
+      border: 1px solid #bbdefb;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .user-info h4 {
+      color: #1976d2;
+      margin-bottom: 10px;
+    }
+    
+    .user-info p {
+      margin: 5px 0;
+      color: #424242;
+    }
+  </style>
+</head>
+<body>
+  <!-- Access Control Check -->
+  <div id="accessControl" class="access-control" style="display: none;">
+    <h3>Access Denied</h3>
+    <p>You do not have permission to access the Termly Report Card module.</p>
+    <p>Required Access Level: Standard or higher</p>
+    <button onclick="goToLogin()">Go to Login</button>
+    <button onclick="goToDashboard()">Go to Dashboard</button>
+  </div>
+
+  <!-- User Info Display -->
+  <div id="userInfo" class="user-info" style="display: none;">
+    <h4>Current User Information</h4>
+    <p><strong>Role:</strong> <span id="userRole">-</span></p>
+    <p><strong>Access Level:</strong> <span id="userAccessLevel">-</span></p>
+    <p><strong>Username:</strong> <span id="username">-</span></p>
+  </div>
+
+  <div class="report-card" id="reportCard">
+    <h2>VISION PREPARATORY SCHOOL<br>LEARNER'S REPORT CARD</h2>
+    <div class="section">
+      <table class="no-border">
+        <tr>
+          <td>Name of Student: <input type="text" id="studentName" style="width: 80%;"></td>
+          <td>Form: <input type="text" id="form" style="width: 60%;"></td>
+          <td>Term: <input type="text" id="term" style="width: 60%;"></td>
+        </tr>
+        <tr>
+          <td>Number on Roll: <input type="text" id="roll" style="width: 80%;"></td>
+          <td colspan="2">Next Term Begins: <input type="text" id="nextTerm" style="width: 60%;"></td>
+        </tr>
+        <tr>
+          <td colspan="3">Position: <input type="text" id="position" style="width: 20%;"></td>
+        </tr>
+      </table>
+    </div>
+    <div class="section">
+      <table>
+        <thead>
+          <tr>
+            <th>Subjects</th>
+            <th>Class Score (50%)</th>
+            <th>Exams Score (50%)</th>
+            <th>Total Score (100%)</th>
+            <th>Position in Subject</th>
+            <th>Grade</th>
+            <th>Level of Proficiency</th>
+          </tr>
+        </thead>
+        <tbody id="subjectTable"></tbody>
+      </table>
+    </div>
+    <div class="section">
+      <p>Attendance: <input type="text" id="attendance"> out of <input type="text" id="totalAttendance"> Repeat/Promoted to: <input type="text" id="promoted"></p>
+      <p>Conduct/Attitude: <input type="text" id="conduct" style="width: 300px;"></p>
+    </div>
+    <div class="remarks-section section">
+      <p>Class Teacher's Name: <input type="text" id="teacherName" style="width: 300px;"></p>
+      <p>Class Teacher's Remarks:</p>
+      <textarea id="teacherRemarks"></textarea>
+      <p>Head Teacher's Remarks:</p>
+      <textarea id="headRemarks"></textarea>
+      <div class="signature">
+        <p>Head Teacher's Stamp and Signature: ___________________________</p>
+      </div>
+    </div>
+    <div class="section">
+      <h3>STUDENT'S BILL</h3>
+      <p>Approved Fees: GHC <input type="text" id="approvedFees"> Arrears: GHC <input type="text" id="arrears"></p>
+      <p>Amount Due: GHC <input type="text" id="amountDue"></p>
+      <p>Payment Made: GHC <input type="text" id="paymentMade"> Arrears: GHC <input type="text" id="finalArrears"></p>
+    </div>
+    <div class="section">
+      <button onclick="saveToIndexedDB()">💾 Save</button>
+      <button onclick="loadFromIndexedDB()">📂 Load</button>
+      <button onclick="printReport()">🖨️ Print</button>
+      <button onclick="exportPDF()">📄 Export PDF</button>
+      <button onclick="goToDashboard()" style="background: #667eea; color: white;">🏠 Back to Dashboard</button>
+    </div>
+  </div>
+  <script>
+    // Access Control System
+    const ACCESS_LEVELS = {
+      'Super Admin': 4,
+      'Admin': 3,
+      'Standard': 2,
+      'Basic': 1
+    };
+
+    // Function to get user's access level
+    function getUserAccessLevel() {
+      const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+      if (!loginCredentials) return null;
+      
+      const roleAccessLevels = {
+        'super-admin': 'Super Admin',
+        'school-manager': 'Admin',
+        'staff': 'Standard',
+        'student': 'Basic',
+        'parent': 'Basic'
+      };
+      
+      return roleAccessLevels[loginCredentials.role] || 'Basic';
+    }
+
+    // Function to get user's role
+    function getUserRole() {
+      const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+      return loginCredentials ? loginCredentials.role : null;
+    }
+
+    // Function to check if user has access to this module
+    function hasModuleAccess() {
+      const userRole = getUserRole();
+      const userAccessLevel = getUserAccessLevel();
+      
+      if (!userRole || !userAccessLevel) return false;
+      
+      // Check if user's role is allowed for this module
+      const allowedRoles = ['super-admin', 'school-manager', 'staff'];
+      if (!allowedRoles.includes(userRole)) return false;
+      
+      // Check if user's access level is sufficient (Standard or higher)
+      const userLevel = ACCESS_LEVELS[userAccessLevel];
+      const requiredLevel = ACCESS_LEVELS['Standard'];
+      
+      return userLevel >= requiredLevel;
+    }
+
+    // Function to check authentication - using shared function
+    function checkAuth() {
+      return window.checkAuth('staff', 'Standard');
+    }
+
+    // Function to display user info
+    function displayUserInfo() {
+      const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+      const userInfo = document.getElementById('userInfo');
+      
+      if (loginCredentials && userInfo) {
+        document.getElementById('userRole').textContent = loginCredentials.role.replace('-', ' ').toUpperCase();
+        document.getElementById('userAccessLevel').textContent = loginCredentials.accessLevel;
+        document.getElementById('username').textContent = loginCredentials.username;
+        userInfo.style.display = 'block';
+      }
+    }
+
+    // Function to go to login
+    function goToLogin() {
+      window.location.href = 'index.html';
+    }
+
+    // Function to go to dashboard
+    function goToDashboard() {
+      const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+      if (loginCredentials) {
+        if (loginCredentials.role === 'student') {
+          window.location.href = 'student_dashboard.html';
+        } else if (loginCredentials.role === 'parent') {
+          window.location.href = 'parent_dashboard.html';
+        } else {
+          window.location.href = 'Enhanced_School_Management_Portal.html';
+        }
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+
+    // Initialize access control
+    function initializeAccessControl() {
+      if (!checkAuth()) return;
+      
+      if (!hasModuleAccess()) {
+        document.getElementById('accessControl').style.display = 'block';
+        document.getElementById('reportCard').style.display = 'none';
+        return;
+      }
+      
+      // User has access, show the report card
+      document.getElementById('accessControl').style.display = 'none';
+      document.getElementById('reportCard').style.display = 'block';
+      displayUserInfo();
+      
+      // Initialize the report card functionality
+      initializeReportCard();
+    }
+
+    // Initialize report card functionality
+    function initializeReportCard() {
+    const subjects = [
+      'Eng. Language', 'Literacy', 'Mathematics', 'Numeracy', 'Creative Art and Design', 'Science',
+      'R.M.E', 'History', 'Asante Twi', 'Computing', 'Social Studies', 'Career Technology'
+    ];
+
+    const table = document.getElementById('subjectTable');
+    subjects.forEach((sub, index) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${sub}</td>
+        <td><input type="number" class="class-score" oninput="calculateTotal(this)"></td>
+        <td><input type="number" class="exam-score" oninput="calculateTotal(this)"></td>
+        <td><input type="number" class="total-score" readonly></td>
+        <td class="position"></td>
+        <td class="grade"></td>
+        <td class="proficiency"></td>
+      `;
+      table.appendChild(row);
+    });
+    }
+
+    function calculateTotal(input) {
+      const row = input.parentElement.parentElement;
+      const classScore = parseFloat(row.cells[1].children[0].value) || 0;
+      const examScore = parseFloat(row.cells[2].children[0].value) || 0;
+      const total = classScore + examScore;
+      row.cells[3].children[0].value = total.toFixed(1);
+
+      // Grade assignment
+      let grade = '', level = '';
+      if (total >= 90) { grade = 'A+', level = 'Excellent'; }
+      else if (total >= 80) { grade = 'A', level = 'Very Good'; }
+      else if (total >= 70) { grade = 'B+', level = 'Good'; }
+      else if (total >= 60) { grade = 'B', level = 'Fair'; }
+      else if (total >= 50) { grade = 'C', level = 'Average'; }
+      else if (total >= 40) { grade = 'D', level = 'Poor'; }
+      else { grade = 'F', level = 'Fail'; }
+      row.querySelector('.grade').textContent = grade;
+      row.querySelector('.proficiency').textContent = level;
+
+      updatePositions();
+    }
+
+    function updatePositions() {
+      const rows = Array.from(document.querySelectorAll('#subjectTable tr'));
+      const scores = rows.map(row => parseFloat(row.cells[3].children[0].value) || 0);
+      const sorted = [...scores].sort((a, b) => b - a);
+      rows.forEach((row, i) => {
+        const score = scores[i];
+        const rank = sorted.indexOf(score) + 1;
+        row.querySelector('.position').textContent = rank;
+      });
+    }
+
+    function saveToIndexedDB() {
+      const data = document.getElementById('reportCard').innerHTML;
+      const request = indexedDB.open("ReportDB", 1);
+
+      request.onupgradeneeded = event => {
+        const db = event.target.result;
+        db.createObjectStore("Reports", { keyPath: "id" });
+      };
+
+      request.onsuccess = event => {
+        const db = event.target.result;
+        const tx = db.transaction("Reports", "readwrite");
+        const store = tx.objectStore("Reports");
+        store.put({ id: 1, content: data });
+        alert("Saved to IndexedDB");
+      };
+    }
+
+    function loadFromIndexedDB() {
+      const request = indexedDB.open("ReportDB", 1);
+      request.onsuccess = event => {
+        const db = event.target.result;
+        const tx = db.transaction("Reports", "readonly");
+        const store = tx.objectStore("Reports");
+        const getRequest = store.get(1);
+        getRequest.onsuccess = () => {
+          if (getRequest.result) {
+            document.getElementById('reportCard').innerHTML = getRequest.result.content;
+            alert("Loaded from IndexedDB");
+          } else {
+            alert("No saved report found");
+          }
+        };
+      };
+    }
+
+    function printReport() {
+      window.print();
+    }
+
+    function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('p', 'pt', 'a4');
+      doc.html(document.getElementById('reportCard'), {
+        callback: function (doc) {
+          doc.save('report-card.pdf');
+        },
+        x: 10,
+        y: 10
+      });
+    }
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', initializeAccessControl);
+  </script>
+</body>
+</html>
