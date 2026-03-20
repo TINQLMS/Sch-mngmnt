@@ -4,7 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Management System</title>
+  <script src="shared-db.js"></script>
   <script src="shared-auth.js"></script>
+  <script src="shared-utils.js"></script>
   <style>
     /* Existing styles */
     body {
@@ -568,7 +570,7 @@
           <!-- User info will be populated here -->
         </div>
         <a href="Enhanced_School_Management_Portal.html" class="back-btn">← Back to Portal</a>
-        <button class="logout-btn" onclick="logout()">Logout</button>
+        <button class="logout-btn" onclick="window.logout()">Logout</button>
       </div>
     </div>
   </header>
@@ -637,7 +639,7 @@
         </div>
 
         <div class="table-container">
-          <table class="users-table" id="usersTable">
+          <div class="responsive-table-container"><table class="users-table" id="usersTable">
             <thead>
               <tr>
                 <th>Username</th>
@@ -654,7 +656,7 @@
             <tbody id="usersTableBody">
               <!-- User rows will be populated here -->
             </tbody>
-          </table>
+          </table></div>
         </div>
       </div>
     </div>
@@ -1106,50 +1108,17 @@
     };
 
     // Authentication and Access Control Functions
-    function checkAuth() {
-      console.log('user-management.html: checkAuth called');
-      // Check if user is authenticated using session storage
-      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-      const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
-      
-      if (!currentUser || !loginCredentials) {
-        console.log('No user session found, redirecting to index.html');
-        showNotification('Session expired. Please login again.', 'error');
-        setTimeout(() => {
-          window.location.href = 'index.html';
-        }, 2000);
-        return false;
-      }
-
-      // Check if user has super-admin access
-      if (currentUser.role !== 'super-admin') {
-        console.log('User does not have super-admin access');
-        showNotification('Access denied. Super Admin access required.', 'error');
-        setTimeout(() => {
-          window.location.href = 'Enhanced_School_Management_Portal.html';
-        }, 2000);
-        return false;
-      }
-      
-      // Update last activity
-      currentUser.lastActivity = new Date().toISOString();
-      sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-      
-      console.log('Authentication successful for:', { 
-        username: currentUser.username, 
-        role: currentUser.role, 
-        accessLevel: currentUser.accessLevel 
-      });
-      return true;
+    async function checkAuth() {
+        return window.checkAuth('super-admin');
     }
 
     // Enhanced User Management Functions
-    function resetUserPassword(username) {
+    async function resetUserPassword(username) {
       const newPassword = generateSecurePassword();
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const userIndex = users.findIndex(u => u.username === username);
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
       
-      if (userIndex === -1) {
+      if(userIndex === -1) {
         showNotification('User not found.', 'error');
         return;
       }
@@ -1159,7 +1128,7 @@
       users[userIndex].passwordResetDate = new Date().toISOString();
       users[userIndex].updatedAt = new Date().toISOString();
       
-      localStorage.setItem('users', JSON.stringify(users));
+      await window.db.put(window.DB_STORES.USERS, newUser);
       
       // Add audit log
       addAuditLog('password_reset', `Password reset for user ${username}`, users[userIndex]);
@@ -1168,16 +1137,16 @@
       loadUsers();
     }
 
-    function generateSecurePassword() {
+    async function generateSecurePassword() {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
       let password = '';
-      for (let i = 0; i < 12; i++) {
+      for(let i = 0; i < 12; i++) {
         password += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       return password;
     }
 
-    function bulkImportUsers() {
+    async function bulkImportUsers() {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.csv';
@@ -1207,9 +1176,9 @@
             }
           }
           
-          const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+          const existingUsers = await window.db.getAll(window.DB_STORES.USERS);
           existingUsers.push(...users);
-          localStorage.setItem('users', JSON.stringify(existingUsers));
+          await Promise.all(existingUsers.map(u => window.db.put(window.DB_STORES.USERS, u)));
           
           addAuditLog('bulk_import', `Imported ${users.length} users`, null);
           showNotification(`Successfully imported ${users.length} users!`, 'success');
@@ -1220,8 +1189,8 @@
       input.click();
     }
 
-    function bulkExportUsers() {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+    async function bulkExportUsers() {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       const csvContent = [
         ['Username', 'Full Name', 'Email', 'Role', 'Status', 'Created At'],
         ...users.map(user => [
@@ -1243,8 +1212,8 @@
       window.URL.revokeObjectURL(url);
     }
 
-    function manageUserSessions() {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+    async function manageUserSessions() {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       const activeSessions = users.filter(u => u.lastActivity && 
         new Date(u.lastActivity) > new Date(Date.now() - 30 * 60 * 1000)); // Last 30 minutes
       
@@ -1255,7 +1224,7 @@
             <span class="close" onclick="closeModal('sessionModal')">&times;</span>
           </div>
           <div class="modal-body">
-            <table class="users-table">
+            <div class="responsive-table-container"><table class="users-table">
               <thead>
                 <tr>
                   <th>Username</th>
@@ -1284,7 +1253,7 @@
       
       html += `
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       `;
@@ -1297,14 +1266,14 @@
       document.body.appendChild(modal);
     }
 
-    function terminateSession(username) {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const userIndex = users.findIndex(u => u.username === username);
+    async function terminateSession(username) {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
       
-      if (userIndex !== -1) {
+      if(userIndex !== -1) {
         users[userIndex].lastActivity = null;
         users[userIndex].sessionTime = null;
-        localStorage.setItem('users', JSON.stringify(users));
+        await window.db.put(window.DB_STORES.USERS, newUser);
         
         addAuditLog('session_terminated', `Session terminated for user ${username}`, users[userIndex]);
         showNotification(`Session terminated for ${username}`, 'success');
@@ -1314,7 +1283,7 @@
     }
 
     // Enhanced Security Functions
-    function loadSecuritySettings() {
+    async function loadSecuritySettings() {
       const securityContent = document.getElementById('securityContent');
       const ipRestrictions = JSON.parse(localStorage.getItem('ipRestrictions') || '[]');
       const rateLimiting = JSON.parse(localStorage.getItem('rateLimiting') || '{"maxLoginAttempts": 5, "lockoutDuration": 30}');
@@ -1375,7 +1344,7 @@
       `;
     }
 
-    function openSecuritySettingsModal() {
+    async function openSecuritySettingsModal() {
       const ipRestrictions = JSON.parse(localStorage.getItem('ipRestrictions') || '[]');
       const rateLimiting = JSON.parse(localStorage.getItem('rateLimiting') || '{"maxLoginAttempts": 5, "lockoutDuration": 30}');
       const sessionSettings = JSON.parse(localStorage.getItem('sessionSettings') || '{"sessionTimeout": 30, "maxConcurrentSessions": 3}');
@@ -1394,20 +1363,20 @@
         return;
       }
       
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       users.forEach(user => {
         user.lastActivity = null;
         user.sessionTime = null;
       });
       
-      localStorage.setItem('users', JSON.stringify(users));
+      await window.db.put(window.DB_STORES.USERS, newUser);
       addAuditLog('all_sessions_cleared', 'All user sessions terminated', null);
       showNotification('All user sessions have been terminated!', 'success');
     }
 
-    function generateSecurityReport() {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const auditLogs = JSON.parse(localStorage.getItem('auditLogs') || '[]');
+    async function generateSecurityReport() {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const auditLogs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
       const ipRestrictions = JSON.parse(localStorage.getItem('ipRestrictions') || '[]');
       const rateLimiting = JSON.parse(localStorage.getItem('rateLimiting') || '{}');
       
@@ -1436,7 +1405,7 @@
       showNotification('Security report downloaded successfully!', 'success');
     }
 
-    function calculateSecurityScore(users) {
+    async function calculateSecurityScore(users) {
       let score = 0;
       const totalUsers = users.length;
       
@@ -1462,7 +1431,7 @@
       return Math.round(score);
     }
 
-    function saveSecuritySettings() {
+    async function saveSecuritySettings() {
       const settings = {
         requireUppercase: document.getElementById('requireUppercase').checked,
         requireLowercase: document.getElementById('requireLowercase').checked,
@@ -1484,44 +1453,44 @@
         return;
       }
       
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       users.forEach(user => {
         user.forcePasswordChange = true;
         user.passwordResetDate = new Date().toISOString();
       });
       
-      localStorage.setItem('users', JSON.stringify(users));
+      await window.db.put(window.DB_STORES.USERS, newUser);
       addAuditLog('force_password_change', 'All users forced to change passwords', null);
       showNotification('All users will be required to change passwords on next login!', 'success');
     }
 
-    function lockAllAccounts() {
+    async function lockAllAccounts() {
       if (!confirm('This will lock all user accounts except super administrators. Continue?')) {
         return;
       }
       
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       users.forEach(user => {
-        if (user.role !== 'super-admin') {
+        if(user.role !== 'super-admin') {
           user.status = 'suspended';
           user.accountLocked = true;
         }
       });
       
-      localStorage.setItem('users', JSON.stringify(users));
+      await window.db.put(window.DB_STORES.USERS, newUser);
       addAuditLog('lock_all_accounts', 'All non-admin accounts locked', null);
       showNotification('All non-admin accounts have been locked!', 'success');
       loadUsers();
     }
 
     // User Management Functions
-    function loadUsers() {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+    async function loadUsers() {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       displayUsers(users);
       updateDashboardStats(users);
     }
 
-    function updateDashboardStats(users) {
+    async function updateDashboardStats(users) {
       const totalUsers = users.length;
       const activeUsers = users.filter(u => u.status === 'active' || !u.status).length;
       const suspendedUsers = users.filter(u => u.status === 'suspended').length;
@@ -1538,12 +1507,12 @@
       document.getElementById('recentActivity').textContent = recentActivity;
     }
 
-    function filterUsers() {
+    async function filterUsers() {
       const searchTerm = document.getElementById('searchUsers').value.toLowerCase();
       const roleFilter = document.getElementById('roleFilter').value;
       const statusFilter = document.getElementById('statusFilter').value;
 
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       const filteredUsers = users.filter(user => {
         const matchesSearch = user.username.toLowerCase().includes(searchTerm) ||
                             (user.fullName && user.fullName.toLowerCase().includes(searchTerm)) ||
@@ -1558,7 +1527,7 @@
     }
 
     // Modal Functions
-    function openAddUserModal() {
+    async function openAddUserModal() {
       document.getElementById('addUserModal').style.display = 'block';
       document.getElementById('addUserForm').reset();
       // Reset permissions and department on modal open
@@ -1584,11 +1553,11 @@
       document.getElementById('newDepartmentOtherGroup').classList.remove('show');
     }
 
-    function closeModal(modalId) {
+    async function closeModal(modalId) {
       document.getElementById(modalId).style.display = 'none';
     }
 
-    function addNewUser() {
+    async function addNewUser() {
       const username = document.getElementById('newUsername').value.trim();
       const fullName = document.getElementById('newFullName').value.trim();
       const email = document.getElementById('newEmail').value.trim();
@@ -1602,7 +1571,7 @@
       const twoFactorEnabled = document.getElementById('newTwoFactorEnabled').checked;
       const emailVerification = document.getElementById('newEmailVerification').checked;
 
-      if (!username || !fullName || !email || !gender || !role || !accessLevel) {
+      if(!username || !fullName || !email || !gender || !role || !accessLevel) {
         notificationSystem.addNotification('error', 'Validation Error', 'Please fill in all required fields');
         showNotification('Please fill in all required fields.', 'error');
         return;
@@ -1644,9 +1613,9 @@
         return;
       }
 
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       
-      if (users.find(u => u.username === username)) {
+      if (await window.db.get(window.DB_STORES.USERS, username)) {
         showNotification('Username already exists.', 'error');
         return;
       }
@@ -1669,7 +1638,7 @@
       };
 
       // Add class field for teachers
-      if (role === 'Teacher') {
+      if(role === 'Teacher') {
         newUser.class = document.getElementById('newClass').value;
       }
 
@@ -1697,14 +1666,14 @@
         };
       }
 
-      users.push(newUser);
-      localStorage.setItem('users', JSON.stringify(users));
+
+      await window.db.put(window.DB_STORES.USERS, newUser);
 
       // Add audit log
       addAuditLog('user_created', `User ${username} was created`, newUser);
 
       // Send email verification if enabled
-      if (emailVerification) {
+      if(emailVerification) {
         const verificationCode = sendEmailVerification(email, username);
         notificationSystem.addNotification('success', 'User Created', `User ${username} created successfully! Verification email sent to ${email}`);
         showNotification(`User created successfully! Verification email sent to ${email}`, 'success');
@@ -1724,9 +1693,9 @@
       loadUsers();
     }
 
-    function editUser(username) {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find(u => u.username === username);
+    async function editUser(username) {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const user = await window.db.get(window.DB_STORES.USERS, username);
       
       if (!user) {
         showNotification('User not found.', 'error');
@@ -1745,7 +1714,7 @@
       document.getElementById('editTwoFactorEnabled').checked = user.twoFactorEnabled || false; // Set two-factor enabled
 
       // Handle class field for teachers
-      if (user.role === 'Teacher') {
+      if(user.role === 'Teacher') {
         document.getElementById('editClass').value = user.class || '';
         toggleEditClassField(); // Show the class field
       } else {
@@ -1796,7 +1765,7 @@
       document.getElementById('editUserModal').style.display = 'block';
     }
 
-    function updateUser() {
+    async function updateUser() {
       const username = document.getElementById('editUsername').value;
       const fullName = document.getElementById('editFullName').value.trim();
       const email = document.getElementById('editEmail').value.trim();
@@ -1840,16 +1809,16 @@
         }
       }
 
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const userIndex = users.findIndex(u => u.username === username);
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
       
       if (userIndex === -1) {
         showNotification('User not found.', 'error');
         return;
       }
 
-      const oldUser = users[userIndex];
-      users[userIndex] = {
+
+      const updatedUser = {
         ...oldUser,
         fullName: fullName,
         email: email,
@@ -1864,7 +1833,7 @@
       };
 
       // Handle class field for teachers
-      if (role === 'Teacher') {
+      if(role === 'Teacher') {
         users[userIndex].class = document.getElementById('editClass').value;
       } else {
         delete users[userIndex].class; // Remove class field for non-teachers
@@ -1896,7 +1865,7 @@
         users[userIndex].permissions = null; // Clear permissions if not Super Admin/School Manager
       }
 
-      localStorage.setItem('users', JSON.stringify(users));
+      await window.db.put(window.DB_STORES.USERS, newUser);
 
       // Add audit log
       addAuditLog('user_updated', `User ${username} was updated`, users[userIndex]);
@@ -1906,11 +1875,11 @@
       loadUsers();
     }
 
-    function toggleUserStatus(username) {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const userIndex = users.findIndex(u => u.username === username);
+    async function toggleUserStatus(username) {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
       
-      if (userIndex === -1) {
+      if(userIndex === -1) {
         showNotification('User not found.', 'error');
         return;
       }
@@ -1918,13 +1887,13 @@
       const user = users[userIndex];
       const newStatus = user.status === 'suspended' ? 'active' : 'suspended';
       
-      users[userIndex] = {
+      const updatedUser = {
         ...user,
         status: newStatus,
         updatedAt: new Date().toISOString()
       };
 
-      localStorage.setItem('users', JSON.stringify(users));
+      await window.db.put(window.DB_STORES.USERS, newUser);
 
       // Add audit log
       addAuditLog('user_status_changed', `User ${username} status changed to ${newStatus}`, users[userIndex]);
@@ -1933,22 +1902,22 @@
       loadUsers();
     }
 
-    function deleteUser(username) {
+    async function deleteUser(username) {
       if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
         return;
       }
 
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const userIndex = users.findIndex(u => u.username === username);
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
       
-      if (userIndex === -1) {
+      if(userIndex === -1) {
         showNotification('User not found.', 'error');
         return;
       }
 
-      const deletedUser = users[userIndex];
-      users.splice(userIndex, 1);
-      localStorage.setItem('users', JSON.stringify(users));
+      const deletedUser = await window.db.get(window.DB_STORES.USERS, username);
+      await window.db.delete(window.DB_STORES.USERS, username);
+      await window.db.put(window.DB_STORES.USERS, newUser);
 
       // Add audit log
       addAuditLog('user_deleted', `User ${username} was deleted`, deletedUser);
@@ -1958,7 +1927,7 @@
     }
 
     // Tab Functions
-    function showTab(tabName) {
+    async function showTab(tabName) {
       // Hide all tab contents
       const tabContents = document.querySelectorAll('.tab-content');
       tabContents.forEach(content => content.classList.remove('active'));
@@ -1974,7 +1943,7 @@
       event.target.classList.add('active');
 
       // Load tab-specific content
-      switch (tabName) {
+      switch(tabName) {
         case 'users':
           loadUsers();
           break;
@@ -1987,7 +1956,7 @@
       }
     }
 
-    function loadSecuritySettings() {
+    async function loadSecuritySettings() {
       const securityContent = document.getElementById('securityContent');
       securityContent.innerHTML = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
@@ -2034,8 +2003,8 @@
       `;
     }
 
-    function loadAuditLogs() {
-      const auditLogs = JSON.parse(localStorage.getItem('auditLogs') || '[]');
+    async function loadAuditLogs() {
+      const auditLogs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
       const auditContent = document.getElementById('auditContent');
       
       if (auditLogs.length === 0) {
@@ -2050,7 +2019,7 @@
 
       let html = `
         <div class="table-container">
-          <table class="users-table">
+          <div class="responsive-table-container"><table class="users-table">
             <thead>
               <tr>
                 <th>Timestamp</th>
@@ -2076,7 +2045,7 @@
 
       html += `
             </tbody>
-          </table>
+          </table></div>
         </div>
       `;
 
@@ -2084,8 +2053,8 @@
     }
 
     // Export Functions
-    function exportUsers() {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+    async function exportUsers() {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       const csvContent = [
         ['Username', 'Full Name', 'Email', 'Role', 'Status', 'Last Login', 'Created At'],
         ...users.map(user => [
@@ -2108,8 +2077,8 @@
       window.URL.revokeObjectURL(url);
     }
 
-    function exportAuditLogs() {
-      const auditLogs = JSON.parse(localStorage.getItem('auditLogs') || '[]');
+    async function exportAuditLogs() {
+      const auditLogs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
       const csvContent = [
         ['Timestamp', 'Event', 'User', 'Details'],
         ...auditLogs.map(log => [
@@ -2129,7 +2098,7 @@
       window.URL.revokeObjectURL(url);
     }
 
-    function clearAuditLogs() {
+    async function clearAuditLogs() {
       if (!confirm('Are you sure you want to clear all audit logs? This action cannot be undone.')) {
         return;
       }
@@ -2140,9 +2109,9 @@
     }
 
     // User Interface Functions
-    function displayUserInfo(user) {
+    async function displayUserInfo(user) {
       const userInfoElement = document.getElementById('userInfo');
-      if (userInfoElement && user) {
+      if(userInfoElement && user) {
         userInfoElement.innerHTML = `
           <div><strong>${user.fullName || user.username}</strong></div>
           <div>${user.role ? user.role.replace('-', ' ').toUpperCase() : 'User'}</div>
@@ -2152,6 +2121,9 @@
 
     // Initialize the application
     document.addEventListener('DOMContentLoaded', function() {
+      // Migrate data if needed
+      if (window.migrateUserData) window.migrateUserData();
+
       if (!checkAuth()) return;
       
       try {
@@ -2178,10 +2150,10 @@
     }
 
     // Enhanced User Management Functions
-    function resetUserPassword(username) {
+    async function resetUserPassword(username) {
       const newPassword = generateSecurePassword();
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const userIndex = users.findIndex(u => u.username === username);
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
       
       if (userIndex === -1) {
         showNotification('User not found.', 'error');
@@ -2193,7 +2165,7 @@
       users[userIndex].passwordResetDate = new Date().toISOString();
       users[userIndex].updatedAt = new Date().toISOString();
       
-      localStorage.setItem('users', JSON.stringify(users));
+      await window.db.put(window.DB_STORES.USERS, newUser);
       
       // Add audit log
       addAuditLog('password_reset', `Password reset for user ${username}`, users[userIndex]);
@@ -2202,16 +2174,16 @@
       loadUsers();
     }
 
-    function generateSecurePassword() {
+    async function generateSecurePassword() {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
       let password = '';
-      for (let i = 0; i < 12; i++) {
+      for(let i = 0; i < 12; i++) {
         password += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       return password;
     }
 
-    function bulkImportUsers() {
+    async function bulkImportUsers() {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.csv';
@@ -2241,9 +2213,9 @@
             }
           }
           
-          const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+          const existingUsers = await window.db.getAll(window.DB_STORES.USERS);
           existingUsers.push(...users);
-          localStorage.setItem('users', JSON.stringify(existingUsers));
+          await Promise.all(existingUsers.map(u => window.db.put(window.DB_STORES.USERS, u)));
           
           addAuditLog('bulk_import', `Imported ${users.length} users`, null);
           showNotification(`Successfully imported ${users.length} users!`, 'success');
@@ -2254,8 +2226,8 @@
       input.click();
     }
 
-    function bulkExportUsers() {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+    async function bulkExportUsers() {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       const csvContent = [
         ['Username', 'Full Name', 'Email', 'Role', 'Status', 'Created At'],
         ...users.map(user => [
@@ -2277,8 +2249,8 @@
       window.URL.revokeObjectURL(url);
     }
 
-    function manageUserSessions() {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+    async function manageUserSessions() {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       const activeSessions = users.filter(u => u.lastActivity && 
         new Date(u.lastActivity) > new Date(Date.now() - 30 * 60 * 1000)); // Last 30 minutes
       
@@ -2289,7 +2261,7 @@
             <span class="close" onclick="closeModal('sessionModal')">&times;</span>
           </div>
           <div class="modal-body">
-            <table class="users-table">
+            <div class="responsive-table-container"><table class="users-table">
               <thead>
                 <tr>
                   <th>Username</th>
@@ -2318,7 +2290,7 @@
       
       html += `
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       `;
@@ -2331,14 +2303,14 @@
       document.body.appendChild(modal);
     }
 
-    function terminateSession(username) {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const userIndex = users.findIndex(u => u.username === username);
+    async function terminateSession(username) {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
       
-      if (userIndex !== -1) {
+      if(userIndex !== -1) {
         users[userIndex].lastActivity = null;
         users[userIndex].sessionTime = null;
-        localStorage.setItem('users', JSON.stringify(users));
+        await window.db.put(window.DB_STORES.USERS, newUser);
         
         addAuditLog('session_terminated', `Session terminated for user ${username}`, users[userIndex]);
         showNotification(`Session terminated for ${username}`, 'success');
@@ -2350,7 +2322,7 @@
     // Priority 1 Enhancement Functions
 
     // Email Integration Functions
-    function sendEmailVerification(email, username) {
+    async function sendEmailVerification(email, username) {
       // Simulate email sending
       const verificationCode = generateVerificationCode();
       const emailData = {
@@ -2383,7 +2355,7 @@
       return verificationCode;
     }
 
-    function generateVerificationCode() {
+    async function generateVerificationCode() {
       return Math.floor(100000 + Math.random() * 900000).toString();
     }
 
@@ -2391,7 +2363,7 @@
       const verificationCodes = JSON.parse(localStorage.getItem('emailVerificationCodes') || '{}');
       const verification = verificationCodes[email];
       
-      if (!verification) {
+      if(!verification) {
         return { success: false, message: 'No verification code found for this email' };
       }
       
@@ -2406,13 +2378,13 @@
       }
       
       // Mark email as verified
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const users = await window.db.getAll(window.DB_STORES.USERS);
       const userIndex = users.findIndex(u => u.email === email);
       
-      if (userIndex !== -1) {
+      if(userIndex !== -1) {
         users[userIndex].emailVerified = true;
         users[userIndex].emailVerifiedAt = new Date().toISOString();
-        localStorage.setItem('users', JSON.stringify(users));
+        await window.db.put(window.DB_STORES.USERS, newUser);
       }
       
       // Remove verification code
@@ -2425,7 +2397,7 @@
     }
 
     // Two-Factor Authentication Functions
-    function setupTwoFactorAuthentication(username) {
+    async function setupTwoFactorAuthentication(username) {
       const secretKey = generateTOTPSecret();
       const qrCodeData = `otpauth://totp/SchoolManagement:${username}?secret=${secretKey}&issuer=SchoolManagement`;
       
@@ -2448,10 +2420,10 @@
       document.getElementById('twoFactorModal').style.display = 'block';
     }
 
-    function generateTOTPSecret() {
+    async function generateTOTPSecret() {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
       let secret = '';
-      for (let i = 0; i < 16; i++) {
+      for(let i = 0; i < 16; i++) {
         secret += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       return secret;
@@ -2494,14 +2466,14 @@
         return;
       }
       
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const userIndex = users.findIndex(u => u.username === username);
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
       
-      if (userIndex !== -1) {
+      if(userIndex !== -1) {
         users[userIndex].twoFactorEnabled = true;
         users[userIndex].twoFactorSecret = secretKey;
         users[userIndex].twoFactorSetupAt = new Date().toISOString();
-        localStorage.setItem('users', JSON.stringify(users));
+        await window.db.put(window.DB_STORES.USERS, newUser);
         
         addAuditLog('two_factor_enabled', `Two-factor authentication enabled for ${username}`, users[userIndex]);
         showNotification('Two-factor authentication setup completed!', 'success');

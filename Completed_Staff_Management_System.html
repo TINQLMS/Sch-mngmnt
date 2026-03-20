@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Management System</title>
+    <script src="shared-db.js"></script>
     <script src="shared-auth.js"></script>
+    <script src="shared-utils.js"></script>
     <style>
         * {
             margin: 0;
@@ -683,7 +685,7 @@
     <!-- Main JavaScript -->
     <script>
         // Enhanced Tab Management System
-        function showTab(tabName, event) {
+        async function showTab(tabName, event) {
             try {
                 console.log(`Switching to tab: ${tabName}`);
                 
@@ -701,7 +703,7 @@
 
                 // Show selected tab content
                 const selectedTab = document.getElementById(tabName);
-                if (selectedTab) {
+                if(selectedTab) {
                     selectedTab.classList.add('active');
                 } else {
                     console.error(`Tab content not found: ${tabName}`);
@@ -733,7 +735,7 @@
         }
 
         // Load tab-specific data
-        function loadTabData(tabName) {
+        async function loadTabData(tabName) {
             try {
                 switch(tabName) {
                     case 'onboarding':
@@ -763,9 +765,9 @@
         }
 
         // Load staff management data
-        function loadStaffManagementData() {
+        async function loadStaffManagementData() {
             try {
-                const staff = JSON.parse(localStorage.getItem('staff') || '[]');
+                const staff = await window.db.getAll(window.DB_STORES.STAFF);
                 renderStaffList(staff);
                 updateStaffMetrics(staff);
             } catch (error) {
@@ -774,17 +776,17 @@
         }
 
         // Render staff list
-        function renderStaffList(staff) {
+        async function renderStaffList(staff) {
             const container = document.getElementById('staffList');
             if (!container) return;
 
-            if (staff.length === 0) {
+            if(staff.length === 0) {
                 container.innerHTML = '<div class="no-data">No staff members found</div>';
                 return;
             }
 
             const table = `
-                <table class="data-table">
+                <div class="responsive-table-container"><table class="data-table">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -814,13 +816,13 @@
                             </tr>
                         `).join('')}
                     </tbody>
-                </table>
+                </table></div>
             `;
             container.innerHTML = table;
         }
 
         // Update staff metrics
-        function updateStaffMetrics(staff) {
+        async function updateStaffMetrics(staff) {
             const totalStaff = staff.length;
             const teachers = staff.filter(s => s.position === 'teacher' || s.role === 'teacher').length;
             const admins = staff.filter(s => s.position === 'administrator' || s.role === 'administrator').length;
@@ -833,10 +835,10 @@
         }
 
         // Load performance data
-        function loadPerformanceData() {
+        async function loadPerformanceData() {
             try {
-                const performances = JSON.parse(localStorage.getItem('performances') || '[]');
-                const staff = JSON.parse(localStorage.getItem('staff') || '[]');
+                const performances = await window.db.getAll(window.DB_STORES.ASSESSMENTS);
+                const staff = await window.db.getAll(window.DB_STORES.STAFF);
                 
                 // Populate staff select
                 const staffSelect = document.getElementById('performanceStaff');
@@ -858,17 +860,17 @@
         }
 
         // Render performance history
-        function renderPerformanceHistory(performances) {
+        async function renderPerformanceHistory(performances) {
             const container = document.getElementById('performanceHistory');
             if (!container) return;
 
-            if (performances.length === 0) {
+            if(performances.length === 0) {
                 container.innerHTML = '<div class="no-data">No performance reviews found</div>';
                 return;
             }
 
             const table = `
-                <table class="data-table">
+                <div class="responsive-table-container"><table class="data-table">
                     <thead>
                         <tr>
                             <th>Staff Member</th>
@@ -889,16 +891,16 @@
                             </tr>
                         `).join('')}
                     </tbody>
-                </table>
+                </table></div>
             `;
             container.innerHTML = table;
         }
 
         // Load scheduling data
-        function loadSchedulingData() {
+        async function loadSchedulingData() {
             try {
-                const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
-                const staff = JSON.parse(localStorage.getItem('staff') || '[]');
+                const schedules = await window.db.getAll('schedules');
+                const staff = await window.db.getAll(window.DB_STORES.STAFF);
                 
                 // Populate staff select
                 const staffSelect = document.getElementById('scheduleStaff');
@@ -920,17 +922,17 @@
         }
 
         // Render schedules
-        function renderSchedules(schedules) {
+        async function renderSchedules(schedules) {
             const container = document.getElementById('schedulesList');
             if (!container) return;
 
-            if (schedules.length === 0) {
+            if(schedules.length === 0) {
                 container.innerHTML = '<div class="no-data">No schedules found</div>';
                 return;
             }
 
             const table = `
-                <table class="data-table">
+                <div class="responsive-table-container"><table class="data-table">
                     <thead>
                         <tr>
                             <th>Staff Member</th>
@@ -951,15 +953,15 @@
                             </tr>
                         `).join('')}
                     </tbody>
-                </table>
+                </table></div>
             `;
             container.innerHTML = table;
         }
 
         // Load offer letters
-        function loadOfferLetters() {
+        async function loadOfferLetters() {
             try {
-                const offers = JSON.parse(localStorage.getItem('offers') || '[]');
+                const offers = await window.db.getAll('offers');
                 renderOfferLetters(offers);
             } catch (error) {
                 console.error('Error loading offer letters:', error);
@@ -967,17 +969,17 @@
         }
 
         // Render offer letters
-        function renderOfferLetters(offers) {
+        async function renderOfferLetters(offers) {
             const container = document.getElementById('offersList');
             if (!container) return;
 
-            if (offers.length === 0) {
+            if(offers.length === 0) {
                 container.innerHTML = '<div class="no-data">No offer letters found</div>';
                 return;
             }
 
             const table = `
-                <table class="data-table">
+                <div class="responsive-table-container"><table class="data-table">
                     <thead>
                         <tr>
                             <th>Candidate</th>
@@ -1008,18 +1010,18 @@
                             </tr>
                         `).join('')}
                     </tbody>
-                </table>
+                </table></div>
             `;
             container.innerHTML = table;
         }
 
         // Update analytics dashboard
-        function updateAnalyticsDashboard() {
+        async function updateAnalyticsDashboard() {
             try {
-                const staff = JSON.parse(localStorage.getItem('staff') || '[]');
-                const performances = JSON.parse(localStorage.getItem('performances') || '[]');
-                const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
-                const offers = JSON.parse(localStorage.getItem('offers') || '[]');
+                const staff = await window.db.getAll(window.DB_STORES.STAFF);
+                const performances = await window.db.getAll(window.DB_STORES.ASSESSMENTS);
+                const schedules = await window.db.getAll('schedules');
+                const offers = await window.db.getAll('offers');
 
                 // Update metrics
                 document.getElementById('analyticsTotalStaff').textContent = staff.length;
@@ -1042,7 +1044,7 @@
         }
 
         // Render analytics charts
-        function renderAnalyticsCharts(staff, performances, schedules, offers) {
+        async function renderAnalyticsCharts(staff, performances, schedules, offers) {
             const container = document.getElementById('analyticsCharts');
             if (!container) return;
 
@@ -1079,7 +1081,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Onboarding form
             const onboardingForm = document.getElementById('onboardingForm');
-            if (onboardingForm) {
+            if(onboardingForm) {
                 onboardingForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     handleOnboardingSubmission();
@@ -1118,7 +1120,7 @@
         });
 
         // Handle onboarding submission
-        function handleOnboardingSubmission() {
+        async function handleOnboardingSubmission() {
             try {
                 const formData = new FormData(document.getElementById('onboardingForm'));
                 const staffData = {
@@ -1133,15 +1135,25 @@
                     hireDate: new Date().toISOString()
                 };
 
-                const staff = JSON.parse(localStorage.getItem('staff') || '[]');
+                const staff = await window.db.getAll(window.DB_STORES.STAFF);
                 staff.push(staffData);
-                localStorage.setItem('staff', JSON.stringify(staff));
+                await window.db.put(window.DB_STORES.STAFF, staffData);
+
+                // Sync with unified user store
+                const roleMapping = {
+                    'teacher': 'staff',
+                    'manager': 'school-manager',
+                    'administrator': 'school-manager',
+                    'support': 'staff'
+                };
+                const userRole = roleMapping[staffData.position] || 'staff';
+                if (window.syncEntityToUser) await window.syncEntityToUser(staffData, userRole);
 
                 // Clear form
                 document.getElementById('onboardingForm').reset();
 
                 // Show success notification
-                notificationSystem.addNotification('success', 'Staff Added', `${staffData.fullName} has been successfully added to the system`);
+                notificationSystem.addNotification('success', 'Staff Added', `${staffData.fullName} has been successfully added to the system and user account created`);
 
                 // Refresh staff list if on management tab
                 if (document.getElementById('management').classList.contains('active')) {
@@ -1155,7 +1167,7 @@
         }
 
         // Handle performance submission
-        function handlePerformanceSubmission() {
+        async function handlePerformanceSubmission() {
             try {
                 const formData = new FormData(document.getElementById('performanceForm'));
                 const performanceData = {
@@ -1169,9 +1181,9 @@
                     reviewer: 'System' // In a real system, this would be the current user
                 };
 
-                const performances = JSON.parse(localStorage.getItem('performances') || '[]');
+                const performances = await window.db.getAll(window.DB_STORES.ASSESSMENTS);
                 performances.push(performanceData);
-                localStorage.setItem('performances', JSON.stringify(performances));
+                await window.db.put(window.DB_STORES.PERFORMANCES, performanceData);
 
                 // Clear form
                 document.getElementById('performanceForm').reset();
@@ -1191,7 +1203,7 @@
         }
 
         // Handle scheduling submission
-        function handleSchedulingSubmission() {
+        async function handleSchedulingSubmission() {
             try {
                 const formData = new FormData(document.getElementById('schedulingForm'));
                 const scheduleData = {
@@ -1206,9 +1218,9 @@
                     createdAt: new Date().toISOString()
                 };
 
-                const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
+                const schedules = await window.db.getAll('schedules');
                 schedules.push(scheduleData);
-                localStorage.setItem('schedules', JSON.stringify(schedules));
+                await window.db.put(window.DB_STORES.SCHEDULES, scheduleData);
 
                 // Clear form
                 document.getElementById('schedulingForm').reset();
@@ -1228,7 +1240,7 @@
         }
 
         // Handle offer submission
-        function handleOfferSubmission() {
+        async function handleOfferSubmission() {
             try {
                 const formData = new FormData(document.getElementById('offerForm'));
                 const offerData = {
@@ -1242,9 +1254,9 @@
                     createdAt: new Date().toISOString()
                 };
 
-                const offers = JSON.parse(localStorage.getItem('offers') || '[]');
+                const offers = await window.db.getAll('offers');
                 offers.push(offerData);
-                localStorage.setItem('offers', JSON.stringify(offers));
+                await window.db.put(window.DB_STORES.OFFERS, offerData);
 
                 // Clear form
                 document.getElementById('offerForm').reset();
@@ -1264,12 +1276,12 @@
         }
 
         // Staff management functions
-        function editStaff(staffId) {
+        async function editStaff(staffId) {
             try {
-                const staff = JSON.parse(localStorage.getItem('staff') || '[]');
+                const staff = await window.db.getAll(window.DB_STORES.STAFF);
                 const staffMember = staff.find(s => s.id === staffId);
                 
-                if (staffMember) {
+                if(staffMember) {
                     // Populate form with staff data
                     document.getElementById('fullName').value = staffMember.fullName || staffMember.name || '';
                     document.getElementById('email').value = staffMember.email || '';
@@ -1290,12 +1302,12 @@
             }
         }
 
-        function deleteStaff(staffId) {
+        async function deleteStaff(staffId) {
             if (confirm('Are you sure you want to delete this staff member? This action cannot be undone.')) {
                 try {
-                    const staff = JSON.parse(localStorage.getItem('staff') || '[]');
+                    const staff = await window.db.getAll(window.DB_STORES.STAFF);
                     const updatedStaff = staff.filter(s => s.id !== staffId);
-                    localStorage.setItem('staff', JSON.stringify(updatedStaff));
+                    await window.db.delete(window.DB_STORES.STAFF, staffId);
                     
                     notificationSystem.addNotification('success', 'Staff Deleted', 'Staff member has been successfully removed from the system');
                     
@@ -1311,13 +1323,13 @@
         }
 
         // Offer management functions
-        function approveOffer(offerId) {
+        async function approveOffer(offerId) {
             try {
-                const offers = JSON.parse(localStorage.getItem('offers') || '[]');
+                const offers = await window.db.getAll('offers');
                 const offer = offers.find(o => o.id === offerId);
-                if (offer) {
+                if(offer) {
                     offer.status = 'approved';
-                    localStorage.setItem('offers', JSON.stringify(offers));
+                    await window.db.put(window.DB_STORES.OFFERS, offerData);
                     
                     notificationSystem.addNotification('success', 'Offer Approved', 'Job offer has been approved');
                     
@@ -1332,13 +1344,13 @@
             }
         }
 
-        function rejectOffer(offerId) {
+        async function rejectOffer(offerId) {
             try {
-                const offers = JSON.parse(localStorage.getItem('offers') || '[]');
+                const offers = await window.db.getAll('offers');
                 const offer = offers.find(o => o.id === offerId);
-                if (offer) {
+                if(offer) {
                     offer.status = 'rejected';
-                    localStorage.setItem('offers', JSON.stringify(offers));
+                    await window.db.put(window.DB_STORES.OFFERS, offerData);
                     
                     notificationSystem.addNotification('success', 'Offer Rejected', 'Job offer has been rejected');
                     
@@ -1353,10 +1365,10 @@
             }
         }
 
-        function deleteOffer(offerId) {
+        async function deleteOffer(offerId) {
             if (confirm('Are you sure you want to delete this offer letter? This action cannot be undone.')) {
                 try {
-                    const offers = JSON.parse(localStorage.getItem('offers') || '[]');
+                    const offers = await window.db.getAll('offers');
                     const updatedOffers = offers.filter(o => o.id !== offerId);
                     localStorage.setItem('offers', JSON.stringify(updatedOffers));
                     
