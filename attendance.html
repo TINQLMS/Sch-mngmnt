@@ -9,11 +9,11 @@
   <script>
     // Authentication check - using shared function
     // Attendance is a Basic permission
-    async function checkAuth() { if (!window.db) await window.db.init(); return await window.checkAuth("student"); }
+    async function checkPageAuth() { if (!window.db) await window.db.init(); return await window.checkAuth("student"); }
     
     // Check auth on page load
     window.onload = async function() {
-      if (await checkAuth()) {
+      if (await checkPageAuth()) {
         if (window.db) { await window.db.init(); loadAll(); }
       }
     };
@@ -81,7 +81,7 @@
   <div class="container">
     <div class="header">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; width: 100%;">
-          <a href="Enhanced_School_Management_Portal.html" class="btn btn-secondary">← Back to Dashboard</a>
+          <button class="btn btn-secondary" onclick="window.goToDashboard()">← Back to Dashboard</button>
           <button class="btn btn-danger" onclick="window.logout()">Logout</button>
       </div>
       <div class="header-content">
@@ -538,14 +538,7 @@
     }
     
     // --- Init ---
-    document.addEventListener('DOMContentLoaded', async () => {
-        if (window.db) {
-            await window.db.init();
-            if (await checkAuth()) {
-                loadAll();
-            }
-        }
-    });
+    // Already handled by window.onload in head
   </script>
 </body>
 </html> 

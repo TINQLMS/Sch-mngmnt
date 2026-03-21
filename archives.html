@@ -119,7 +119,7 @@
 <body>
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-            <a href="Enhanced_School_Management_Portal.html" class="btn btn-secondary">← Back to Dashboard</a>
+            <button class="btn btn-secondary" onclick="window.goToDashboard()">← Back to Dashboard</button>
             <button class="btn btn-danger" onclick="window.logout()">Logout</button>
         </div>
         <h1>📜 Student Archives</h1>
@@ -159,7 +159,7 @@
     <script>
         let allArchives = [];
 
-        async function init() {
+        async function initPage() {
             if (!window.db) await window.db.init();
             if (!(await window.checkAuth('staff'))) return;
 
@@ -286,7 +286,7 @@
             }
         }
 
-        window.onload = init;
+        window.onload = initPage;
     </script>
 </body>
 </html>

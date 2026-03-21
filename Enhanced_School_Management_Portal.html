@@ -1210,7 +1210,7 @@
 
     async function checkAuth() {
       if (!window.db) await window.db.init();
-      return await window.checkAuth('student'); // All registered users have basic dashboard access
+      return await window.checkAuth('staff'); // Management portal requires at least staff access
     }
 
     function getUserRole() {
