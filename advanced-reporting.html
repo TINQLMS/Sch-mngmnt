@@ -4,7 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Advanced Reporting Engine</title>
+  <script src="shared-db.js"></script>
   <script src="shared-auth.js"></script>
+    <script src="shared-utils.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
@@ -246,7 +248,7 @@
       loadReportData();
     });
 
-    function initializeReportingEngine() {
+    async function initializeReportingEngine() {
       // Initialize reporting data structures
       if (!localStorage.getItem('customReports')) {
         localStorage.setItem('customReports', JSON.stringify([]));
@@ -256,14 +258,14 @@
       }
     }
 
-    function showTab(tabName) {
+    async function showTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
       document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
       document.getElementById(tabName).classList.add('active');
       event.target.classList.add('active');
     }
 
-    function loadReportData() {
+    async function loadReportData() {
       // Load data for report generation
       loadClasses();
       loadStudents();
@@ -274,14 +276,14 @@
     function loadClasses() {
       const classes = JSON.parse(localStorage.getItem('classes') || '[]');
       const select = document.getElementById('classSelect');
-      if (select) {
+      if(select) {
         select.innerHTML = '<option value="">All Classes</option>' +
           classes.map(cls => `<option value="${cls.id}">${cls.name}</option>`).join('');
       }
     }
 
     function loadStudents() {
-      const students = JSON.parse(localStorage.getItem('students') || '[]');
+      const students = await window.db.getAll(window.DB_STORES.ADMISSIONS);
       const select = document.getElementById('studentSelect');
       if (select) {
         select.innerHTML = '<option value="">All Students</option>' +
@@ -291,17 +293,17 @@
       }
     }
 
-    function loadSubjects() {
+    async function loadSubjects() {
       const subjects = ['Mathematics', 'English', 'Science', 'History', 'Geography', 'Art', 'Music', 'Physical Education'];
       const select = document.getElementById('subjectSelect');
-      if (select) {
+      if(select) {
         select.innerHTML = '<option value="">All Subjects</option>' +
           subjects.map(subject => `<option value="${subject}">${subject}</option>`).join('');
       }
     }
 
-    function loadStaff() {
-      const staff = JSON.parse(localStorage.getItem('staff') || '[]');
+    async function loadStaff() {
+      const staff = await window.db.getAll(window.DB_STORES.STAFF);
       const select = document.getElementById('staffSelect');
       if (select) {
         select.innerHTML = '<option value="">All Staff</option>' +
@@ -312,9 +314,9 @@
     }
 
     // Report Generation Functions
-    function generateStudentAnalytics() {
-      const students = JSON.parse(localStorage.getItem('students') || '[]');
-      const results = JSON.parse(localStorage.getItem('results') || '[]');
+    async function generateStudentAnalytics() {
+      const students = await window.db.getAll(window.DB_STORES.ADMISSIONS);
+      const results = await window.db.getAll(window.DB_STORES.ASSESSMENTS);
       
       const analytics = {
         totalStudents: students.length,
@@ -329,9 +331,9 @@
       alert('Student Analytics Report generated successfully!');
     }
 
-    function generateFinancialAnalytics() {
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
-      const invoices = JSON.parse(localStorage.getItem('invoices') || '[]');
+    async function generateFinancialAnalytics() {
+      const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
+      const invoices = await window.db.getAll(window.DB_STORES.FINANCIAL);
       
       const analytics = {
         totalRevenue: payments.reduce((sum, p) => sum + p.amount, 0),
@@ -348,9 +350,9 @@
       alert('Financial Analytics Report generated successfully!');
     }
 
-    function generateStaffAnalytics() {
-      const staff = JSON.parse(localStorage.getItem('staff') || '[]');
-      const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+    async function generateStaffAnalytics() {
+      const staff = await window.db.getAll(window.DB_STORES.STAFF);
+      const attendance = await window.db.getAll(window.DB_STORES.ATTENDANCE);
       
       const analytics = {
         totalStaff: staff.length,
@@ -365,9 +367,9 @@
       alert('Staff Analytics Report generated successfully!');
     }
 
-    function generateOperationalAnalytics() {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const auditLogs = JSON.parse(localStorage.getItem('auditLogs') || '[]');
+    async function generateOperationalAnalytics() {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const auditLogs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
       
       const analytics = {
         totalUsers: users.length,
@@ -384,7 +386,7 @@
     }
 
     // Academic Report Functions
-    function generateClassReport() {
+    async function generateClassReport() {
       const classId = document.getElementById('classSelect').value;
       const startDate = document.getElementById('academicStartDate').value;
       const endDate = document.getElementById('academicEndDate').value;
@@ -402,7 +404,7 @@
       alert('Class Performance Report generated successfully!');
     }
 
-    function generateStudentProgressReport() {
+    async function generateStudentProgressReport() {
       const studentId = document.getElementById('studentSelect').value;
       
       const report = {
@@ -454,7 +456,7 @@
       const reportType = document.getElementById('customReportType').value;
       const sortBy = document.getElementById('sortBy').value;
       
-      if (!reportType) {
+      if(!reportType) {
         alert('Please select a report type');
         return;
       }
@@ -634,7 +636,7 @@
 
     function calculateStudentProgress(studentId) {
       // Get real student data from localStorage
-      const students = JSON.parse(localStorage.getItem('students') || '[]');
+      const students = await window.db.getAll(window.DB_STORES.ADMISSIONS);
       const student = students.find(s => s.id === studentId);
       
       if (!student) {
@@ -652,12 +654,12 @@
       };
     }
 
-    function calculateStudentAttendance(studentId) {
+    async function calculateStudentAttendance(studentId) {
       // Get real attendance data from localStorage
-      const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+      const attendance = await window.db.getAll(window.DB_STORES.ATTENDANCE);
       const studentAttendance = attendance.filter(a => a.studentId === studentId);
       
-      if (studentAttendance.length === 0) {
+      if(studentAttendance.length === 0) {
         return 0;
       }
       
@@ -665,7 +667,7 @@
       return (presentDays / studentAttendance.length) * 100;
     }
 
-    function calculatePerformanceTrends(studentId) {
+    async function calculatePerformanceTrends(studentId) {
       // Get real performance data from localStorage
       const performance = JSON.parse(localStorage.getItem('performance') || '[]');
       const studentPerformance = performance.filter(p => p.studentId === studentId);
@@ -695,9 +697,9 @@
       };
     }
 
-    function generateRecommendations(studentId) {
+    async function generateRecommendations(studentId) {
       // Get real student data and generate recommendations
-      const students = JSON.parse(localStorage.getItem('students') || '[]');
+      const students = await window.db.getAll(window.DB_STORES.ADMISSIONS);
       const student = students.find(s => s.id === studentId);
       
       if (!student) {
@@ -707,7 +709,7 @@
       const recommendations = [];
       
       // Generate recommendations based on available data
-      if (student.attendance && student.attendance < 80) {
+      if(student.attendance && student.attendance < 80) {
         recommendations.push('Improve attendance rate');
       }
       
@@ -726,9 +728,9 @@
       return recommendations;
     }
 
-    function calculateRevenueData(period) {
+    async function calculateRevenueData(period) {
       // Get real payment data from localStorage
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
       const currentPeriod = new Date();
       const previousPeriod = new Date(currentPeriod.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
       
@@ -750,19 +752,19 @@
       };
     }
 
-    function calculateGrowthRate(period) {
+    async function calculateGrowthRate(period) {
       // Calculate growth rate based on real data
       const revenueData = calculateRevenueData(period);
       return revenueData.growth;
     }
 
-    function calculateRevenueProjections(period) {
+    async function calculateRevenueProjections(period) {
       // Calculate projections based on historical data
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
       const monthlyAverages = [];
       
       // Calculate monthly averages for the last 12 months
-      for (let i = 0; i < 12; i++) {
+      for(let i = 0; i < 12; i++) {
         const monthStart = new Date();
         monthStart.setMonth(monthStart.getMonth() - i);
         monthStart.setDate(1);
@@ -789,9 +791,9 @@
       };
     }
 
-    function calculatePaymentData(status) {
+    async function calculatePaymentData(status) {
       // Get real payment data from localStorage
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
       const filteredPayments = status ? payments.filter(p => p.status === status) : payments;
       
       const total = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -805,34 +807,34 @@
       };
     }
 
-    function calculateCollectionEfficiency(status) {
+    async function calculateCollectionEfficiency(status) {
       // Calculate collection efficiency based on real data
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
       const totalPayments = payments.length;
       const successfulPayments = payments.filter(p => p.status === 'completed').length;
       
       return totalPayments > 0 ? (successfulPayments / totalPayments) * 100 : 0;
     }
 
-    function calculateOutstandingAmounts(status) {
+    async function calculateOutstandingAmounts(status) {
       // Calculate outstanding amounts from real data
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+      const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
       const outstandingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
       
       return outstandingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
     }
 
-    function generateCustomData(reportType) {
+    async function generateCustomData(reportType) {
       // Get real data based on report type
-      switch (reportType) {
+      switch(reportType) {
         case 'students':
-          return JSON.parse(localStorage.getItem('students') || '[]');
+          return await window.db.getAll(window.DB_STORES.ADMISSIONS);
         case 'payments':
-          return JSON.parse(localStorage.getItem('payments') || '[]');
+          return await window.db.getAll(window.DB_STORES.FINANCIAL);
         case 'attendance':
-          return JSON.parse(localStorage.getItem('attendance') || '[]');
+          return await window.db.getAll(window.DB_STORES.ATTENDANCE);
         case 'users':
-          return JSON.parse(localStorage.getItem('users') || '[]');
+          return await window.db.getAll(window.DB_STORES.USERS);
         default:
           return [];
       }

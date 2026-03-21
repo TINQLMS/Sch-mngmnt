@@ -4,15 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Dashboard</title>
+    <script src="shared-db.js"></script>
     <script src="shared-auth.js"></script>
+    <script src="shared-utils.js"></script>
     <script>
         // Authentication check - using shared function
         function checkAuth() {
-            return window.checkAuth('student', 'Basic');
+            return window.checkAuth('student');
         }
         
         window.onload = function() {
             if (checkAuth()) {
+                if (typeof initializeDatabase === 'function') initializeDatabase();
                 loadStudentData();
             }
         };
@@ -200,7 +203,7 @@
 <body>
     <div class="header">
         <h1>Student Dashboard</h1>
-        <button class="logout-btn" onclick="logout()">Logout</button>
+        <button class="logout-btn" onclick="window.logout()">Logout</button>
     </div>
 
     <div class="container">
@@ -312,12 +315,12 @@
 
 
 
-        function loadStudentData() {
+        async function loadStudentData() {
             const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
             if (!currentUser) return;
 
             // Load student information
-            getAllFromStore('admissions').then(admissions => {
+            window.db.getAll(window.DB_STORES.ADMISSIONS).then(admissions => {
                 const student = admissions.find(a => a.admissionNo === currentUser.admissionNo);
                 if (student) {
                     document.getElementById('studentName').textContent = student.studentName;
@@ -330,7 +333,7 @@
             });
 
             // Load attendance data
-            getAllFromStore('attendance').then(attendanceRecords => {
+            window.db.getAll(window.DB_STORES.ATTENDANCE).then(attendanceRecords => {
                 const studentAttendance = attendanceRecords.filter(record => 
                     record.statuses && record.statuses[currentUser.admissionNo]
                 );
@@ -413,7 +416,7 @@
         }
 
         function loadRecipients() {
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const users = await window.db.getAll(window.DB_STORES.USERS);
             const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
             const recipientSelect = document.getElementById('recipient');
             

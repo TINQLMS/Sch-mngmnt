@@ -3,15 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <title>Assessment Management</title>
+  <script src="shared-db.js"></script>
   <script src="shared-auth.js"></script>
+  <script src="shared-utils.js"></script>
   <script>
-          // Authentication check - using shared function
       function checkAuth() {
-        return window.checkAuth('staff', 'Standard');
+        return window.checkAuth('staff');
       }
-    
-    // Check auth on page load
-    window.onload = checkAuth;
+    window.onload = function() {
+      if (checkAuth()) {
+        initializeDatabase();
+      }
+    };
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
@@ -154,7 +157,7 @@
     <div class="header">
       
       <div class="header-content">
-        <button onclick="goToDashboard()" class="btn-back">← Back to Dashboard</button>
+        <button onclick="window.goToDashboard()" class="btn-back">← Back to Dashboard</button>
         <h2>Assessment Management</h2>
       </div>
     </div>
@@ -191,7 +194,7 @@
 
     <div id="studentInfoContainer"></div>
 
-    <table>
+    <div class="responsive-table-container"><table>
       <thead>
         <tr>
           <th>Student</th><th>Class</th><th>Term</th><th>Subject</th>
@@ -199,7 +202,7 @@
         </tr>
       </thead>
       <tbody id="assessmentTable"></tbody>
-    </table>
+    </table></div>
 
     <div>
       <h3>Subject Performance</h3>
@@ -208,48 +211,6 @@
   </div>
 
   <script>
-    // Function to go to dashboard based on user role
-    function goToDashboard() {
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-        const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
-        
-        if (currentUser && currentUser.role) {
-            switch (currentUser.role) {
-                case 'super-admin':
-                case 'school-manager':
-                case 'staff':
-                    window.location.href = 'Enhanced_School_Management_Portal.html';
-                    break;
-                case 'student':
-                    window.location.href = 'student_dashboard.html';
-                    break;
-                case 'parent':
-                    window.location.href = 'parent_dashboard.html';
-                    break;
-                default:
-                    window.location.href = 'index.html';
-            }
-        } else if (loginCredentials && loginCredentials.role) {
-            switch (loginCredentials.role) {
-                case 'super-admin':
-                case 'school-manager':
-                case 'staff':
-                    window.location.href = 'Enhanced_School_Management_Portal.html';
-                    break;
-                case 'student':
-                    window.location.href = 'student_dashboard.html';
-                    break;
-                case 'parent':
-                    window.location.href = 'parent_dashboard.html';
-                    break;
-                default:
-                    window.location.href = 'index.html';
-            }
-        } else {
-            window.location.href = 'index.html';
-        }
-    }
-
     // --- IndexedDB/localStorage Fallback Setup ---
     let db, useLocalStorage = false, dbInitialized = false;
     function initializeDatabase() {
@@ -279,7 +240,7 @@
         }
       });
     }
-    function saveAssessment(assessment) {
+    async function saveAssessment(assessment) { return window.db.put(window.DB_STORES.ASSESSMENTS, assessment); }
       return new Promise((resolve, reject) => {
         if (useLocalStorage) {
           const arr = JSON.parse(localStorage.getItem('assessments') || '[]');
@@ -334,9 +295,9 @@
 
     function loadAll() {
       Promise.all([
-        getAllFromStore('assessments'),
-        getAllFromStore('attendance'),
-        getAllFromStore('admissions')
+        window.db.getAll(window.DB_STORES.ASSESSMENTS),
+        window.db.getAll(window.DB_STORES.ATTENDANCE),
+        window.db.getAll(window.DB_STORES.ADMISSIONS)
       ]).then(([assess, attend, admis]) => {
         assessments = assess;
         attendanceData = attend;
@@ -401,7 +362,7 @@
           html += `<div class="detail-item"><span class="detail-label">Parent:</span><span class="detail-value">${studentInfo.fatherName || studentInfo.motherName || 'N/A'}</span></div>`;
           html += `<div class="detail-item"><span class="detail-label">Contact:</span><span class="detail-value">${studentInfo.contactNumber || 'N/A'}</span></div>`;
         }
-        html += '</div></div>';
+        html += '</div>';
         document.getElementById("studentInfoContainer").innerHTML = html;
       }
     }
@@ -515,7 +476,7 @@
       
       let html = `<h3>Assessment Report for ${student.studentName}</h3>`;
       html += `<p><strong>Student ID:</strong> ${studentId} | <strong>Class:</strong> ${student.class}</p>`;
-      html += `<table border="1" style="width:100%; border-collapse:collapse;">`;
+      html += `<div class="responsive-table-container"><table border="1" style="width:100%; border-collapse:collapse;">`;
       html += `<tr><th>Subject</th><th>Type</th><th>Term</th><th>Score</th><th>Out Of</th><th>%</th><th>Remark</th></tr>`;
       
       rows.forEach(r => {
@@ -523,7 +484,7 @@
         <td>${r.outOf}</td><td>${r.percent}%</td><td>${r.remark || ''}</td></tr>`;
       });
       
-      html += "</table>";
+      html += "</table></div>";
       
       // Calculate averages
       const subjects = {};
@@ -564,7 +525,7 @@
 
       let csv = "Student Name,Class,Term,Subject,Type,Score,Out Of,Percentage,Remark\n";
       filtered.forEach(a => {
-        csv += `"${a.studentName}","${a.class}","${a.term}","${a.subject}","${a.type}",${a.score},${a.outOf},${a.percent}%,"${a.remark || ''}"\n`;
+        csv += `\"${a.studentName}\",\"${a.class}\",\"${a.term}\",\"${a.subject}\",\"${a.type}\",${a.score},${a.outOf},${a.percent}%,\"${a.remark || ''}\"\n`;
       });
 
       const blob = new Blob([csv], { type: 'text/csv' });
@@ -621,9 +582,6 @@
         });
       }
     }
-
-    // Initialize
-    initializeDatabase();
   </script>
 </body>
 </html>

@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Termly Report Card</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="shared-db.js"></script>
   <script src="shared-auth.js"></script>
+  <script src="shared-utils.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -121,7 +123,7 @@
     <p>You do not have permission to access the Termly Report Card module.</p>
     <p>Required Access Level: Standard or higher</p>
     <button onclick="goToLogin()">Go to Login</button>
-    <button onclick="goToDashboard()">Go to Dashboard</button>
+    <button onclick="window.goToDashboard()">Go to Dashboard</button>
   </div>
 
   <!-- User Info Display -->
@@ -135,7 +137,7 @@
   <div class="report-card" id="reportCard">
     <h2>VISION PREPARATORY SCHOOL<br>LEARNER'S REPORT CARD</h2>
     <div class="section">
-      <table class="no-border">
+      <div class="responsive-table-container"><table class="no-border">
         <tr>
           <td>Name of Student: <input type="text" id="studentName" style="width: 80%;"></td>
           <td>Form: <input type="text" id="form" style="width: 60%;"></td>
@@ -148,10 +150,10 @@
         <tr>
           <td colspan="3">Position: <input type="text" id="position" style="width: 20%;"></td>
         </tr>
-      </table>
+      </table></div>
     </div>
     <div class="section">
-      <table>
+      <div class="responsive-table-container"><table>
         <thead>
           <tr>
             <th>Subjects</th>
@@ -164,7 +166,7 @@
           </tr>
         </thead>
         <tbody id="subjectTable"></tbody>
-      </table>
+      </table></div>
     </div>
     <div class="section">
       <p>Attendance: <input type="text" id="attendance"> out of <input type="text" id="totalAttendance"> Repeat/Promoted to: <input type="text" id="promoted"></p>
@@ -191,7 +193,7 @@
       <button onclick="loadFromIndexedDB()">📂 Load</button>
       <button onclick="printReport()">🖨️ Print</button>
       <button onclick="exportPDF()">📄 Export PDF</button>
-      <button onclick="goToDashboard()" style="background: #667eea; color: white;">🏠 Back to Dashboard</button>
+      <button onclick="window.goToDashboard()" style="background: #667eea; color: white;">🏠 Back to Dashboard</button>
     </div>
   </div>
   <script>
@@ -270,9 +272,7 @@
     function goToDashboard() {
       const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
       if (loginCredentials) {
-        if (loginCredentials.role === 'student') {
-          window.location.href = 'student_dashboard.html';
-        } else if (loginCredentials.role === 'parent') {
+        if (loginCredentials.role === 'parent') {
           window.location.href = 'parent_dashboard.html';
         } else {
           window.location.href = 'Enhanced_School_Management_Portal.html';

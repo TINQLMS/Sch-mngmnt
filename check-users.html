@@ -326,7 +326,7 @@
 
         function loadAllData() {
             try {
-                allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+                allUsers = await window.db.getAll(window.DB_STORES.USERS);
                 systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
                 staff = JSON.parse(localStorage.getItem('staff') || '[]');
                 auditLogs = JSON.parse(localStorage.getItem('auditLogs') || '[]');

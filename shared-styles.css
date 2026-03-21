@@ -503,3 +503,41 @@ body {
         font-size: 16px; /* Prevents zoom on iOS */
     }
 }
+
+/* Additional Responsive Enhancements */
+.responsive-table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 20px;
+    border-radius: 10px;
+}
+
+@media (max-width: 375px) {
+    .header h1 {
+        font-size: 1.25rem;
+    }
+    .header p {
+        font-size: 0.9rem;
+    }
+    .card {
+        padding: 15px;
+    }
+    .btn {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Grid layout responsiveness */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
