@@ -82,17 +82,20 @@
         `;
     }
 
-    function showSection(id) {
+    function showSection(id, event) {
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        event.target.classList.add('active');
+        const targetSection = document.getElementById(id);
+        if (targetSection) {
+            targetSection.classList.add('active');
+        }
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
     }
 
     async function checkPageAuth() {
       return window.checkAuth('school-manager');
-    async function checkPageAuth() {
-      return window.checkAuth('super-admin');
     }
     
     // Check auth on page load
@@ -208,15 +211,15 @@
   </header>
 
   <nav>
-    <button onclick="showSection('admission')" class="active">Admission Info</button>
-    <button onclick="showSection('reports')">Reports</button>
-    <button onclick="showSection('analytics')">Analytics</button>
+      <button onclick="showSection('admission', event)" class="active">Admission Info</button>
+      <button onclick="showSection('reports', event)">Reports</button>
+      <button onclick="showSection('analytics', event)">Analytics</button>
   </nav>
 
   <section id="admission" class="active">
     <h2>Admission Information</h2>
     <div class="tab-headers" id="tabHeaders"></div>
-    <div class="progress-outer"><div class="progress-inner" id="progress"></div>
+    <div class="progress-outer"><div class="progress-inner" id="progress"></div></div>
     <form id="admissionForm"></form>
     <div class="form-actions">
       <button type="button" id="reset-form">Reset/Clear</button>
@@ -241,7 +244,7 @@
       </table></div>
     </div>
     <div class="pagination" id="pagination"></div>
-    <div id="modal-bg" class="modal-bg" style="display:none;"><div class="modal" id="modal-content"></div>
+    <div id="modal-bg" class="modal-bg" style="display:none;"><div class="modal" id="modal-content"></div></div>
     <div id="spinner" class="spinner" style="display:none;"></div>
   </section>
 
@@ -310,7 +313,7 @@
     </div>
   </section>
 
-  
+
   <script>
     const admissionTabs = [
       { title: 'Student Info', fields: [
@@ -327,12 +330,6 @@
         { label: 'Contact Phone', name: 'contactNumber', required: true },
         { label: 'Email Address', name: 'email' },
         { label: 'Home Address', name: 'address' }
-        { label: 'Gender', name: 'gender', type: 'select', options: ['Male','Female','Other'], required: true },
-        { label: 'Class', name: 'classAdmitted', type: 'select', options: ['Class 1','Class 2','Class 3','JHS1','JHS2','JHS3'], required: true }
-      ]},
-      { title: 'Parent Info', fields: [
-        { label: 'Parent Name', name: 'parentName', required: true },
-        { label: 'Phone', name: 'parentPhone', required: true }
       ]}
     ];
 
@@ -416,17 +413,9 @@
         `;
     }
 
-    function showSection(id) {
-        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        event.target.classList.add('active');
-    }
 
     async function checkPageAuth() {
       return await window.checkAuth('school-manager');
-    async function checkPageAuth() {
-      return await window.checkAuth('super-admin');
     }
 
     async function showTab(idx) {
@@ -448,7 +437,6 @@
         input.name = field.name;
         input.value = formData[field.name] || '';
         input.onchange = (e) => formData[field.name] = e.target.value;
-        input.oninput = (e) => formData[field.name] = e.target.value;
         div.appendChild(input);
         form.appendChild(div);
       });
@@ -483,22 +471,91 @@
     async function saveToDatabase(data) { return await window.db.put(window.DB_STORES.ADMISSIONS, data); }
     async function deleteFromDatabase(k) { return await window.db.delete(window.DB_STORES.ADMISSIONS, k); }
 
-    async function refreshTable() {
-      const rows = await getAllFromDatabase();
-      const tbody = document.querySelector('#admissionTable tbody');
-      tbody.innerHTML = rows.map(r => `
-        <tr>
-          <td>${r.admissionNo}</td>
-          <td>${r.studentName}</td>
-          <td>${r.gender}</td>
-          <td>${r.classAdmitted}</td>
-          <td>
-            <button onclick="editAdmission('${r.admissionNo}')">Edit</button>
-            <button onclick="deleteAdmission('${r.admissionNo}')">Delete</button>
-          </td>
-        </tr>
-      `).join('');
+
+    async function performSearchAndFilter() {
+        const searchVal = document.getElementById('search').value.toLowerCase();
+        const filterClass = document.getElementById('filter-class').value;
+        const filterGender = document.getElementById('filter-gender').value;
+
+        const allAdmissions = await getAllFromDatabase();
+        const filtered = allAdmissions.filter(a => {
+            const matchesSearch = (a.studentName || '').toLowerCase().includes(searchVal) ||
+                                (a.admissionNo || '').toLowerCase().includes(searchVal);
+            const matchesClass = !filterClass || a.classAdmitted === filterClass;
+            const matchesGender = !filterGender || a.gender === filterGender;
+            return matchesSearch && matchesClass && matchesGender;
+        });
+
+        renderTable(filtered);
     }
+
+    function renderTable(rows) {
+        const tbody = document.querySelector('#admissionTable tbody');
+        tbody.innerHTML = rows.map(r => `
+            <tr>
+                <td><strong>${r.admissionNo}</strong></td>
+                <td>${r.studentName}</td>
+                <td>${r.gender}</td>
+                <td>${r.classAdmitted}</td>
+                <td>
+                    <button class="btn btn-edit" onclick="editAdmission('${r.admissionNo}')">Edit</button>
+                    <button class="btn btn-delete" onclick="deleteAdmission('${r.admissionNo}')">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function refreshTable() {
+        const rows = await getAllFromDatabase();
+        // Update filters based on current data
+        const classFilter = document.getElementById('filter-class');
+        const classes = [...new Set(rows.map(r => r.classAdmitted))].filter(Boolean);
+        classFilter.innerHTML = '<option value="">All Classes</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
+
+        const genderFilter = document.getElementById('filter-gender');
+        const genders = [...new Set(rows.map(r => r.gender))].filter(Boolean);
+        genderFilter.innerHTML = '<option value="">All Genders</option>' + genders.map(g => `<option value="${g}">${g}</option>`).join('');
+
+        renderTable(rows);
+    }
+
+    function exportToCSV() {
+        getAllFromDatabase().then(rows => {
+            if (rows.length === 0) return alert('No data to export');
+            const headers = Object.keys(rows[0]).join(',');
+            const csv = [headers, ...rows.map(row => Object.values(row).join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'admissions.csv';
+            a.click();
+        });
+    }
+
+    // Initialize listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('search');
+        if (searchInput) searchInput.addEventListener('input', performSearchAndFilter);
+
+        const classFilter = document.getElementById('filter-class');
+        if (classFilter) classFilter.addEventListener('change', performSearchAndFilter);
+
+        const genderFilter = document.getElementById('filter-gender');
+        if (genderFilter) genderFilter.addEventListener('change', performSearchAndFilter);
+
+        const exportBtn = document.getElementById('export-csv');
+        if (exportBtn) exportBtn.addEventListener('click', exportToCSV);
+
+        const resetBtn = document.getElementById('reset-form');
+        if (resetBtn) resetBtn.addEventListener('click', () => {
+            formData = {};
+            editingKey = null;
+            showTab(0);
+        });
+    });
+
+
 
     window.editAdmission = async (k) => {
       const rows = await getAllFromDatabase();
@@ -513,10 +570,27 @@
 
     document.getElementById('admissionForm').onsubmit = async (e) => {
       e.preventDefault();
-      if (!formData.admissionNo) formData.admissionNo = 'ADM' + Date.now();
-      await saveToDatabase({...formData});
-      formData = {}; editingKey = null; showTab(0); await refreshTable();
-      alert('Saved!');
+      try {
+          if (!formData.admissionNo) formData.admissionNo = 'ADM' + Date.now();
+          formData.createdAt = formData.createdAt || new Date().toISOString();
+          formData.updatedAt = new Date().toISOString();
+
+          await saveToDatabase({...formData});
+
+          // Sync with users store
+          if (window.syncEntityToUser) {
+              await window.syncEntityToUser(formData, 'student');
+          }
+
+          formData = {};
+          editingKey = null;
+          showTab(0);
+          await refreshTable();
+          alert('Admission record saved successfully!');
+      } catch (error) {
+          console.error('Error saving admission:', error);
+          alert('Failed to save admission record.');
+      }
     };
 
     window.onload = async function() {

@@ -1,0 +1,15 @@
+127.0.0.1 - - [21/Mar/2026 13:45:03] "GET /setup.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:45:03] "GET /shared-styles.css HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:45:03] "GET /shared-db.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:45:03] "GET /shared-utils.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:45:03] "GET /shared-auth.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:45:05] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:45:08] "GET /termly_report_card.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:46:59] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:46:59] "GET /shared-db.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:46:59] "GET /shared-auth.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:46:59] "GET /shared-utils.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:46:59] "GET /shared-styles.css HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:46:59] "GET /Enhanced_School_Management_Portal.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:47:01] "GET /termly_report_card.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 13:47:06] "GET /archives.html HTTP/1.1" 200 -

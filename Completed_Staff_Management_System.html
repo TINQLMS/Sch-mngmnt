@@ -323,17 +323,18 @@
                 flex-direction: column;
                 align-items: center;
             }
-            
+
             .nav-tab {
                 width: 100%;
                 max-width: 300px;
             }
-            
+
             .metrics-grid {
                 grid-template-columns: 1fr;
             }
         }
     </style>
+    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
     <div class="container">
@@ -351,66 +352,147 @@
             <button class="nav-tab" onclick="showTab('scheduling')">📅 Scheduling</button>
             <button class="nav-tab" onclick="showTab('offers')">📄 Offer Letters</button>
             <button class="nav-tab" onclick="showTab('analytics')">📊 Analytics</button>
+            <button class="nav-tab" onclick="showTab('messaging')">💬 Messaging</button>
         </div>
 
         <!-- Notification Container -->
         <div id="notificationContainer" class="notification-container"></div>
 
         <!-- Tab Contents -->
-        
+
         <!-- Onboarding Tab -->
         <div id="onboarding" class="tab-content active">
             <h2>🚀 Staff Onboarding</h2>
             <p>Streamlined onboarding process for new staff members</p>
-            
+
             <form id="onboardingForm">
+                <div class="form-group">
+                    <label for="username">Username *</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
                 <div class="form-group">
                     <label for="fullName">Full Name *</label>
                     <input type="text" id="fullName" name="fullName" required>
                 </div>
-                
                 <div class="form-group">
                     <label for="email">Email Address *</label>
                     <input type="email" id="email" name="email" required>
                 </div>
-                
+                <div class="form-group">
+                    <label for="gender">Gender *</label>
+                    <select id="gender" name="gender" required onchange="toggleGenderOther()">
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group" id="genderOtherGroup" style="display: none;">
+                    <label for="genderOther">Specify Gender</label>
+                    <input type="text" id="genderOther" name="genderOther">
+                </div>
                 <div class="form-group">
                     <label for="phone">Phone Number *</label>
                     <input type="tel" id="phone" name="phone" required>
                 </div>
-                
+
                 <div class="form-group">
-                    <label for="position">Position *</label>
-                    <select id="position" name="position" required>
-                        <option value="">Select Position</option>
-                        <option value="teacher">Teacher</option>
-                        <option value="administrator">Administrator</option>
-                        <option value="support">Support Staff</option>
-                        <option value="manager">Manager</option>
+                    <label for="position">Role *</label>
+                    <select id="position" name="position" required onchange="onPositionChange(); updateAccessDescription();">
+                        <option value="">Select Role</option>
+                        <option value="Teacher">Teacher</option>
+                        <option value="School Manager">School Manager</option>
+                        <option value="Super Admin">Super Admin</option>
+                        <option value="Non-Teaching">Non-Teaching</option>
                     </select>
                 </div>
-                
+
+                <div class="form-group">
+                    <label for="accessLevel">Access Level *</label>
+                    <select id="accessLevel" name="accessLevel" required onchange="updateAccessDescription()">
+                        <option value="Standard">Standard</option>
+                        <option value="Administrator">Administrator</option>
+                        <option value="Super Administrator">Super Administrator</option>
+                        <option value="Basic">Basic</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="accessDescription">Access Description</label>
+                    <textarea id="accessDescription" rows="3" readonly placeholder="Access level description"></textarea>
+                </div>
+
+                <div class="form-group" id="staffIdGroup" style="display: none;">
+                    <label for="staffId">Staff ID (Auto-generated)</label>
+                    <input type="text" id="staffId" name="staffId" readonly>
+                </div>
+
+                <div class="form-group" id="classGroup" style="display: none;">
+                    <label for="assignedClass">Assigned Class *</label>
+                    <select id="assignedClass" name="assignedClass">
+                        <option value="">Select Class</option>
+                        <option value="Creche">Creche</option>
+                        <option value="Nursery">Nursery</option>
+                        <option value="KG1">KG1</option>
+                        <option value="KG2">KG2</option>
+                        <option value="Class 1">Class 1</option>
+                        <option value="Class 2">Class 2</option>
+                        <option value="Class 3">Class 3</option>
+                        <option value="Class 4">Class 4</option>
+                        <option value="Class 5">Class 5</option>
+                        <option value="Class 6">Class 6</option>
+                        <option value="JHS1">JHS1</option>
+                        <option value="JHS2">JHS2</option>
+                        <option value="JHS3">JHS3</option>
+                    </select>
+                </div>
+
                 <div class="form-group">
                     <label for="department">Department *</label>
-                    <select id="department" name="department" required>
+                    <select id="department" name="department" required onchange="toggleDepartmentOther()">
                         <option value="">Select Department</option>
                         <option value="academic">Academic</option>
                         <option value="administration">Administration</option>
                         <option value="it">IT Support</option>
                         <option value="maintenance">Maintenance</option>
+                        <option value="Others">Others</option>
                     </select>
                 </div>
-                
+                <div class="form-group" id="departmentOtherGroup" style="display: none;">
+                    <label for="departmentOther">Specify Department</label>
+                    <input type="text" id="departmentOther" name="departmentOther">
+                </div>
+
                 <div class="form-group">
                     <label for="startDate">Start Date *</label>
                     <input type="date" id="startDate" name="startDate" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="salary">Salary (₵) *</label>
                     <input type="number" id="salary" name="salary" min="0" step="0.01" required>
                 </div>
-                
+
+                <div class="form-group">
+                    <label for="password">Password <span id="pwdRequired">*</span></label>
+                    <input type="password" id="password" name="password">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password <span id="cpwdRequired">*</span></label>
+                    <input type="password" id="confirmPassword" name="confirmPassword">
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="twoFactorEnabled" name="twoFactorEnabled"> Enable Two-Factor Authentication
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="emailVerification" name="emailVerification" checked> Send Email Verification
+                    </label>
+                </div>
+
                 <button type="submit" class="btn">Add Staff Member</button>
             </form>
         </div>
@@ -419,7 +501,7 @@
         <div id="management" class="tab-content">
             <h2>👥 Staff Management</h2>
             <p>Manage existing staff members and their information</p>
-            
+
             <div class="metrics-grid">
                 <div class="metric-card">
                     <div class="metric-icon">👥</div>
@@ -450,7 +532,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div id="staffList">
                 <div class="loading">
                     <div class="spinner"></div>
@@ -463,7 +545,7 @@
         <div id="performance" class="tab-content">
             <h2>📈 Performance Management</h2>
             <p>Track and manage staff performance reviews</p>
-            
+
             <form id="performanceForm">
                 <div class="form-group">
                     <label for="performanceStaff">Staff Member *</label>
@@ -471,7 +553,7 @@
                         <option value="">Select Staff Member</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="reviewPeriod">Review Period *</label>
                     <select id="reviewPeriod" name="reviewPeriod" required>
@@ -481,7 +563,7 @@
                         <option value="annual">Annual</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="performanceRating">Performance Rating *</label>
                     <select id="performanceRating" name="performanceRating" required>
@@ -493,15 +575,15 @@
                         <option value="unsatisfactory">Unsatisfactory (1)</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="performanceComments">Comments</label>
                     <textarea id="performanceComments" name="performanceComments" rows="4"></textarea>
                 </div>
-                
+
                 <button type="submit" class="btn">Submit Performance Review</button>
             </form>
-            
+
             <div id="performanceHistory">
                 <h3>Performance History</h3>
                 <div class="loading">
@@ -515,7 +597,7 @@
         <div id="scheduling" class="tab-content">
             <h2>📅 Staff Scheduling</h2>
             <p>Create and manage staff schedules</p>
-            
+
             <form id="schedulingForm">
                 <div class="form-group">
                     <label for="scheduleStaff">Staff Member *</label>
@@ -523,22 +605,22 @@
                         <option value="">Select Staff Member</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="scheduleDate">Date *</label>
                     <input type="date" id="scheduleDate" name="scheduleDate" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="startTime">Start Time *</label>
                     <input type="time" id="startTime" name="startTime" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="endTime">End Time *</label>
                     <input type="time" id="endTime" name="endTime" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="scheduleType">Schedule Type *</label>
                     <select id="scheduleType" name="scheduleType" required>
@@ -549,10 +631,10 @@
                         <option value="training">Training</option>
                     </select>
                 </div>
-                
+
                 <button type="submit" class="btn">Create Schedule</button>
             </form>
-            
+
             <div id="schedulesList">
                 <h3>Current Schedules</h3>
                 <div class="loading">
@@ -566,33 +648,33 @@
         <div id="offers" class="tab-content">
             <h2>📄 Offer Letters</h2>
             <p>Manage job offer letters and applications</p>
-            
+
             <form id="offerForm">
                 <div class="form-group">
                     <label for="candidateName">Candidate Name *</label>
                     <input type="text" id="candidateName" name="candidateName" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="candidateEmail">Candidate Email *</label>
                     <input type="email" id="candidateEmail" name="candidateEmail" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="offerPosition">Position *</label>
                     <input type="text" id="offerPosition" name="offerPosition" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="offerSalary">Salary (₵) *</label>
                     <input type="number" id="offerSalary" name="offerSalary" min="0" step="0.01" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="offerStartDate">Start Date *</label>
                     <input type="date" id="offerStartDate" name="offerStartDate" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="offerStatus">Status *</label>
                     <select id="offerStatus" name="offerStatus" required>
@@ -602,10 +684,10 @@
                         <option value="rejected">Rejected</option>
                     </select>
                 </div>
-                
+
                 <button type="submit" class="btn">Create Offer Letter</button>
             </form>
-            
+
             <div id="offersList">
                 <h3>Offer Letters</h3>
                 <div class="loading">
@@ -619,7 +701,7 @@
         <div id="analytics" class="tab-content">
             <h2>📊 Staff Analytics Dashboard</h2>
             <p>Comprehensive analytics and insights</p>
-            
+
             <div class="metrics-grid">
                 <div class="metric-card">
                     <div class="metric-icon">👥</div>
@@ -664,12 +746,49 @@
                     </div>
                 </div>
             </div>
-            
+
             <div id="analyticsCharts">
                 <h3>Performance Trends</h3>
                 <div class="loading">
                     <div class="spinner"></div>
                     <p>Loading analytics...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messaging Tab -->
+        <div id="messaging" class="tab-content">
+            <h2>💬 Staff Messaging</h2>
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+                <div class="card">
+                    <button class="btn" onclick="showStaffComposeForm()">Compose Message</button>
+                    <div id="staffMessageList" style="margin-top: 15px;">
+                        <!-- Messages loaded here -->
+                    </div>
+                </div>
+                <div class="card">
+                    <div id="staffMessageContent">
+                        <p>Select a message to view content</p>
+                    </div>
+                    <div id="staffComposeForm" style="display: none;">
+                        <h3>New Message</h3>
+                        <form onsubmit="sendStaffMessage(event)">
+                            <div class="form-group">
+                                <label>Recipient</label>
+                                <select id="staffRecipient" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Subject</label>
+                                <input type="text" id="staffSubject" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Message</label>
+                                <textarea id="staffMessageText" required></textarea>
+                            </div>
+                            <button type="submit" class="btn">Send</button>
+                            <button type="button" class="btn btn-secondary" onclick="hideStaffComposeForm()">Cancel</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -684,11 +803,18 @@
 
     <!-- Main JavaScript -->
     <script>
+        let editingStaffId = null;
+
+    async function checkAuthPage() {
+        if (!window.db) await window.db.init();
+        return await window.checkAuth('school-manager');
+    }
+
         // Enhanced Tab Management System
         async function showTab(tabName, event) {
             try {
                 console.log(`Switching to tab: ${tabName}`);
-                
+
                 // Hide all tab contents
                 const tabContents = document.querySelectorAll('.tab-content');
                 tabContents.forEach(content => {
@@ -724,13 +850,13 @@
                 }
 
                 // Load tab-specific data
-                loadTabData(tabName);
+                await loadTabData(tabName);
 
-                notificationSystem.addNotification('success', 'Tab Switched', `Switched to ${tabName} tab`);
-                
+                window.showNotification('success', 'Tab Switched', `Switched to ${tabName} tab`);
+
             } catch (error) {
                 console.error('Error switching tabs:', error);
-                notificationSystem.addNotification('error', 'Tab Error', `Failed to switch to ${tabName} tab`);
+                window.showNotification('error', 'Tab Error', `Failed to switch to ${tabName} tab`);
             }
         }
 
@@ -742,19 +868,22 @@
                         // Onboarding tab is already loaded by default
                         break;
                     case 'management':
-                        loadStaffManagementData();
+                        await loadStaffManagementData();
                         break;
                     case 'performance':
-                        loadPerformanceData();
+                        await loadPerformanceData();
                         break;
                     case 'scheduling':
-                        loadSchedulingData();
+                        await loadSchedulingData();
                         break;
                     case 'offers':
-                        loadOfferLetters();
+                        await loadOfferLetters();
                         break;
                     case 'analytics':
-                        updateAnalyticsDashboard();
+                        await updateAnalyticsDashboard();
+                        break;
+                    case 'messaging':
+                        await loadStaffMessages();
                         break;
                     default:
                         console.log(`No specific data loading for tab: ${tabName}`);
@@ -837,9 +966,9 @@
         // Load performance data
         async function loadPerformanceData() {
             try {
-                const performances = await window.db.getAll(window.DB_STORES.ASSESSMENTS);
+                const performances = await window.db.getAll(window.DB_STORES.PERFORMANCES);
                 const staff = await window.db.getAll(window.DB_STORES.STAFF);
-                
+
                 // Populate staff select
                 const staffSelect = document.getElementById('performanceStaff');
                 if (staffSelect) {
@@ -899,9 +1028,9 @@
         // Load scheduling data
         async function loadSchedulingData() {
             try {
-                const schedules = await window.db.getAll('schedules');
+                const schedules = await window.db.getAll(window.DB_STORES.SCHEDULES);
                 const staff = await window.db.getAll(window.DB_STORES.STAFF);
-                
+
                 // Populate staff select
                 const staffSelect = document.getElementById('scheduleStaff');
                 if (staffSelect) {
@@ -961,7 +1090,7 @@
         // Load offer letters
         async function loadOfferLetters() {
             try {
-                const offers = await window.db.getAll('offers');
+                const offers = await window.db.getAll(window.DB_STORES.OFFERS);
                 renderOfferLetters(offers);
             } catch (error) {
                 console.error('Error loading offer letters:', error);
@@ -1019,9 +1148,9 @@
         async function updateAnalyticsDashboard() {
             try {
                 const staff = await window.db.getAll(window.DB_STORES.STAFF);
-                const performances = await window.db.getAll(window.DB_STORES.ASSESSMENTS);
-                const schedules = await window.db.getAll('schedules');
-                const offers = await window.db.getAll('offers');
+                const performances = await window.db.getAll(window.DB_STORES.PERFORMANCES);
+                const schedules = await window.db.getAll(window.DB_STORES.SCHEDULES);
+                const offers = await window.db.getAll(window.DB_STORES.OFFERS);
 
                 // Update metrics
                 document.getElementById('analyticsTotalStaff').textContent = staff.length;
@@ -1031,7 +1160,7 @@
                 document.getElementById('analyticsOffers').textContent = offers.filter(o => o.status === 'pending').length;
 
                 // Calculate average performance rating
-                const avgRating = performances.length > 0 
+                const avgRating = performances.length > 0
                     ? (performances.reduce((sum, p) => sum + (parseInt(p.rating) || 0), 0) / performances.length).toFixed(1)
                     : '0.0';
                 document.getElementById('analyticsAvgRating').textContent = avgRating;
@@ -1119,50 +1248,167 @@
             initializeSystem();
         });
 
+        function toggleGenderOther() {
+            const gender = document.getElementById('gender').value;
+            document.getElementById('genderOtherGroup').style.display = gender === 'Other' ? 'block' : 'none';
+        }
+
+        function toggleDepartmentOther() {
+            const dept = document.getElementById('department').value;
+            document.getElementById('departmentOtherGroup').style.display = dept === 'Others' ? 'block' : 'none';
+        }
+
+        function updateAccessDescription() {
+            const role = document.getElementById('position').value;
+            const accessLevel = document.getElementById('accessLevel').value;
+            const desc = document.getElementById('accessDescription');
+
+            const descriptions = {
+                'Super Administrator': 'Full system access with complete administrative privileges. Can manage all users, settings, and system configurations.',
+                'Administrator': 'Advanced administrative access for school management. Can manage staff, students, and most school operations.',
+                'Standard': 'Standard access for teaching staff. Can manage class-related activities, student records, and academic functions.',
+                'Basic': 'Limited access. Restricted to personal information and specific modules.'
+            };
+
+            // Auto-set access level based on role if not manually changed
+            if (role === 'Super Admin') {
+                document.getElementById('accessLevel').value = 'Super Administrator';
+            } else if (role === 'School Manager') {
+                document.getElementById('accessLevel').value = 'Administrator';
+            } else if (role === 'Teacher') {
+                document.getElementById('accessLevel').value = 'Standard';
+            }
+
+            desc.value = descriptions[document.getElementById('accessLevel').value] || '';
+        }
+
+        function onPositionChange() {
+            const pos = document.getElementById('position').value.toLowerCase();
+            const classGroup = document.getElementById('classGroup');
+            const staffIdGroup = document.getElementById('staffIdGroup');
+            const staffIdInput = document.getElementById('staffId');
+
+            if (pos === 'teacher') {
+                classGroup.style.display = 'block';
+                staffIdGroup.style.display = 'block';
+                // Generate 5 digit ID if empty
+                if (!staffIdInput.value) {
+                    staffIdInput.value = Math.floor(10000 + Math.random() * 90000).toString();
+                }
+            } else {
+                classGroup.style.display = 'none';
+                staffIdGroup.style.display = 'none';
+                staffIdInput.value = '';
+            }
+        }
+
         // Handle onboarding submission
         async function handleOnboardingSubmission() {
             try {
-                const formData = new FormData(document.getElementById('onboardingForm'));
+                const form = document.getElementById('onboardingForm');
+                const formData = new FormData(form);
+
+                const password = formData.get('password');
+                const confirmPassword = formData.get('confirmPassword');
+
+                if (!editingStaffId && !password) {
+                    alert('Password is required for new staff members');
+                    return;
+                }
+
+                if (password && password !== confirmPassword) {
+                    alert('Passwords do not match');
+                    return;
+                }
+
+                const position = formData.get('position'); // e.g. "Teacher"
+                const gender = formData.get('gender') === 'Other' ? formData.get('genderOther') : formData.get('gender');
+                const department = formData.get('department') === 'Others' ? formData.get('departmentOther') : formData.get('department');
+
                 const staffData = {
-                    id: Date.now() + Math.random(),
+                    id: editingStaffId || (position.toLowerCase() === 'teacher' ? formData.get('staffId') : (Date.now() + Math.random()).toString()),
+                    username: formData.get('username'),
                     fullName: formData.get('fullName'),
                     email: formData.get('email'),
+                    gender: gender,
                     phone: formData.get('phone'),
-                    position: formData.get('position'),
-                    department: formData.get('department'),
+                    position: position,
+                    department: department,
                     startDate: formData.get('startDate'),
                     salary: parseFloat(formData.get('salary')),
-                    hireDate: new Date().toISOString()
+                    hireDate: new Date().toISOString(),
+                    accessLevel: formData.get('accessLevel')
                 };
 
-                const staff = await window.db.getAll(window.DB_STORES.STAFF);
-                staff.push(staffData);
+                if (position.toLowerCase() === 'teacher') {
+                    staffData.class = formData.get('assignedClass');
+                }
+
                 await window.db.put(window.DB_STORES.STAFF, staffData);
 
-                // Sync with unified user store
+                // Create user account
                 const roleMapping = {
-                    'teacher': 'staff',
-                    'manager': 'school-manager',
-                    'administrator': 'school-manager',
-                    'support': 'staff'
+                    'Teacher': 'teacher',
+                    'School Manager': 'school-manager',
+                    'Super Admin': 'super-admin',
+                    'Non-Teaching': 'staff'
                 };
-                const userRole = roleMapping[staffData.position] || 'staff';
-                if (window.syncEntityToUser) await window.syncEntityToUser(staffData, userRole);
+                const userRole = roleMapping[position] || 'staff';
+
+                // Fetch existing user if updating
+                let userData = {};
+                if (editingStaffId) {
+                    const existingUser = await window.db.get(window.DB_STORES.USERS, staffData.username);
+                    if (existingUser) userData = existingUser;
+                }
+
+                userData = {
+                    ...userData,
+                    username: staffData.username,
+                    fullName: staffData.fullName,
+                    email: staffData.email,
+                    role: userRole,
+                    status: 'active',
+                    accessLevel: staffData.accessLevel,
+                    gender: staffData.gender,
+                    department: staffData.department,
+                    twoFactorEnabled: formData.get('twoFactorEnabled') === 'on',
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (!editingStaffId) {
+                    userData.password = btoa(password);
+                    userData.createdAt = new Date().toISOString();
+                    // If emailVerification is checked, it means we SHOULD send verification, so emailVerified starts as false.
+                    userData.emailVerified = formData.get('emailVerification') !== 'on';
+                } else if (password) {
+                    userData.password = btoa(password);
+                }
+
+                if (position.toLowerCase() === 'teacher') {
+                    userData.staffId = staffData.id;
+                    userData.class = staffData.class;
+                }
+
+                await window.db.put(window.DB_STORES.USERS, userData);
 
                 // Clear form
-                document.getElementById('onboardingForm').reset();
+                form.reset();
+                editingStaffId = null;
+                document.querySelector('#onboardingForm button[type="submit"]').textContent = 'Add Staff Member';
+                onPositionChange(); // Reset visibility
 
                 // Show success notification
-                notificationSystem.addNotification('success', 'Staff Added', `${staffData.fullName} has been successfully added to the system and user account created`);
+                window.showNotification('success', 'Staff Added', `${staffData.fullName} has been successfully added to the system and user account created`);
 
                 // Refresh staff list if on management tab
                 if (document.getElementById('management').classList.contains('active')) {
-                    loadStaffManagementData();
+                    await loadStaffManagementData();
                 }
 
             } catch (error) {
                 console.error('Error adding staff member:', error);
-                notificationSystem.addNotification('error', 'Error', 'Failed to add staff member. Please try again.');
+                window.showNotification('error', 'Error', 'Failed to add staff member. Please try again.');
             }
         }
 
@@ -1181,24 +1427,23 @@
                     reviewer: 'System' // In a real system, this would be the current user
                 };
 
-                const performances = await window.db.getAll(window.DB_STORES.ASSESSMENTS);
-                performances.push(performanceData);
+
                 await window.db.put(window.DB_STORES.PERFORMANCES, performanceData);
 
                 // Clear form
                 document.getElementById('performanceForm').reset();
 
                 // Show success notification
-                notificationSystem.addNotification('success', 'Performance Review Submitted', 'Performance review has been successfully submitted');
+                window.showNotification('success', 'Performance Review Submitted', 'Performance review has been successfully submitted');
 
                 // Refresh performance history
                 if (document.getElementById('performance').classList.contains('active')) {
-                    loadPerformanceData();
+                    await loadPerformanceData();
                 }
 
             } catch (error) {
                 console.error('Error submitting performance review:', error);
-                notificationSystem.addNotification('error', 'Error', 'Failed to submit performance review. Please try again.');
+                window.showNotification('error', 'Error', 'Failed to submit performance review. Please try again.');
             }
         }
 
@@ -1218,24 +1463,23 @@
                     createdAt: new Date().toISOString()
                 };
 
-                const schedules = await window.db.getAll('schedules');
-                schedules.push(scheduleData);
+
                 await window.db.put(window.DB_STORES.SCHEDULES, scheduleData);
 
                 // Clear form
                 document.getElementById('schedulingForm').reset();
 
                 // Show success notification
-                notificationSystem.addNotification('success', 'Schedule Created', 'Staff schedule has been successfully created');
+                window.showNotification('success', 'Schedule Created', 'Staff schedule has been successfully created');
 
                 // Refresh schedules list
                 if (document.getElementById('scheduling').classList.contains('active')) {
-                    loadSchedulingData();
+                    await loadSchedulingData();
                 }
 
             } catch (error) {
                 console.error('Error creating schedule:', error);
-                notificationSystem.addNotification('error', 'Error', 'Failed to create schedule. Please try again.');
+                window.showNotification('error', 'Error', 'Failed to create schedule. Please try again.');
             }
         }
 
@@ -1254,35 +1498,35 @@
                     createdAt: new Date().toISOString()
                 };
 
-                const offers = await window.db.getAll('offers');
-                offers.push(offerData);
+
                 await window.db.put(window.DB_STORES.OFFERS, offerData);
 
                 // Clear form
                 document.getElementById('offerForm').reset();
 
                 // Show success notification
-                notificationSystem.addNotification('success', 'Offer Letter Created', 'Job offer letter has been successfully created');
+                window.showNotification('success', 'Offer Letter Created', 'Job offer letter has been successfully created');
 
                 // Refresh offers list
                 if (document.getElementById('offers').classList.contains('active')) {
-                    loadOfferLetters();
+                    await loadOfferLetters();
                 }
 
             } catch (error) {
                 console.error('Error creating offer letter:', error);
-                notificationSystem.addNotification('error', 'Error', 'Failed to create offer letter. Please try again.');
+                window.showNotification('error', 'Error', 'Failed to create offer letter. Please try again.');
             }
         }
 
         // Staff management functions
         async function editStaff(staffId) {
             try {
-                const staff = await window.db.getAll(window.DB_STORES.STAFF);
-                const staffMember = staff.find(s => s.id === staffId);
-                
+                const staffMember = await window.db.get(window.DB_STORES.STAFF, staffId);
+                const user = staffMember ? await window.db.get(window.DB_STORES.USERS, staffMember.username) : null;
+
                 if(staffMember) {
                     // Populate form with staff data
+                    document.getElementById('username').value = staffMember.username || '';
                     document.getElementById('fullName').value = staffMember.fullName || staffMember.name || '';
                     document.getElementById('email').value = staffMember.email || '';
                     document.getElementById('phone').value = staffMember.phone || '';
@@ -1290,15 +1534,38 @@
                     document.getElementById('department').value = staffMember.department || '';
                     document.getElementById('startDate').value = staffMember.startDate || '';
                     document.getElementById('salary').value = staffMember.salary || '';
-                    
+                    document.getElementById('gender').value = staffMember.gender || '';
+                    document.getElementById('accessLevel').value = staffMember.accessLevel || 'Standard';
+                    document.getElementById('staffId').value = staffMember.id || '';
+
+                    if (staffMember.position === 'teacher') {
+                        document.getElementById('assignedClass').value = staffMember.class || '';
+                    }
+
+                    if (user) {
+                        document.getElementById('twoFactorEnabled').checked = user.twoFactorEnabled || false;
+                        document.getElementById('emailVerification').checked = !user.emailVerified;
+                    }
+
+                    // Trigger visibility updates
+                    toggleGenderOther();
+                    toggleDepartmentOther();
+                    onPositionChange();
+
+                    editingStaffId = staffId;
+                    document.getElementById('username').readOnly = true;
+                    document.querySelector('#onboardingForm button[type="submit"]').textContent = 'Update Staff Member';
+                    document.getElementById('pwdRequired').style.display = 'none';
+                    document.getElementById('cpwdRequired').style.display = 'none';
+
                     // Switch to onboarding tab
                     showTab('onboarding');
-                    
-                    notificationSystem.addNotification('info', 'Edit Mode', 'Staff member data loaded for editing');
+
+                    window.showNotification('info', 'Edit Mode', 'Staff member data loaded for editing');
                 }
             } catch (error) {
                 console.error('Error editing staff member:', error);
-                notificationSystem.addNotification('error', 'Error', 'Failed to load staff member data for editing');
+                window.showNotification('error', 'Error', 'Failed to load staff member data for editing');
             }
         }
 
@@ -1308,16 +1575,16 @@
                     const staff = await window.db.getAll(window.DB_STORES.STAFF);
                     const updatedStaff = staff.filter(s => s.id !== staffId);
                     await window.db.delete(window.DB_STORES.STAFF, staffId);
-                    
-                    notificationSystem.addNotification('success', 'Staff Deleted', 'Staff member has been successfully removed from the system');
-                    
+
+                    window.showNotification('success', 'Staff Deleted', 'Staff member has been successfully removed from the system');
+
                     // Refresh staff list
                     if (document.getElementById('management').classList.contains('active')) {
-                        loadStaffManagementData();
+                        await loadStaffManagementData();
                     }
                 } catch (error) {
                     console.error('Error deleting staff member:', error);
-                    notificationSystem.addNotification('error', 'Error', 'Failed to delete staff member');
+                    window.showNotification('error', 'Error', 'Failed to delete staff member');
                 }
             }
         }
@@ -1325,102 +1592,167 @@
         // Offer management functions
         async function approveOffer(offerId) {
             try {
-                const offers = await window.db.getAll('offers');
-                const offer = offers.find(o => o.id === offerId);
+                const offer = await window.db.get(window.DB_STORES.OFFERS, offerId);
                 if(offer) {
                     offer.status = 'approved';
-                    await window.db.put(window.DB_STORES.OFFERS, offerData);
-                    
-                    notificationSystem.addNotification('success', 'Offer Approved', 'Job offer has been approved');
-                    
+                    await window.db.put(window.DB_STORES.OFFERS, offer);
+
+                    window.showNotification('success', 'Offer Approved', 'Job offer has been approved');
+
                     // Refresh offers list
                     if (document.getElementById('offers').classList.contains('active')) {
-                        loadOfferLetters();
+                        await loadOfferLetters();
                     }
                 }
             } catch (error) {
                 console.error('Error approving offer:', error);
-                notificationSystem.addNotification('error', 'Error', 'Failed to approve offer');
+                window.showNotification('error', 'Error', 'Failed to approve offer');
             }
         }
 
         async function rejectOffer(offerId) {
             try {
-                const offers = await window.db.getAll('offers');
-                const offer = offers.find(o => o.id === offerId);
+                const offer = await window.db.get(window.DB_STORES.OFFERS, offerId);
                 if(offer) {
                     offer.status = 'rejected';
-                    await window.db.put(window.DB_STORES.OFFERS, offerData);
-                    
-                    notificationSystem.addNotification('success', 'Offer Rejected', 'Job offer has been rejected');
-                    
+                    await window.db.put(window.DB_STORES.OFFERS, offer);
+
+                    window.showNotification('success', 'Offer Rejected', 'Job offer has been rejected');
+
                     // Refresh offers list
                     if (document.getElementById('offers').classList.contains('active')) {
-                        loadOfferLetters();
+                        await loadOfferLetters();
                     }
                 }
             } catch (error) {
                 console.error('Error rejecting offer:', error);
-                notificationSystem.addNotification('error', 'Error', 'Failed to reject offer');
+                window.showNotification('error', 'Error', 'Failed to reject offer');
             }
         }
 
         async function deleteOffer(offerId) {
             if (confirm('Are you sure you want to delete this offer letter? This action cannot be undone.')) {
                 try {
-                    const offers = await window.db.getAll('offers');
-                    const updatedOffers = offers.filter(o => o.id !== offerId);
-                    localStorage.setItem('offers', JSON.stringify(updatedOffers));
-                    
-                    notificationSystem.addNotification('success', 'Offer Deleted', 'Offer letter has been successfully deleted');
-                    
-                    // Refresh offers list
+                    await window.db.delete(window.DB_STORES.OFFERS, offerId);
+                    window.showNotification('success', 'Offer Deleted', 'Offer letter has been successfully deleted');
                     if (document.getElementById('offers').classList.contains('active')) {
-                        loadOfferLetters();
+                        await loadOfferLetters();
                     }
                 } catch (error) {
                     console.error('Error deleting offer:', error);
-                    notificationSystem.addNotification('error', 'Error', 'Failed to delete offer letter');
+                    window.showNotification('error', 'Error', 'Failed to delete offer letter');
                 }
             }
+        }
+
+        // Messaging Logic
+        async function loadStaffMessages() {
+            const currentUser = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+            if (!currentUser) return;
+            const messages = await window.db.getAll(window.DB_STORES.MESSAGES);
+            const userMessages = messages.filter(m => m.sender === currentUser.username || m.recipient === currentUser.username)
+                                         .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            const list = document.getElementById('staffMessageList');
+            list.innerHTML = userMessages.map(m => `
+                <div class="message-item ${m.recipient === currentUser.username && !m.read ? 'unread' : ''}"
+                     onclick="viewStaffMessage('${m.id}')"
+                     style="padding:10px; border-bottom:1px solid #eee; cursor:pointer;">
+                    <strong>${m.subject}</strong><br>
+                    <small>${m.sender === currentUser.username ? 'To: ' + m.recipient : 'From: ' + m.sender}</small>
+                </div>
+            `).join('') || '<p>No messages</p>';
+
+            await loadStaffRecipients();
+        }
+
+        async function loadStaffRecipients() {
+            const users = await window.db.getAll(window.DB_STORES.USERS);
+            const currentUser = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+            const select = document.getElementById('staffRecipient');
+            select.innerHTML = '<option value="">Select Recipient</option>' +
+                users.filter(u => u.username !== currentUser.username)
+                     .map(u => `<option value="${u.username}">${u.fullName || u.username} (${u.role})</option>`).join('');
+        }
+
+        async function viewStaffMessage(id) {
+            const currentUser = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+            const message = (await window.db.getAll(window.DB_STORES.MESSAGES)).find(m => m.id === id);
+            if (!message) return;
+
+            if (message.recipient === currentUser.username && !message.read) {
+                message.read = true;
+                await window.db.put(window.DB_STORES.MESSAGES, message);
+                await loadStaffMessages();
+            }
+
+            document.getElementById('staffComposeForm').style.display = 'none';
+            const content = document.getElementById('staffMessageContent');
+            content.style.display = 'block';
+            content.innerHTML = `
+                <h3>${message.subject}</h3>
+                <p><strong>From:</strong> ${message.sender}</p>
+                <p><strong>Date:</strong> ${new Date(message.timestamp).toLocaleString()}</p>
+                <hr>
+                <p style="white-space: pre-wrap; margin-top: 15px;">${message.message}</p>
+                <button class="btn" style="margin-top: 15px;" onclick="replyToStaffMessage('${message.id}')">Reply</button>
+            `;
+        }
+
+        function showStaffComposeForm() {
+            document.getElementById('staffComposeForm').style.display = 'block';
+            document.getElementById('staffMessageContent').style.display = 'none';
+        }
+
+        function hideStaffComposeForm() {
+            document.getElementById('staffComposeForm').style.display = 'none';
+        }
+
+        async function sendStaffMessage(event) {
+            event.preventDefault();
+            const currentUser = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+            const msg = {
+                id: Date.now().toString(),
+                sender: currentUser.username,
+                recipient: document.getElementById('staffRecipient').value,
+                subject: document.getElementById('staffSubject').value,
+                message: document.getElementById('staffMessageText').value,
+                timestamp: new Date().toISOString(),
+                read: false
+            };
+            await window.db.put(window.DB_STORES.MESSAGES, msg);
+            alert('Message sent');
+            hideStaffComposeForm();
+            await loadStaffMessages();
+        }
+
+        async function replyToStaffMessage(id) {
+            const message = (await window.db.getAll(window.DB_STORES.MESSAGES)).find(m => m.id === id);
+            showStaffComposeForm();
+            document.getElementById('staffRecipient').value = message.sender;
+            document.getElementById('staffSubject').value = 'Re: ' + message.subject;
+            document.getElementById('staffMessageText').focus();
         }
 
         // Initialize system
-        function initializeSystem() {
+        async function initializeSystem() {
             try {
-                // Initialize localStorage if not exists
-                if (!localStorage.getItem('staff')) {
-                    localStorage.setItem('staff', JSON.stringify([]));
-                }
-                if (!localStorage.getItem('performances')) {
-                    localStorage.setItem('performances', JSON.stringify([]));
-                }
-                if (!localStorage.getItem('schedules')) {
-                    localStorage.setItem('schedules', JSON.stringify([]));
-                }
-                if (!localStorage.getItem('offers')) {
-                    localStorage.setItem('offers', JSON.stringify([]));
-                }
-
-                // Load initial data for active tab
+                await window.db.init();
+                if (!(await checkAuthPage())) return;
                 const activeTab = document.querySelector('.tab-content.active');
                 if (activeTab) {
                     const tabId = activeTab.id;
-                    loadTabData(tabId);
+                    await loadTabData(tabId);
                 }
-
-                notificationSystem.addNotification('success', 'System Ready', 'Staff Management System initialized successfully');
-                
+                window.showNotification('success', 'System Ready', 'Staff Management System initialized successfully');
             } catch (error) {
                 console.error('Error initializing system:', error);
-                notificationSystem.addNotification('error', 'Initialization Error', 'Failed to initialize system');
+                window.showNotification('error', 'Initialization Error', 'Failed to initialize system');
             }
         }
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize the system
-            initializeSystem();
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initializeSystem();
         });
     </script>
 </body>

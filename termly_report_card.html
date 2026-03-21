@@ -138,17 +138,33 @@
   <div class="report-card" id="reportCard">
     <h2>VISION PREPARATORY SCHOOL<br>LEARNER'S REPORT CARD</h2>
     <div class="section">
-      <div class="form-group">
-        <label>Select Student to Generate Report</label>
-        <select id="studentSelector" onchange="loadStudentData(this.value)">
-            <option value="">-- Select Student --</option>
-        </select>
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="form-group">
+          <label>Select Student to Generate Report</label>
+          <select id="studentSelector" onchange="loadStudentData(this.value)">
+              <option value="">-- Select Student --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Search by Student ID</label>
+          <div style="display: flex; gap: 10px;">
+            <input type="text" id="studentIdInput" placeholder="Enter Student ID (e.g. ADM001)">
+            <button onclick="loadStudentData(document.getElementById('studentIdInput').value)" style="margin: 0;">Search</button>
+          </div>
+        </div>
       </div>
       <div class="responsive-table-container"><table class="no-border">
         <tr>
           <td>Name of Student: <input type="text" id="studentName" style="width: 80%;"></td>
-          <td>Form: <input type="text" id="form" style="width: 60%;"></td>
-          <td>Term: <input type="text" id="term" style="width: 60%;"></td>
+          <td>Class/Form: <input type="text" id="form" style="width: 60%;"></td>
+          <td>
+            Term:
+            <select id="term" style="width: 60%;">
+              <option value="Term 1">Term 1</option>
+              <option value="Term 2">Term 2</option>
+              <option value="Term 3">Term 3</option>
+            </select>
+          </td>
         </tr>
         <tr>
           <td>Number on Roll: <input type="text" id="roll" style="width: 80%;"></td>
@@ -176,7 +192,17 @@
       </table></div>
     </div>
     <div class="section">
-      <p>Attendance: <input type="text" id="attendance"> out of <input type="text" id="totalAttendance"> Repeat/Promoted to: <input type="text" id="promoted"></p>
+      <p>
+        Attendance: <input type="text" id="attendance"> out of <input type="text" id="totalAttendance">
+        Action:
+        <select id="promotionAction">
+          <option value="none">-- Select Action --</option>
+          <option value="promote">Promote to</option>
+          <option value="repeat">Repeat</option>
+          <option value="demote">Demote to</option>
+        </select>
+        <input type="text" id="promoted" placeholder="Next Class/Form">
+      </p>
       <p>Conduct/Attitude: <input type="text" id="conduct" style="width: 300px;"></p>
     </div>
     <div class="remarks-section section">
@@ -367,8 +393,14 @@
     }
 
     async function saveToIndexedDB() {
+      const studentId = document.getElementById('studentSelector').value || document.getElementById('studentIdInput').value;
+      if (!studentId) return alert("Please select or enter a Student ID.");
+
+      const promotionAction = document.getElementById('promotionAction').value;
+      const nextClass = document.getElementById('promoted').value;
+
       const reportData = {
-          id: document.getElementById('studentSelector').value || 'manual-' + Date.now(),
+          id: studentId,
           studentName: document.getElementById('studentName').value,
           form: document.getElementById('form').value,
           term: document.getElementById('term').value,
@@ -388,7 +420,51 @@
       };
 
       await window.db.put(window.DB_STORES.REPORTS, reportData);
+
+      // Handle Promotion/Archiving
+      if (promotionAction !== 'none') {
+          const confirmMsg = promotionAction === 'promote' ?
+              `Are you sure you want to PROMOTE ${reportData.studentName} to ${nextClass}? This will archive current records.` :
+              `Are you sure you want to ${promotionAction.toUpperCase()} ${reportData.studentName}?`;
+
+          if (confirm(confirmMsg)) {
+              await archiveAndProcessPromotion(studentId, promotionAction, nextClass, reportData);
+          }
+      }
+
       alert("Report saved successfully to central database.");
+    }
+
+    async function archiveAndProcessPromotion(studentId, action, nextClass, reportData) {
+        const student = await window.db.get(window.DB_STORES.ADMISSIONS, studentId);
+        if (!student) return;
+
+        // 1. Archive current state
+        const archiveEntry = {
+            studentId: studentId,
+            studentName: student.studentName,
+            term: reportData.term,
+            academicYear: new Date().getFullYear(), // Should ideally be a setting
+            class: student.classAdmitted,
+            reportCard: reportData,
+            timestamp: new Date().toISOString()
+        };
+        await window.db.put(window.DB_STORES.ARCHIVES, archiveEntry);
+
+        // 2. Update Student Class if promoted/demoted
+        if (action === 'promote' || action === 'demote') {
+            student.classAdmitted = nextClass;
+            await window.db.put(window.DB_STORES.ADMISSIONS, student);
+
+            // Also update the User store if it exists
+            const user = await window.db.get(window.DB_STORES.USERS, studentId);
+            if (user) {
+                user.class = nextClass;
+                await window.db.put(window.DB_STORES.USERS, user);
+            }
+        }
+
+        // Note: In a real system, we might want to clear assessments for the new term here.
     }
 
     async function loadFromIndexedDB() {
@@ -420,10 +496,47 @@
 
     async function loadStudentData(studentId) {
         if (!studentId) return;
+
+        // Auto-calculate Number on Roll
+        const allStudents = await window.db.getAll(window.DB_STORES.ADMISSIONS);
+        const studentToLoad = allStudents.find(s => s.admissionNo === studentId);
+        if (studentToLoad) {
+            const classSize = allStudents.filter(s => s.classAdmitted === studentToLoad.classAdmitted).length;
+            document.getElementById('roll').value = classSize;
+        }
+
+        // Sync the two inputs
+        document.getElementById('studentSelector').value = studentId;
+        document.getElementById('studentIdInput').value = studentId;
+
         const student = await window.db.get(window.DB_STORES.ADMISSIONS, studentId);
         if (student) {
             document.getElementById('studentName').value = student.studentName;
             document.getElementById('form').value = student.classAdmitted;
+
+            // Auto-populate Financials
+            const financialData = await window.db.get(window.DB_STORES.FINANCIAL, 'main');
+            if (financialData && financialData.fees) {
+                const studentFees = financialData.fees.filter(f => f.studentId === studentId);
+                const totalDue = studentFees.reduce((sum, f) => sum + parseFloat(f.amount), 0);
+                const totalPaid = studentFees.filter(f => f.status === 'paid').reduce((sum, f) => sum + parseFloat(f.amount), 0);
+                const arrears = totalDue - totalPaid;
+
+                document.getElementById('approvedFees').value = totalDue.toFixed(2);
+                document.getElementById('paymentMade').value = totalPaid.toFixed(2);
+                document.getElementById('arrears').value = arrears.toFixed(2);
+                document.getElementById('amountDue').value = arrears.toFixed(2);
+                document.getElementById('finalArrears').value = arrears.toFixed(2);
+            }
+
+            // Auto-populate Attendance
+            const attendanceRecords = await window.db.getAll(window.DB_STORES.ATTENDANCE);
+            const studentAttendance = attendanceRecords.filter(r => r.statuses && r.statuses[studentId]);
+            const presentCount = studentAttendance.filter(r => r.statuses[studentId] === 'Present').length;
+            const totalDays = studentAttendance.length;
+
+            document.getElementById('attendance').value = presentCount;
+            document.getElementById('totalAttendance').value = totalDays;
 
             // Auto-load assessments
             const allAssessments = await window.db.getAll(window.DB_STORES.ASSESSMENTS);
