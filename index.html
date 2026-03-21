@@ -649,16 +649,18 @@
                         const lockoutDuration = 15;
                         failedUser.lockedUntil = new Date(Date.now() + lockoutDuration * 60 * 1000).toISOString();
                         if (window.addAuditLog) await window.addAuditLog('account_locked', `User ${usernameInput} account locked`, failedUser);
+                        await addAuditLog('account_locked', `User ${username} account locked due to ${failedUser.loginAttempts} failed login attempts`);
                         showLoginError(`Account locked due to too many failed attempts. Try again in ${lockoutDuration} minutes.`);
                     } else {
                         showLoginError('Invalid username or password.');
                     }
-                    await window.db.put(window.DB_STORES.USERS, failedUser);
+                    
+                    await window.db.put(window.DB_STORES.USERS, user);
                 } else {
                     showLoginError('Invalid username or password.');
                 }
                 
-                if (window.addAuditLog) await window.addAuditLog('login_failed', `Failed login attempt for ${usernameInput}`);
+                await addAuditLog('login_failed', `Failed login attempt for ${usernameInput}`, 'unknown');
             }
         }
 

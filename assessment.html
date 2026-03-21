@@ -7,10 +7,12 @@
   <script src="shared-auth.js"></script>
   <script src="shared-utils.js"></script>
   <script>
-      async function checkAuthPage() { if (!window.db) await window.db.init(); return await window.checkAuth("staff"); }
-    window.onload = async function() {
-      if (await checkAuthPage()) {
-        if (window.db) { await window.db.init(); loadAll(); }
+      function checkAuth() {
+        return window.checkAuth('staff');
+      }
+    window.onload = function() {
+      if (checkAuth()) {
+        initializeDatabase();
       }
     };
   </script>
@@ -220,6 +222,82 @@
 
     async function deleteAssessment(id) {
         return await window.db.delete(window.DB_STORES.ASSESSMENTS, id);
+    // --- IndexedDB/localStorage Fallback Setup ---
+    let db, useLocalStorage = false, dbInitialized = false;
+    function initializeDatabase() {
+      const request = indexedDB.open("SchoolDB", 2);
+      request.onerror = () => { useLocalStorage = true; dbInitialized = true; loadAll(); };
+      request.onsuccess = e => { db = e.target.result; dbInitialized = true; loadAll(); };
+      request.onupgradeneeded = e => {
+        db = e.target.result;
+        if (!db.objectStoreNames.contains("admissions")) db.createObjectStore("admissions", { keyPath: "admissionNo" });
+        if (!db.objectStoreNames.contains("attendance")) db.createObjectStore("attendance", { keyPath: "id", autoIncrement: true });
+        if (!db.objectStoreNames.contains("assessments")) db.createObjectStore("assessments", { keyPath: "id", autoIncrement: true });
+      };
+    }
+    function getAllFromStore(storeName) {
+      return new Promise((resolve, reject) => {
+        if (useLocalStorage) {
+          const data = JSON.parse(localStorage.getItem(storeName) || '[]');
+          resolve(data);
+        } else {
+          try {
+            const tx = db.transaction(storeName, "readonly");
+            const store = tx.objectStore(storeName);
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+          } catch (e) { useLocalStorage = true; resolve(JSON.parse(localStorage.getItem(storeName) || '[]')); }
+        }
+      });
+    }
+    async function saveAssessment(assessment) { return window.db.put(window.DB_STORES.ASSESSMENTS, assessment); }
+      return new Promise((resolve, reject) => {
+        if (useLocalStorage) {
+          const arr = JSON.parse(localStorage.getItem('assessments') || '[]');
+          arr.push(assessment);
+          localStorage.setItem('assessments', JSON.stringify(arr));
+          resolve();
+        } else {
+          try {
+            const tx = db.transaction("assessments", "readwrite");
+            const store = tx.objectStore("assessments");
+            store.add(assessment).onsuccess = () => resolve();
+          } catch (e) { useLocalStorage = true; saveAssessment(assessment).then(resolve); }
+        }
+      });
+    }
+    function updateAssessment(assessment, index) {
+      return new Promise((resolve, reject) => {
+        if (useLocalStorage) {
+          const arr = JSON.parse(localStorage.getItem('assessments') || '[]');
+          arr[index] = assessment;
+          localStorage.setItem('assessments', JSON.stringify(arr));
+          resolve();
+        } else {
+          try {
+            const tx = db.transaction("assessments", "readwrite");
+            const store = tx.objectStore("assessments");
+            store.put(assessment).onsuccess = () => resolve();
+          } catch (e) { useLocalStorage = true; updateAssessment(assessment, index).then(resolve); }
+        }
+      });
+    }
+    function deleteAssessment(index) {
+      return new Promise((resolve, reject) => {
+        if (useLocalStorage) {
+          const arr = JSON.parse(localStorage.getItem('assessments') || '[]');
+          arr.splice(index, 1);
+          localStorage.setItem('assessments', JSON.stringify(arr));
+          resolve();
+        } else {
+          try {
+            const tx = db.transaction("assessments", "readwrite");
+            const store = tx.objectStore("assessments");
+            store.delete(index).onsuccess = () => resolve();
+          } catch (e) { useLocalStorage = true; deleteAssessment(index).then(resolve); }
+        }
+      });
     }
 
     async function loadAll() {
@@ -230,6 +308,12 @@
             window.db.getAll(window.DB_STORES.ADMISSIONS)
         ]);
 
+    function loadAll() {
+      Promise.all([
+        window.db.getAll(window.DB_STORES.ASSESSMENTS),
+        window.db.getAll(window.DB_STORES.ATTENDANCE),
+        window.db.getAll(window.DB_STORES.ADMISSIONS)
+      ]).then(([assess, attend, admis]) => {
         assessments = assess;
         attendanceData = attend;
         admissionsData = admis;

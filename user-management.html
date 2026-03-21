@@ -557,7 +557,6 @@
       }
     }
   </style>
-    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
   <header>
@@ -1064,7 +1063,7 @@
             </div>
             <button class="btn-secondary" onclick="saveIPRestrictions()">Save IP Restrictions</button>
           </div>
-
+          
           <div class="security-section">
             <h4>Rate Limiting</h4>
             <div class="form-group">
@@ -1077,7 +1076,7 @@
             </div>
             <button class="btn-secondary" onclick="saveRateLimiting()">Save Rate Limiting</button>
           </div>
-
+          
           <div class="security-section">
             <h4>Session Management</h4>
             <div class="form-group">
@@ -1109,33 +1108,33 @@
     };
 
     // Authentication and Access Control Functions
-    async function checkAuth() { if (!window.db) await window.db.init(); return await window.checkAuth("super-admin"); }
+    async function checkAuth() {
+        return window.checkAuth('super-admin');
+    }
 
     // Enhanced User Management Functions
-        async function resetUserPassword(username) {
-      try {
-        const newPassword = await generateSecurePassword();
-        const user = await window.db.get(window.DB_STORES.USERS, username);
-
-        if(!user) {
-          if (window.showNotification) window.showNotification('User not found.', 'error');
-          return;
-        }
-
-        user.password = btoa(newPassword);
-        user.forcePasswordChange = true;
-        user.passwordResetDate = new Date().toISOString();
-        user.updatedAt = new Date().toISOString();
-
-        await window.db.put(window.DB_STORES.USERS, user);
-
-        if (window.addAuditLog) await window.addAuditLog('password_reset', `Password reset for user ${username}`, user);
-
-        if (window.showNotification) window.showNotification(`Password reset for ${username}. New password: ${newPassword}`, 'success');
-        await loadUsers();
-      } catch (error) {
-        console.error('Error resetting password:', error);
+    async function resetUserPassword(username) {
+      const newPassword = generateSecurePassword();
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
+      
+      if(userIndex === -1) {
+        showNotification('User not found.', 'error');
+        return;
       }
+      
+      users[userIndex].password = btoa(newPassword);
+      users[userIndex].forcePasswordChange = true;
+      users[userIndex].passwordResetDate = new Date().toISOString();
+      users[userIndex].updatedAt = new Date().toISOString();
+      
+      await window.db.put(window.DB_STORES.USERS, newUser);
+      
+      // Add audit log
+      addAuditLog('password_reset', `Password reset for user ${username}`, users[userIndex]);
+      
+      showNotification(`Password reset for ${username}. New password: ${newPassword}`, 'success');
+      loadUsers();
     }
 
     async function generateSecurePassword() {
@@ -1159,7 +1158,7 @@
           const lines = csv.split('\n');
           const headers = lines[0].split(',');
           const users = [];
-
+          
           for (let i = 1; i < lines.length; i++) {
             if (lines[i].trim()) {
               const values = lines[i].split(',');
@@ -1176,11 +1175,11 @@
               users.push(user);
             }
           }
-
-
-
-          for (const u of users) { await window.db.put(window.DB_STORES.USERS, u); }
-
+          
+          const existingUsers = await window.db.getAll(window.DB_STORES.USERS);
+          existingUsers.push(...users);
+          await Promise.all(existingUsers.map(u => window.db.put(window.DB_STORES.USERS, u)));
+          
           addAuditLog('bulk_import', `Imported ${users.length} users`, null);
           showNotification(`Successfully imported ${users.length} users!`, 'success');
           loadUsers();
@@ -1215,9 +1214,9 @@
 
     async function manageUserSessions() {
       const users = await window.db.getAll(window.DB_STORES.USERS);
-      const activeSessions = users.filter(u => u.lastActivity &&
+      const activeSessions = users.filter(u => u.lastActivity && 
         new Date(u.lastActivity) > new Date(Date.now() - 30 * 60 * 1000)); // Last 30 minutes
-
+      
       let html = `
         <div class="modal-content">
           <div class="modal-header">
@@ -1236,7 +1235,7 @@
               </thead>
               <tbody>
       `;
-
+      
       activeSessions.forEach(user => {
         const lastActivity = new Date(user.lastActivity);
         const timeDiff = Math.floor((new Date() - lastActivity) / 1000 / 60);
@@ -1251,14 +1250,14 @@
           </tr>
         `;
       });
-
+      
       html += `
               </tbody>
             </table></div>
           </div>
         </div>
       `;
-
+      
       const modal = document.createElement('div');
       modal.id = 'sessionModal';
       modal.className = 'modal';
@@ -1267,21 +1266,20 @@
       document.body.appendChild(modal);
     }
 
-        async function terminateSession(username) {
-      try {
-        const user = await window.db.get(window.DB_STORES.USERS, username);
-        if(user) {
-          user.lastActivity = null;
-          user.sessionTime = null;
-          await window.db.put(window.DB_STORES.USERS, user);
-          if (window.addAuditLog) await window.addAuditLog('session_terminated', `Session terminated for user ${username}`, user);
-          if (window.showNotification) window.showNotification(`Session terminated for ${username}`, 'success');
-        }
-      } catch (error) {
-        console.error('Error terminating session:', error);
+    async function terminateSession(username) {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
+      
+      if(userIndex !== -1) {
+        users[userIndex].lastActivity = null;
+        users[userIndex].sessionTime = null;
+        await window.db.put(window.DB_STORES.USERS, newUser);
+        
+        addAuditLog('session_terminated', `Session terminated for user ${username}`, users[userIndex]);
+        showNotification(`Session terminated for ${username}`, 'success');
       }
+      
       closeModal('sessionModal');
-      await loadUsers();
     }
 
     // Enhanced Security Functions
@@ -1290,7 +1288,7 @@
       const ipRestrictions = JSON.parse(localStorage.getItem('ipRestrictions') || '[]');
       const rateLimiting = JSON.parse(localStorage.getItem('rateLimiting') || '{"maxLoginAttempts": 5, "lockoutDuration": 30}');
       const sessionSettings = JSON.parse(localStorage.getItem('sessionSettings') || '{"sessionTimeout": 30, "maxConcurrentSessions": 3}');
-
+      
       securityContent.innerHTML = `
         <div class="security-sections">
           <div class="security-section">
@@ -1309,7 +1307,7 @@
             </div>
             <button class="btn-primary" onclick="openSecuritySettingsModal()">Configure Advanced Security</button>
           </div>
-
+          
           <div class="security-section">
             <h4>📊 Security Statistics</h4>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 15px 0;">
@@ -1331,7 +1329,7 @@
               </div>
             </div>
           </div>
-
+          
           <div class="security-section">
             <h4>🛡️ Security Actions</h4>
             <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -1350,13 +1348,13 @@
       const ipRestrictions = JSON.parse(localStorage.getItem('ipRestrictions') || '[]');
       const rateLimiting = JSON.parse(localStorage.getItem('rateLimiting') || '{"maxLoginAttempts": 5, "lockoutDuration": 30}');
       const sessionSettings = JSON.parse(localStorage.getItem('sessionSettings') || '{"sessionTimeout": 30, "maxConcurrentSessions": 3}');
-
+      
       document.getElementById('allowedIPs').value = ipRestrictions.join('\n');
       document.getElementById('maxLoginAttempts').value = rateLimiting.maxLoginAttempts;
       document.getElementById('lockoutDuration').value = rateLimiting.lockoutDuration;
       document.getElementById('sessionTimeout').value = sessionSettings.sessionTimeout;
       document.getElementById('maxConcurrentSessions').value = sessionSettings.maxConcurrentSessions;
-
+      
       document.getElementById('securitySettingsModal').style.display = 'block';
     }
 
@@ -1364,13 +1362,13 @@
       if (!confirm('This will terminate all active user sessions. Continue?')) {
         return;
       }
-
+      
       const users = await window.db.getAll(window.DB_STORES.USERS);
       users.forEach(user => {
         user.lastActivity = null;
         user.sessionTime = null;
       });
-
+      
       await window.db.put(window.DB_STORES.USERS, newUser);
       addAuditLog('all_sessions_cleared', 'All user sessions terminated', null);
       showNotification('All user sessions have been terminated!', 'success');
@@ -1381,7 +1379,7 @@
       const auditLogs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
       const ipRestrictions = JSON.parse(localStorage.getItem('ipRestrictions') || '[]');
       const rateLimiting = JSON.parse(localStorage.getItem('rateLimiting') || '{}');
-
+      
       const report = {
         timestamp: new Date().toISOString(),
         totalUsers: users.length,
@@ -1394,7 +1392,7 @@
         rateLimiting: rateLimiting,
         securityScore: calculateSecurityScore(users)
       };
-
+      
       const reportBlob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
       const url = window.URL.createObjectURL(reportBlob);
       const a = document.createElement('a');
@@ -1402,7 +1400,7 @@
       a.download = `security_report_${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       window.URL.revokeObjectURL(url);
-
+      
       addAuditLog('security_report_generated', 'Security report generated', null);
       showNotification('Security report downloaded successfully!', 'success');
     }
@@ -1410,26 +1408,26 @@
     async function calculateSecurityScore(users) {
       let score = 0;
       const totalUsers = users.length;
-
+      
       if (totalUsers === 0) return 0;
-
+      
       // Two-factor authentication
       const twoFactorUsers = users.filter(u => u.twoFactorEnabled).length;
       score += (twoFactorUsers / totalUsers) * 30;
-
+      
       // Email verification
       const emailVerifiedUsers = users.filter(u => u.emailVerified).length;
       score += (emailVerifiedUsers / totalUsers) * 25;
-
+      
       // Strong passwords (assuming users with recent password changes have strong passwords)
-      const recentPasswordChanges = users.filter(u => u.passwordResetDate &&
+      const recentPasswordChanges = users.filter(u => u.passwordResetDate && 
         new Date(u.passwordResetDate) > new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)).length;
       score += (recentPasswordChanges / totalUsers) * 25;
-
+      
       // Active users (inactive accounts are security risks)
       const activeUsers = users.filter(u => u.status === 'active').length;
       score += (activeUsers / totalUsers) * 20;
-
+      
       return Math.round(score);
     }
 
@@ -1444,7 +1442,7 @@
         maxFailedAttempts: parseInt(document.getElementById('maxFailedAttempts').value),
         lockoutDuration: parseInt(document.getElementById('lockoutDuration').value)
       };
-
+      
       localStorage.setItem('securitySettings', JSON.stringify(settings));
       addAuditLog('security_settings_updated', 'Security settings updated', null);
       showNotification('Security settings saved successfully!', 'success');
@@ -1454,13 +1452,13 @@
       if (!confirm('This will force all users to change their passwords on next login. Continue?')) {
         return;
       }
-
+      
       const users = await window.db.getAll(window.DB_STORES.USERS);
       users.forEach(user => {
         user.forcePasswordChange = true;
         user.passwordResetDate = new Date().toISOString();
       });
-
+      
       await window.db.put(window.DB_STORES.USERS, newUser);
       addAuditLog('force_password_change', 'All users forced to change passwords', null);
       showNotification('All users will be required to change passwords on next login!', 'success');
@@ -1470,7 +1468,7 @@
       if (!confirm('This will lock all user accounts except super administrators. Continue?')) {
         return;
       }
-
+      
       const users = await window.db.getAll(window.DB_STORES.USERS);
       users.forEach(user => {
         if(user.role !== 'super-admin') {
@@ -1478,7 +1476,7 @@
           user.accountLocked = true;
         }
       });
-
+      
       await window.db.put(window.DB_STORES.USERS, newUser);
       addAuditLog('lock_all_accounts', 'All non-admin accounts locked', null);
       showNotification('All non-admin accounts have been locked!', 'success');
@@ -1574,7 +1572,7 @@
       const emailVerification = document.getElementById('newEmailVerification').checked;
 
       if(!username || !fullName || !email || !gender || !role || !accessLevel) {
-        window.showNotification('error', 'Validation Error', 'Please fill in all required fields');
+        notificationSystem.addNotification('error', 'Validation Error', 'Please fill in all required fields');
         showNotification('Please fill in all required fields.', 'error');
         return;
       }
@@ -1583,7 +1581,7 @@
       if (gender === 'Other') {
         const genderOther = document.getElementById('newGenderOther').value.trim();
         if (!genderOther) {
-          window.showNotification('error', 'Gender Specification Required', 'Please specify your gender when selecting "Other"');
+          notificationSystem.addNotification('error', 'Gender Specification Required', 'Please specify your gender when selecting "Other"');
           showNotification('Please specify your gender when selecting "Other".', 'error');
           return;
         }
@@ -1593,7 +1591,7 @@
       if (department === 'Others') {
         const departmentOther = document.getElementById('newDepartmentOther').value.trim();
         if (!departmentOther) {
-          window.showNotification('error', 'Department Specification Required', 'Please specify the department when selecting "Others"');
+          notificationSystem.addNotification('error', 'Department Specification Required', 'Please specify the department when selecting "Others"');
           showNotification('Please specify the department when selecting "Others".', 'error');
           return;
         }
@@ -1603,20 +1601,20 @@
       if (role === 'Teacher') {
         const classValue = document.getElementById('newClass').value;
         if (!classValue) {
-          window.showNotification('error', 'Class Required', 'Class is required for teachers');
+          notificationSystem.addNotification('error', 'Class Required', 'Class is required for teachers');
           showNotification('Class is required for teachers.', 'error');
           return;
         }
       }
 
       if (password !== confirmPassword) {
-        window.showNotification('error', 'Password Mismatch', 'Passwords do not match');
+        notificationSystem.addNotification('error', 'Password Mismatch', 'Passwords do not match');
         showNotification('Passwords do not match.', 'error');
         return;
       }
 
       const users = await window.db.getAll(window.DB_STORES.USERS);
-
+      
       if (await window.db.get(window.DB_STORES.USERS, username)) {
         showNotification('Username already exists.', 'error');
         return;
@@ -1677,17 +1675,17 @@
       // Send email verification if enabled
       if(emailVerification) {
         const verificationCode = sendEmailVerification(email, username);
-        window.showNotification('success', 'User Created', `User ${username} created successfully! Verification email sent to ${email}`);
+        notificationSystem.addNotification('success', 'User Created', `User ${username} created successfully! Verification email sent to ${email}`);
         showNotification(`User created successfully! Verification email sent to ${email}`, 'success');
       } else {
-        window.showNotification('success', 'User Created', `User ${username} created successfully with role: ${role}`);
+        notificationSystem.addNotification('success', 'User Created', `User ${username} created successfully with role: ${role}`);
         showNotification('User created successfully!', 'success');
       }
 
       // Setup two-factor authentication if enabled
       if (twoFactorEnabled) {
         setTimeout(() => {
-          await setupTwoFactorAuthentication(username);
+          setupTwoFactorAuthentication(username);
         }, 1000);
       }
 
@@ -1698,7 +1696,7 @@
     async function editUser(username) {
       const users = await window.db.getAll(window.DB_STORES.USERS);
       const user = await window.db.get(window.DB_STORES.USERS, username);
-
+      
       if (!user) {
         showNotification('User not found.', 'error');
         return;
@@ -1811,42 +1809,49 @@
         }
       }
 
-      const user = await window.db.get(window.DB_STORES.USERS, username);
-      if (!user) {
-        if (window.showNotification) window.showNotification('User not found.', 'error');
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
+      
+      if (userIndex === -1) {
+        showNotification('User not found.', 'error');
         return;
       }
 
+
       const updatedUser = {
-        ...user,
+        ...oldUser,
         fullName: fullName,
         email: email,
         gender: gender,
         role: role,
         accessLevel: accessLevel,
         accessDescription: accessDescription,
-        department: department,
+        department: department, // Update department
         status: status,
-        twoFactorEnabled: twoFactorEnabled,
+        twoFactorEnabled: twoFactorEnabled, // Update two-factor enabled
         updatedAt: new Date().toISOString()
       };
 
+      // Handle class field for teachers
       if(role === 'Teacher') {
-        updatedUser.class = document.getElementById('editClass').value;
+        users[userIndex].class = document.getElementById('editClass').value;
       } else {
-        delete updatedUser.class;
+        delete users[userIndex].class; // Remove class field for non-teachers
       }
 
+      // Handle gender specification
       if (gender === 'Other') {
-        updatedUser.gender = `Other: ${document.getElementById('editGenderOther').value}`;
+        users[userIndex].gender = `Other: ${document.getElementById('editGenderOther').value}`;
       }
 
+      // Handle department specification
       if (department === 'Others') {
-        updatedUser.department = `Others: ${document.getElementById('editDepartmentOther').value}`;
+        users[userIndex].department = `Others: ${document.getElementById('editDepartmentOther').value}`;
       }
 
+      // Update permissions based on role
       if (role === 'Super Admin' || role === 'School Manager') {
-        updatedUser.permissions = {
+        users[userIndex].permissions = {
           user_manage: true,
           student_manage: true,
           staff_manage: true,
@@ -1857,10 +1862,10 @@
           settings_manage: true
         };
       } else {
-        updatedUser.permissions = null;
+        users[userIndex].permissions = null; // Clear permissions if not Super Admin/School Manager
       }
 
-      await window.db.put(window.DB_STORES.USERS, updatedUser);
+      await window.db.put(window.DB_STORES.USERS, newUser);
 
       // Add audit log
       addAuditLog('user_updated', `User ${username} was updated`, users[userIndex]);
@@ -1871,19 +1876,27 @@
     }
 
     async function toggleUserStatus(username) {
-      const user = await window.db.get(window.DB_STORES.USERS, username);
-      if(!user) {
-        if (window.showNotification) window.showNotification('User not found.', 'error');
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
+      
+      if(userIndex === -1) {
+        showNotification('User not found.', 'error');
         return;
       }
 
+      const user = users[userIndex];
       const newStatus = user.status === 'suspended' ? 'active' : 'suspended';
-      user.status = newStatus;
-      user.updatedAt = new Date().toISOString();
+      
+      const updatedUser = {
+        ...user,
+        status: newStatus,
+        updatedAt: new Date().toISOString()
+      };
 
-      await window.db.put(window.DB_STORES.USERS, user);
+      await window.db.put(window.DB_STORES.USERS, newUser);
 
-      if (window.addAuditLog) await window.addAuditLog('user_status_changed', `User ${username} status changed to ${newStatus}`, user);
+      // Add audit log
+      addAuditLog('user_status_changed', `User ${username} status changed to ${newStatus}`, users[userIndex]);
 
       showNotification(`User ${newStatus === 'suspended' ? 'suspended' : 'activated'} successfully!`, 'success');
       loadUsers();
@@ -1894,14 +1907,20 @@
         return;
       }
 
-      const deletedUser = await window.db.get(window.DB_STORES.USERS, username);
-      if (!deletedUser) {
-        if (window.showNotification) window.showNotification('User not found.', 'error');
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
+      
+      if(userIndex === -1) {
+        showNotification('User not found.', 'error');
         return;
       }
-      await window.db.delete(window.DB_STORES.USERS, username);
 
-      if (window.addAuditLog) await window.addAuditLog('user_deleted', `User ${username} was deleted`, deletedUser);
+      const deletedUser = await window.db.get(window.DB_STORES.USERS, username);
+      await window.db.delete(window.DB_STORES.USERS, username);
+      await window.db.put(window.DB_STORES.USERS, newUser);
+
+      // Add audit log
+      addAuditLog('user_deleted', `User ${username} was deleted`, deletedUser);
 
       showNotification('User deleted successfully!', 'success');
       loadUsers();
@@ -1959,7 +1978,7 @@
               <label>Minimum length: <input type="number" id="minLength" value="8" min="6" max="20"></label>
             </div>
           </div>
-
+          
           <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <h4>Session Management</h4>
             <div style="margin: 10px 0;">
@@ -1973,7 +1992,7 @@
             </div>
             <button class="btn-primary" onclick="saveSecuritySettings()">Save Settings</button>
           </div>
-
+          
           <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <h4>Security Actions</h4>
             <button class="btn-secondary" onclick="manageUserSessions()" style="width: 100%; margin: 5px 0;">Manage Active Sessions</button>
@@ -1987,7 +2006,7 @@
     async function loadAuditLogs() {
       const auditLogs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
       const auditContent = document.getElementById('auditContent');
-
+      
       if (auditLogs.length === 0) {
         auditContent.innerHTML = `
           <div style="text-align: center; padding: 40px;">
@@ -2083,7 +2102,7 @@
       if (!confirm('Are you sure you want to clear all audit logs? This action cannot be undone.')) {
         return;
       }
-
+      
       localStorage.removeItem('auditLogs');
       showNotification('Audit logs cleared successfully!', 'success');
       loadAuditLogs();
@@ -2101,12 +2120,12 @@
     }
 
     // Initialize the application
-    document.addEventListener('DOMContentLoaded', async function() {
+    document.addEventListener('DOMContentLoaded', function() {
       // Migrate data if needed
       if (window.migrateUserData) window.migrateUserData();
 
-      if (!(await checkAuth())) return;
-
+      if (!checkAuth()) return;
+      
       try {
         initializeUserManagement();
         console.log('User Management System initialized successfully');
@@ -2117,44 +2136,42 @@
 
     function initializeUserManagement() {
       console.log('Initializing User Management System...');
-
+      
       // Initialize user interface
       const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
       if (currentUser) {
         displayUserInfo(currentUser);
       }
-
+      
       // Load initial data
       loadUsers();
-
+      
       console.log('User Management System initialized successfully');
     }
 
     // Enhanced User Management Functions
-        async function resetUserPassword(username) {
-      try {
-        const newPassword = await generateSecurePassword();
-        const user = await window.db.get(window.DB_STORES.USERS, username);
-
-        if(!user) {
-          if (window.showNotification) window.showNotification('User not found.', 'error');
-          return;
-        }
-
-        user.password = btoa(newPassword);
-        user.forcePasswordChange = true;
-        user.passwordResetDate = new Date().toISOString();
-        user.updatedAt = new Date().toISOString();
-
-        await window.db.put(window.DB_STORES.USERS, user);
-
-        if (window.addAuditLog) await window.addAuditLog('password_reset', `Password reset for user ${username}`, user);
-
-        if (window.showNotification) window.showNotification(`Password reset for ${username}. New password: ${newPassword}`, 'success');
-        await loadUsers();
-      } catch (error) {
-        console.error('Error resetting password:', error);
+    async function resetUserPassword(username) {
+      const newPassword = generateSecurePassword();
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
+      
+      if (userIndex === -1) {
+        showNotification('User not found.', 'error');
+        return;
       }
+      
+      users[userIndex].password = btoa(newPassword);
+      users[userIndex].forcePasswordChange = true;
+      users[userIndex].passwordResetDate = new Date().toISOString();
+      users[userIndex].updatedAt = new Date().toISOString();
+      
+      await window.db.put(window.DB_STORES.USERS, newUser);
+      
+      // Add audit log
+      addAuditLog('password_reset', `Password reset for user ${username}`, users[userIndex]);
+      
+      showNotification(`Password reset for ${username}. New password: ${newPassword}`, 'success');
+      loadUsers();
     }
 
     async function generateSecurePassword() {
@@ -2178,7 +2195,7 @@
           const lines = csv.split('\n');
           const headers = lines[0].split(',');
           const users = [];
-
+          
           for (let i = 1; i < lines.length; i++) {
             if (lines[i].trim()) {
               const values = lines[i].split(',');
@@ -2195,11 +2212,11 @@
               users.push(user);
             }
           }
-
-
-
-          for (const u of users) { await window.db.put(window.DB_STORES.USERS, u); }
-
+          
+          const existingUsers = await window.db.getAll(window.DB_STORES.USERS);
+          existingUsers.push(...users);
+          await Promise.all(existingUsers.map(u => window.db.put(window.DB_STORES.USERS, u)));
+          
           addAuditLog('bulk_import', `Imported ${users.length} users`, null);
           showNotification(`Successfully imported ${users.length} users!`, 'success');
           loadUsers();
@@ -2234,9 +2251,9 @@
 
     async function manageUserSessions() {
       const users = await window.db.getAll(window.DB_STORES.USERS);
-      const activeSessions = users.filter(u => u.lastActivity &&
+      const activeSessions = users.filter(u => u.lastActivity && 
         new Date(u.lastActivity) > new Date(Date.now() - 30 * 60 * 1000)); // Last 30 minutes
-
+      
       let html = `
         <div class="modal-content">
           <div class="modal-header">
@@ -2255,7 +2272,7 @@
               </thead>
               <tbody>
       `;
-
+      
       activeSessions.forEach(user => {
         const lastActivity = new Date(user.lastActivity);
         const timeDiff = Math.floor((new Date() - lastActivity) / 1000 / 60);
@@ -2270,14 +2287,14 @@
           </tr>
         `;
       });
-
+      
       html += `
               </tbody>
             </table></div>
           </div>
         </div>
       `;
-
+      
       const modal = document.createElement('div');
       modal.id = 'sessionModal';
       modal.className = 'modal';
@@ -2286,21 +2303,20 @@
       document.body.appendChild(modal);
     }
 
-        async function terminateSession(username) {
-      try {
-        const user = await window.db.get(window.DB_STORES.USERS, username);
-        if(user) {
-          user.lastActivity = null;
-          user.sessionTime = null;
-          await window.db.put(window.DB_STORES.USERS, user);
-          if (window.addAuditLog) await window.addAuditLog('session_terminated', `Session terminated for user ${username}`, user);
-          if (window.showNotification) window.showNotification(`Session terminated for ${username}`, 'success');
-        }
-      } catch (error) {
-        console.error('Error terminating session:', error);
+    async function terminateSession(username) {
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
+      
+      if(userIndex !== -1) {
+        users[userIndex].lastActivity = null;
+        users[userIndex].sessionTime = null;
+        await window.db.put(window.DB_STORES.USERS, newUser);
+        
+        addAuditLog('session_terminated', `Session terminated for user ${username}`, users[userIndex]);
+        showNotification(`Session terminated for ${username}`, 'success');
       }
+      
       closeModal('sessionModal');
-      await loadUsers();
     }
 
     // Priority 1 Enhancement Functions
@@ -2321,7 +2337,7 @@
           <p>If you didn't create this account, please ignore this email.</p>
         `
       };
-
+      
       // Store verification code
       const verificationCodes = JSON.parse(localStorage.getItem('emailVerificationCodes') || '{}');
       verificationCodes[email] = {
@@ -2331,10 +2347,10 @@
         expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       };
       localStorage.setItem('emailVerificationCodes', JSON.stringify(verificationCodes));
-
+      
       // Add audit log
       addAuditLog('email_verification_sent', `Email verification sent to ${email}`, null);
-
+      
       showNotification(`Verification email sent to ${email}`, 'success');
       return verificationCode;
     }
@@ -2346,36 +2362,37 @@
     function verifyEmailCode(email, code) {
       const verificationCodes = JSON.parse(localStorage.getItem('emailVerificationCodes') || '{}');
       const verification = verificationCodes[email];
-
+      
       if(!verification) {
         return { success: false, message: 'No verification code found for this email' };
       }
-
+      
       if (new Date() > new Date(verification.expires)) {
         delete verificationCodes[email];
         localStorage.setItem('emailVerificationCodes', JSON.stringify(verificationCodes));
         return { success: false, message: 'Verification code has expired' };
       }
-
+      
       if (verification.code !== code) {
         return { success: false, message: 'Invalid verification code' };
       }
-
+      
       // Mark email as verified
       const users = await window.db.getAll(window.DB_STORES.USERS);
-      const user = users.find(u => u.email === email);
-
-      if(user) {
-        user.emailVerified = true;
-        user.emailVerifiedAt = new Date().toISOString();
-        await window.db.put(window.DB_STORES.USERS, user);
-
-        if (window.addAuditLog) await window.addAuditLog('email_verified', `Email verified for ${email}`, user);
+      const userIndex = users.findIndex(u => u.email === email);
+      
+      if(userIndex !== -1) {
+        users[userIndex].emailVerified = true;
+        users[userIndex].emailVerifiedAt = new Date().toISOString();
+        await window.db.put(window.DB_STORES.USERS, newUser);
       }
-
+      
+      // Remove verification code
       delete verificationCodes[email];
       localStorage.setItem('emailVerificationCodes', JSON.stringify(verificationCodes));
-
+      
+      addAuditLog('email_verified', `Email verified for ${email}`, users[userIndex]);
+      
       return { success: true, message: 'Email verified successfully' };
     }
 
@@ -2383,11 +2400,11 @@
     async function setupTwoFactorAuthentication(username) {
       const secretKey = generateTOTPSecret();
       const qrCodeData = `otpauth://totp/SchoolManagement:${username}?secret=${secretKey}&issuer=SchoolManagement`;
-
+      
       // Store secret key temporarily
       sessionStorage.setItem('tempTwoFactorSecret', secretKey);
       sessionStorage.setItem('tempTwoFactorUsername', username);
-
+      
       // Update QR code display
       document.getElementById('secretKey').textContent = secretKey;
       document.getElementById('qrCode').innerHTML = `
@@ -2399,7 +2416,7 @@
           </div>
         </div>
       `;
-
+      
       document.getElementById('twoFactorModal').style.display = 'block';
     }
 
@@ -2415,15 +2432,15 @@
     function verifyTwoFactor() {
       const code = document.getElementById('twoFactorCode').value;
       const secretKey = sessionStorage.getItem('tempTwoFactorSecret');
-
+      
       if (!code || code.length !== 6) {
         showNotification('Please enter a valid 6-digit code', 'error');
         return;
       }
-
+      
       // Simple TOTP verification (in real implementation, use proper TOTP library)
       const expectedCode = generateTOTPCode(secretKey);
-
+      
       if (code === expectedCode) {
         showNotification('Two-factor authentication verified successfully!', 'success');
         document.getElementById('twoFactorCode').value = '';
@@ -2443,24 +2460,25 @@
     function completeTwoFactorSetup() {
       const username = sessionStorage.getItem('tempTwoFactorUsername');
       const secretKey = sessionStorage.getItem('tempTwoFactorSecret');
-
+      
       if (!username || !secretKey) {
         showNotification('Two-factor setup failed. Please try again.', 'error');
         return;
       }
-
-      const user = await window.db.get(window.DB_STORES.USERS, username);
-
-      if(user) {
-        user.twoFactorEnabled = true;
-        user.twoFactorSecret = secretKey;
-        user.twoFactorSetupAt = new Date().toISOString();
-        await window.db.put(window.DB_STORES.USERS, user);
-
-        if (window.addAuditLog) await window.addAuditLog('two_factor_enabled', `Two-factor authentication enabled for ${username}`, user);
-        if (window.showNotification) window.showNotification('Two-factor authentication setup completed!', 'success');
+      
+      const users = await window.db.getAll(window.DB_STORES.USERS);
+      const oldUser = await window.db.get(window.DB_STORES.USERS, username);
+      
+      if(userIndex !== -1) {
+        users[userIndex].twoFactorEnabled = true;
+        users[userIndex].twoFactorSecret = secretKey;
+        users[userIndex].twoFactorSetupAt = new Date().toISOString();
+        await window.db.put(window.DB_STORES.USERS, newUser);
+        
+        addAuditLog('two_factor_enabled', `Two-factor authentication enabled for ${username}`, users[userIndex]);
+        showNotification('Two-factor authentication setup completed!', 'success');
       }
-
+      
       // Clear temporary data
       sessionStorage.removeItem('tempTwoFactorSecret');
       sessionStorage.removeItem('tempTwoFactorUsername');
@@ -2482,11 +2500,11 @@
       const role = document.getElementById('newRole').value;
       const accessLevel = document.getElementById('newAccessLevel').value;
       const permissionsSection = document.getElementById('permissionsSection');
-
+      
       // Show permissions section for all roles except Student and Parent
       if (role === 'Super Admin' || role === 'School Manager' || role === 'Teacher' || role === 'Non-Teaching') {
         permissionsSection.style.display = 'block';
-
+        
         // Auto-configure permissions based on access level
         configurePermissionsByAccessLevel(accessLevel, 'new');
       } else {
@@ -2500,17 +2518,17 @@
     function configurePermissionsByAccessLevel(accessLevel, formType) {
       const prefix = formType === 'edit' ? 'edit_' : '';
       const badgeId = formType === 'edit' ? 'editCurrentAccessLevelBadge' : 'currentAccessLevelBadge';
-
+      
       // Update access level badge
       const badge = document.getElementById(badgeId);
       if (badge) {
         badge.textContent = accessLevel || 'No Access Level';
       }
-
+      
       // Reset all permissions first
       const permissions = [
         'perm_user_manage',
-        'perm_student_manage',
+        'perm_student_manage', 
         'perm_staff_manage',
         'perm_finance_view',
         'perm_finance_edit',
@@ -2518,12 +2536,12 @@
         'perm_reports_edit',
         'perm_settings_manage'
       ];
-
+      
       permissions.forEach(perm => {
         const element = document.getElementById(prefix + perm);
         if (element) element.checked = false;
       });
-
+      
       // Configure permissions based on access level
       switch (accessLevel) {
         case 'Super Administrator':
@@ -2533,7 +2551,7 @@
             if (element) element.checked = true;
           });
           break;
-
+          
         case 'Administrator':
           // High-level administrative access
           const adminPermissions = [
@@ -2549,7 +2567,7 @@
             if (element) element.checked = true;
           });
           break;
-
+          
         case 'Standard':
           // Standard access for teachers and non-teaching staff
           const standardPermissions = [
@@ -2562,12 +2580,12 @@
             if (element) element.checked = true;
           });
           break;
-
+          
         case 'Basic':
           // Limited access - no administrative permissions
           // Permissions remain unchecked for basic access
           break;
-
+          
         default:
           // No access level selected - no permissions
           break;
@@ -2578,7 +2596,7 @@
     function onAccessLevelChange() {
       const accessLevel = document.getElementById('newAccessLevel').value;
       const role = document.getElementById('newRole').value;
-
+      
       if (role === 'Super Admin' || role === 'School Manager' || role === 'Teacher' || role === 'Non-Teaching') {
         configurePermissionsByAccessLevel(accessLevel, 'new');
         if (accessLevel) {
@@ -2590,7 +2608,7 @@
     function onEditAccessLevelChange() {
       const accessLevel = document.getElementById('editAccessLevel').value;
       const role = document.getElementById('editRole').value;
-
+      
       if (role === 'Super Admin' || role === 'School Manager' || role === 'Teacher' || role === 'Non-Teaching') {
         configurePermissionsByAccessLevel(accessLevel, 'edit');
         if (accessLevel) {
@@ -2611,7 +2629,7 @@
         'perm_reports_edit': 'Allows creating, editing, and managing system reports and analytics',
         'perm_settings_manage': 'Allows managing system settings, configurations, and administrative options'
       };
-
+      
       const description = permissionDescriptions[permissionId];
       if (description) {
         showNotification(description, 'info', 5000);
@@ -2629,7 +2647,7 @@
         'edit_perm_reports_edit': 'Allows creating, editing, and managing system reports and analytics',
         'edit_perm_settings_manage': 'Allows managing system settings, configurations, and administrative options'
       };
-
+      
       const description = permissionDescriptions[permissionId];
       if (description) {
         showNotification(description, 'info', 5000);
@@ -2644,7 +2662,7 @@
         'Standard': 'Standard access for staff. Can manage students, view finances and reports.',
         'Basic': 'Limited access with no administrative permissions. Suitable for students and parents.'
       };
-
+      
       const summary = summaries[accessLevel];
       if (summary) {
         showNotification(`Access Level: ${accessLevel} - ${summary}`, 'info', 6000);
@@ -2656,7 +2674,7 @@
       const roleSelect = document.getElementById('newRole');
       const classGroup = document.getElementById('newClassGroup');
       const classSelect = document.getElementById('newClass');
-
+      
       if (roleSelect.value === 'Teacher') {
         classGroup.classList.remove('hide');
         classGroup.classList.add('show');
@@ -2673,7 +2691,7 @@
       const roleSelect = document.getElementById('editRole');
       const classGroup = document.getElementById('editClassGroup');
       const classSelect = document.getElementById('editClass');
-
+      
       if (roleSelect.value === 'Teacher') {
         classGroup.classList.remove('hide');
         classGroup.classList.add('show');
@@ -2691,7 +2709,7 @@
       const genderSelect = document.getElementById('newGender');
       const genderOtherGroup = document.getElementById('newGenderOtherGroup');
       const genderOtherInput = document.getElementById('newGenderOther');
-
+      
       if (genderSelect.value === 'Other') {
         genderOtherGroup.classList.remove('hide');
         genderOtherGroup.classList.add('show');
@@ -2708,7 +2726,7 @@
       const genderSelect = document.getElementById('editGender');
       const genderOtherGroup = document.getElementById('editGenderOtherGroup');
       const genderOtherInput = document.getElementById('editGenderOther');
-
+      
       if (genderSelect.value === 'Other') {
         genderOtherGroup.classList.remove('hide');
         genderOtherGroup.classList.add('show');
@@ -2725,7 +2743,7 @@
       const departmentSelect = document.getElementById('newDepartment');
       const departmentOtherGroup = document.getElementById('newDepartmentOtherGroup');
       const departmentOtherInput = document.getElementById('newDepartmentOther');
-
+      
       if (departmentSelect.value === 'Others') {
         departmentOtherGroup.classList.remove('hide');
         departmentOtherGroup.classList.add('show');
@@ -2742,7 +2760,7 @@
       const departmentSelect = document.getElementById('editDepartment');
       const departmentOtherGroup = document.getElementById('editDepartmentOtherGroup');
       const departmentOtherInput = document.getElementById('editDepartmentOther');
-
+      
       if (departmentSelect.value === 'Others') {
         departmentOtherGroup.classList.remove('hide');
         departmentOtherGroup.classList.add('show');
@@ -2760,11 +2778,11 @@
       const role = document.getElementById('newRole').value;
       const accessLevelSelect = document.getElementById('newAccessLevel');
       const accessDescription = document.getElementById('newAccessDescription');
-
+      
       // Clear previous values
       accessLevelSelect.value = '';
       accessDescription.value = '';
-
+      
       // Set access level and description based on role
       switch (role) {
         case 'Super Admin':
@@ -2795,7 +2813,7 @@
           accessLevelSelect.value = '';
           accessDescription.value = '';
       }
-
+      
       // Update permissions based on the new access level
       updatePermissions();
     }
@@ -2804,11 +2822,11 @@
       const role = document.getElementById('editRole').value;
       const accessLevelSelect = document.getElementById('editAccessLevel');
       const accessDescription = document.getElementById('editAccessDescription');
-
+      
       // Clear previous values
       accessLevelSelect.value = '';
       accessDescription.value = '';
-
+      
       // Set access level and description based on role
       switch (role) {
         case 'Super Admin':
@@ -2839,7 +2857,7 @@
           accessLevelSelect.value = '';
           accessDescription.value = '';
       }
-
+      
       // Update permissions based on the new access level
       updateEditPermissions();
     }
@@ -2848,11 +2866,11 @@
       const role = document.getElementById('editRole').value;
       const accessLevel = document.getElementById('editAccessLevel').value;
       const permissionsSection = document.getElementById('editPermissionsSection');
-
+      
       // Show permissions section for all roles except Student and Parent
       if (role === 'Super Admin' || role === 'School Manager' || role === 'Teacher' || role === 'Non-Teaching') {
         permissionsSection.style.display = 'block';
-
+        
         // Auto-configure permissions based on access level
         configurePermissionsByAccessLevel(accessLevel, 'edit');
       } else {
@@ -2867,7 +2885,7 @@
     function saveIPRestrictions() {
       const allowedIPs = document.getElementById('allowedIPs').value;
       const ipRestrictions = allowedIPs.split('\n').filter(ip => ip.trim());
-
+      
       localStorage.setItem('ipRestrictions', JSON.stringify(ipRestrictions));
       addAuditLog('ip_restrictions_updated', `IP restrictions updated: ${ipRestrictions.length} rules`, null);
       showNotification('IP restrictions saved successfully!', 'success');
@@ -2876,12 +2894,12 @@
     function saveRateLimiting() {
       const maxLoginAttempts = document.getElementById('maxLoginAttempts').value;
       const lockoutDuration = document.getElementById('lockoutDuration').value;
-
+      
       const rateLimiting = {
         maxLoginAttempts: parseInt(maxLoginAttempts),
         lockoutDuration: parseInt(lockoutDuration)
       };
-
+      
       localStorage.setItem('rateLimiting', JSON.stringify(rateLimiting));
       addAuditLog('rate_limiting_updated', `Rate limiting updated: ${maxLoginAttempts} attempts, ${lockoutDuration} minutes`, null);
       showNotification('Rate limiting settings saved successfully!', 'success');
@@ -2890,12 +2908,12 @@
     function saveSessionSettings() {
       const sessionTimeout = document.getElementById('sessionTimeout').value;
       const maxConcurrentSessions = document.getElementById('maxConcurrentSessions').value;
-
+      
       const sessionSettings = {
         sessionTimeout: parseInt(sessionTimeout),
         maxConcurrentSessions: parseInt(maxConcurrentSessions)
       };
-
+      
       localStorage.setItem('sessionSettings', JSON.stringify(sessionSettings));
       addAuditLog('session_settings_updated', `Session settings updated: ${sessionTimeout} minutes, ${maxConcurrentSessions} sessions`, null);
       showNotification('Session settings saved successfully!', 'success');
@@ -2905,7 +2923,7 @@
       saveIPRestrictions();
       saveRateLimiting();
       saveSessionSettings();
-
+      
       showNotification('All security settings applied successfully!', 'success');
       closeModal('securitySettingsModal');
     }
@@ -2918,13 +2936,13 @@
       users.forEach(user => {
         const row = document.createElement('tr');
         const departmentBadge = user.department ? `<span class="user-group-badge group-${user.department.toLowerCase().replace(/\s+/g, '-')}">${user.department}</span>` : '';
-        const twoFactorBadge = user.twoFactorEnabled ?
-          '<span class="two-factor-status two-factor-enabled">2FA</span>' :
+        const twoFactorBadge = user.twoFactorEnabled ? 
+          '<span class="two-factor-status two-factor-enabled">2FA</span>' : 
           '<span class="two-factor-status two-factor-disabled">No 2FA</span>';
-        const emailVerifiedBadge = user.emailVerified ?
-          '<span class="email-verification-status email-verified">✓ Verified</span>' :
+        const emailVerifiedBadge = user.emailVerified ? 
+          '<span class="email-verification-status email-verified">✓ Verified</span>' : 
           '<span class="email-verification-status email-unverified">✗ Unverified</span>';
-
+        
         row.innerHTML = `
           <td>${user.username} ${departmentBadge}</td>
           <td>${user.fullName || 'N/A'}</td>
@@ -2946,7 +2964,86 @@
       });
     }
 
-    , 5000);
+    // Comprehensive Notification System
+    class NotificationSystem {
+      constructor() {
+        this.notifications = [];
+        this.notificationContainer = null;
+        this.notificationBadge = null;
+        this.init();
+      }
+
+      init() {
+        this.createNotificationContainer();
+        this.createNotificationBadge();
+        this.loadNotifications();
+        this.startAutoCleanup();
+      }
+
+      createNotificationContainer() {
+        // Create notification container if it doesn't exist
+        if (!document.getElementById('notificationContainer')) {
+          const container = document.createElement('div');
+          container.id = 'notificationContainer';
+          container.className = 'notification-container';
+          document.body.appendChild(container);
+        }
+        this.notificationContainer = document.getElementById('notificationContainer');
+      }
+
+      createNotificationBadge() {
+        // Create notification badge if it doesn't exist
+        if (!document.getElementById('notificationBadge')) {
+          const badge = document.createElement('div');
+          badge.id = 'notificationBadge';
+          badge.className = 'notification-badge';
+          badge.innerHTML = '0';
+          badge.style.display = 'none';
+          badge.onclick = () => this.showNotificationPanel();
+          document.body.appendChild(badge);
+        }
+        this.notificationBadge = document.getElementById('notificationBadge');
+      }
+
+      addNotification(type, title, message, data = {}) {
+        const notification = {
+          id: Date.now() + Math.random(),
+          type: type, // 'success', 'error', 'warning', 'info', 'system'
+          title: title,
+          message: message,
+          data: data,
+          timestamp: new Date().toISOString(),
+          read: false
+        };
+
+        this.notifications.unshift(notification);
+        this.saveNotifications();
+        this.updateBadge();
+        this.showToast(notification);
+        this.logEvent(notification);
+      }
+
+      showToast(notification) {
+        const toast = document.createElement('div');
+        toast.className = `notification-toast notification-${notification.type}`;
+        toast.innerHTML = `
+          <div class="toast-header">
+            <span class="toast-icon">${this.getIcon(notification.type)}</span>
+            <span class="toast-title">${notification.title}</span>
+            <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
+          </div>
+          <div class="toast-message">${notification.message}</div>
+          <div class="toast-time">${new Date(notification.timestamp).toLocaleTimeString()}</div>
+        `;
+
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.remove();
+          }
+        }, 5000);
       }
 
       getIcon(type) {
@@ -3041,7 +3138,7 @@
       logEvent(notification) {
         // Log to console for debugging
         console.log(`[${notification.type.toUpperCase()}] ${notification.title}: ${notification.message}`, notification.data);
-
+        
         // Save to audit log
         this.saveToAuditLog(notification);
       }
@@ -3069,8 +3166,8 @@
         setInterval(() => {
           const thirtyDaysAgo = new Date();
           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-          this.notifications = this.notifications.filter(n =>
+          
+          this.notifications = this.notifications.filter(n => 
             new Date(n.timestamp) > thirtyDaysAgo
           );
           this.saveNotifications();
@@ -3080,7 +3177,7 @@
     }
 
     // Initialize notification system
-
+    const notificationSystem = new NotificationSystem();
 
     // Close modal when clicking outside
     window.onclick = function(event) {
@@ -3094,7 +3191,7 @@
 
     // System startup notification
     setTimeout(() => {
-      window.showNotification('system', 'System Ready', 'User Management System initialized and ready for use');
+      notificationSystem.addNotification('system', 'System Ready', 'User Management System initialized and ready for use');
     }, 1000);
   </script>
 </body>

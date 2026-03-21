@@ -9,14 +9,14 @@
     <script src="shared-utils.js"></script>
     <script>
         // Authentication check - using shared function
-        async function checkAuthPage() {
-            return await window.checkAuth('parent');
+        function checkAuth() {
+            return window.checkAuth('parent');
         }
-
-        window.onload = async function() {
-            if (await checkAuthPage()) {
-                if (typeof initializeDatabase === 'function') if (window.db) await window.db.init();
-                await loadParentData();
+        
+        window.onload = function() {
+            if (checkAuth()) {
+                if (typeof initializeDatabase === 'function') initializeDatabase();
+                loadParentData();
             }
         };
     </script>
@@ -144,7 +144,7 @@
             background: linear-gradient(90deg, #4caf50, #8bc34a);
             transition: width 0.3s ease;
         }
-
+        
         /* Messaging Styles */
         .message-section {
             background: white;
@@ -153,23 +153,23 @@
             margin-top: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-
+        
         .message-item {
             padding: 12px;
             border-bottom: 1px solid #eee;
             cursor: pointer;
             transition: background 0.2s;
         }
-
+        
         .message-item:hover {
             background: #f8f9fa;
         }
-
+        
         .message-item.unread {
             background: #f0f9ff;
             border-left: 3px solid #3b82f6;
         }
-
+        
         .compose-btn {
             background: #667eea;
             color: white;
@@ -179,7 +179,7 @@
             cursor: pointer;
             margin-bottom: 15px;
         }
-
+        
         .message-content {
             background: #f8f9fa;
             padding: 15px;
@@ -187,7 +187,7 @@
             margin-top: 15px;
             display: none;
         }
-
+        
         .compose-form {
             background: #f8f9fa;
             padding: 20px;
@@ -195,17 +195,17 @@
             margin-top: 15px;
             display: none;
         }
-
+        
         .form-group {
             margin-bottom: 15px;
         }
-
+        
         .form-group label {
             display: block;
             margin-bottom: 5px;
             font-weight: 600;
         }
-
+        
         .form-group input,
         .form-group textarea,
         .form-group select {
@@ -215,13 +215,12 @@
             border-radius: 4px;
             font-size: 14px;
         }
-
+        
         .form-group textarea {
             height: 100px;
             resize: vertical;
         }
     </style>
-    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
     <div class="header">
@@ -302,7 +301,7 @@
                 </div>
             </div>
         </div>
-
+        
         <!-- Messaging Section -->
         <div class="message-section">
             <h3>Messages</h3>
@@ -340,7 +339,19 @@
     <script>
         let db, useLocalStorage = false;
 
-        ;
+        function initializeDatabase() {
+            const request = indexedDB.open("SchoolDB", 3);
+            request.onerror = () => { useLocalStorage = true; };
+            request.onsuccess = e => { db = e.target.result; };
+            request.onupgradeneeded = e => {
+                db = e.target.result;
+                if (!db.objectStoreNames.contains("admissions")) {
+                    db.createObjectStore("admissions", { keyPath: "admissionNo" });
+                }
+                if (!db.objectStoreNames.contains("attendance")) {
+                    db.createObjectStore("attendance", { keyPath: "id", autoIncrement: true });
+                }
+            };
         }
 
 
@@ -361,7 +372,7 @@
                     document.getElementById('admissionNo').textContent = child.admissionNo;
                     document.getElementById('currentClass').textContent = child.classAdmitted;
                     document.getElementById('admissionDate').textContent = new Date(child.createdAt).toLocaleDateString();
-
+                    
                     // Calculate days enrolled
                     const admissionDate = new Date(child.createdAt);
                     const today = new Date();
@@ -372,13 +383,13 @@
 
             // Load attendance data
             window.db.getAll(window.DB_STORES.ATTENDANCE).then(attendanceRecords => {
-                const childAttendance = attendanceRecords.filter(record =>
+                const childAttendance = attendanceRecords.filter(record => 
                     record.statuses && record.statuses[currentUser.admissionNo]
                 );
 
                 if (childAttendance.length > 0) {
                     const totalDays = childAttendance.length;
-                    const presentDays = childAttendance.filter(record =>
+                    const presentDays = childAttendance.filter(record => 
                         record.statuses[currentUser.admissionNo] === 'Present'
                     ).length;
                     const absentDays = totalDays - presentDays;
@@ -392,14 +403,14 @@
 
                     // Show recent attendance
                     const recentAttendance = childAttendance.slice(-5).reverse();
-                    let html = '<div class="responsive-table-container"><table class="attendance-table">';
+                    let html = '<table class="attendance-table">';
                     html += '<thead><tr><th>Date</th><th>Status</th></tr></thead><tbody>';
                     recentAttendance.forEach(record => {
                         const status = record.statuses[currentUser.admissionNo];
                         const statusClass = status === 'Present' ? 'status-present' : 'status-absent';
                         html += `<tr><td>${record.date}</td><td class="${statusClass}">${status}</td></tr>`;
                     });
-                    html += '</tbody></table></div>';
+                    html += '</tbody></table>';
                     document.getElementById('recentAttendance').innerHTML = html;
                 } else {
                     document.getElementById('recentAttendance').innerHTML = '<p>No attendance records found.</p>';
@@ -411,61 +422,25 @@
 
 
 
-        async function loadMessages() {
+        function viewMessage(messageId) {
+            const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+            const message = messages.find(m => m.id === messageId);
             const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-            if (!currentUser) return;
-
-            const allMessages = await window.db.getAll(window.DB_STORES.MESSAGES);
-            const userMessages = allMessages.filter(m =>
-                m.recipient === currentUser.username || m.sender === currentUser.username
-            ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-            displayMessages(userMessages, currentUser.username);
-            await loadRecipients();
-        }
-
-        function displayMessages(messages, username) {
-            const list = document.getElementById('messageList');
-            if (!list) return;
-
-            if (messages.length === 0) {
-                list.innerHTML = '<p>No messages found.</p>';
-                return;
-            }
-
-            list.innerHTML = messages.map(m => {
-                const isUnread = m.recipient === username && !m.read;
-                const isSent = m.sender === username;
-                return `
-                    <div class="message-item ${isUnread ? 'unread' : ''}" onclick="viewMessage('${m.id}')">
-                        <div style="display: flex; justify-content: space-between;">
-                            <strong>${m.subject}</strong>
-                            <small>${new Date(m.timestamp).toLocaleDateString()}</small>
-                        </div>
-                        <div style="font-size: 0.9em; color: #666;">
-                            ${isSent ? 'To: ' + m.recipient : 'From: ' + m.sender}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        async function viewMessage(messageId) {
-            const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-            const message = (await window.db.getAll(window.DB_STORES.MESSAGES)).find(m => m.id === messageId);
-
+            
             if (!message) return;
-
+            
             const messageContent = document.getElementById('messageContent');
             const isInbox = message.recipient === currentUser.username;
-
+            
             // Mark as read if it's an inbox message
             if (isInbox && !message.read) {
                 message.read = true;
-                await window.db.put(window.DB_STORES.MESSAGES, message);
-                await loadMessages();
+                localStorage.setItem('messages', JSON.stringify(messages));
+                displayMessages(messages.filter(m => 
+                    m.recipient === currentUser.username || m.sender === currentUser.username
+                ), currentUser.username);
             }
-
+            
             messageContent.style.display = 'block';
             messageContent.innerHTML = `
                 <h4>${message.subject}</h4>
@@ -490,13 +465,13 @@
             document.getElementById('composeForm').style.display = 'none';
         }
 
-        async function loadRecipients() {
+        function loadRecipients() {
             const users = await window.db.getAll(window.DB_STORES.USERS);
             const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
             const recipientSelect = document.getElementById('recipient');
-
+            
             if (!recipientSelect) return;
-
+            
             let options = '<option value="">Select Recipient</option>';
             users.forEach(user => {
                 if (user.username !== currentUser.username) {
@@ -506,19 +481,19 @@
             recipientSelect.innerHTML = options;
         }
 
-        async function sendMessage(event) {
+        function sendMessage(event) {
             event.preventDefault();
-
+            
             const recipient = document.getElementById('recipient').value;
             const subject = document.getElementById('subject').value;
             const messageText = document.getElementById('messageText').value;
             const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-
+            
             if (!recipient || !subject || !messageText) {
                 alert('Please fill in all fields');
                 return;
             }
-
+            
             const newMessage = {
                 id: Date.now().toString(),
                 sender: currentUser.username,
@@ -528,43 +503,46 @@
                 timestamp: new Date().toISOString(),
                 read: false
             };
-
-            await window.db.put(window.DB_STORES.MESSAGES, newMessage);
-
-            // Create notification for recipient via shared system
-            if (window.showNotification) {
-                // This is local toast, we need to store it in DB for the other user
-                await window.db.put(window.DB_STORES.NOTIFICATIONS, {
-                    title: `New Message from ${currentUser.fullName || currentUser.username}`,
-                    message: subject,
-                    timestamp: new Date().toISOString(),
-                    read: false,
-                    type: 'message',
-                    targetUser: recipient,
-                    messageId: newMessage.id
-                });
-            }
-
+            
+            const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+            messages.push(newMessage);
+            localStorage.setItem('messages', JSON.stringify(messages));
+            
+            // Create notification for recipient
+            const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+            const notification = {
+                id: Date.now().toString(),
+                title: `New Message from ${currentUser.fullName || currentUser.username}`,
+                message: subject,
+                timestamp: new Date().toISOString(),
+                read: false,
+                type: 'message',
+                messageId: newMessage.id
+            };
+            notifications.push(notification);
+            localStorage.setItem('notifications', JSON.stringify(notifications));
+            
             alert('Message sent successfully!');
             hideComposeForm();
-            await loadMessages();
-
+            loadMessages();
+            
             // Clear form
             document.getElementById('subject').value = '';
             document.getElementById('messageText').value = '';
         }
 
-        async function replyToMessage(messageId) {
-            const message = (await window.db.getAll(window.DB_STORES.MESSAGES)).find(m => m.id === messageId);
+        function replyToMessage(messageId) {
+            const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+            const message = messages.find(m => m.id === messageId);
             const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-
+            
             if (!message) return;
-
+            
             const recipient = message.sender === currentUser.username ? message.recipient : message.sender;
             const subject = `Re: ${message.subject}`;
-
+            
             showComposeForm();
-
+            
             // Pre-fill the form
             document.getElementById('recipient').value = recipient;
             document.getElementById('subject').value = subject;
@@ -576,7 +554,7 @@
         }
 
         // Initialize
-        if (window.db) await window.db.init();
+        initializeDatabase();
         loadMessages();
     </script>
 </body>

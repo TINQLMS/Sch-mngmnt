@@ -6,6 +6,7 @@
 
 const DB_NAME = 'SchoolManagementDB';
 const DB_VERSION = 2;
+const DB_VERSION = 1;
 
 const STORES = {
     USERS: 'users',
@@ -22,6 +23,7 @@ const STORES = {
     OFFERS: 'offers',
     SETTINGS: 'settings',
     REPORTS: 'reports'
+    OFFERS: 'offers'
 };
 
 class SchoolDB {

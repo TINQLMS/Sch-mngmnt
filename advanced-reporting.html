@@ -31,7 +31,6 @@
     .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
     .table th { background: #f8f9fa; font-weight: 600; }
   </style>
-    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
   <div class="container">
@@ -59,7 +58,7 @@
           </div>
           <button class="btn btn-primary" onclick="generateStudentAnalytics()">Generate Report</button>
         </div>
-
+        
         <div class="report-card">
           <h3>Financial Performance</h3>
           <div class="chart-container">
@@ -67,7 +66,7 @@
           </div>
           <button class="btn btn-primary" onclick="generateFinancialAnalytics()">Generate Report</button>
         </div>
-
+        
         <div class="report-card">
           <h3>Staff Performance</h3>
           <div class="chart-container">
@@ -75,7 +74,7 @@
           </div>
           <button class="btn btn-primary" onclick="generateStaffAnalytics()">Generate Report</button>
         </div>
-
+        
         <div class="report-card">
           <h3>Operational Efficiency</h3>
           <div class="chart-container">
@@ -88,7 +87,6 @@
 
     <!-- Academic Reports -->
     <div id="academic" class="tab-content">
-      <div class="responsive-table-container">
       <div class="report-grid">
         <div class="report-card">
           <h3>Class Performance Report</h3>
@@ -105,7 +103,7 @@
           </div>
           <button class="btn btn-primary" onclick="generateClassReport()">Generate Report</button>
         </div>
-
+        
         <div class="report-card">
           <h3>Student Progress Report</h3>
           <div class="form-group">
@@ -116,7 +114,7 @@
           </div>
           <button class="btn btn-primary" onclick="generateStudentProgressReport()">Generate Report</button>
         </div>
-
+        
         <div class="report-card">
           <h3>Subject Performance Analysis</h3>
           <div class="form-group">
@@ -128,12 +126,10 @@
           <button class="btn btn-primary" onclick="generateSubjectReport()">Generate Report</button>
         </div>
       </div>
-      </div>
     </div>
 
     <!-- Financial Reports -->
     <div id="financial" class="tab-content">
-      <div class="responsive-table-container">
       <div class="report-grid">
         <div class="report-card">
           <h3>Revenue Analysis</h3>
@@ -147,7 +143,7 @@
           </div>
           <button class="btn btn-primary" onclick="generateRevenueReport()">Generate Report</button>
         </div>
-
+        
         <div class="report-card">
           <h3>Payment Collection Report</h3>
           <div class="form-group">
@@ -161,18 +157,16 @@
           </div>
           <button class="btn btn-primary" onclick="generatePaymentReport()">Generate Report</button>
         </div>
-
+        
         <div class="report-card">
           <h3>Fee Structure Analysis</h3>
           <button class="btn btn-primary" onclick="generateFeeAnalysis()">Generate Report</button>
         </div>
       </div>
-      </div>
     </div>
 
     <!-- Operational Reports -->
     <div id="operational" class="tab-content">
-      <div class="responsive-table-container">
       <div class="report-grid">
         <div class="report-card">
           <h3>Attendance Analysis</h3>
@@ -183,7 +177,7 @@
           </div>
           <button class="btn btn-primary" onclick="generateAttendanceReport()">Generate Report</button>
         </div>
-
+        
         <div class="report-card">
           <h3>Staff Activity Report</h3>
           <div class="form-group">
@@ -194,12 +188,11 @@
           </div>
           <button class="btn btn-primary" onclick="generateStaffActivityReport()">Generate Report</button>
         </div>
-
+        
         <div class="report-card">
           <h3>System Usage Report</h3>
           <button class="btn btn-primary" onclick="generateSystemUsageReport()">Generate Report</button>
         </div>
-      </div>
       </div>
     </div>
 
@@ -217,28 +210,28 @@
             <option value="user">User Activity</option>
           </select>
         </div>
-
+        
         <div class="form-group">
           <label>Data Fields</label>
           <div id="dataFields">
             <!-- Dynamic fields will be loaded here -->
           </div>
         </div>
-
+        
         <div class="form-group">
           <label>Filters</label>
           <div id="customFilters">
             <!-- Dynamic filters will be loaded here -->
           </div>
         </div>
-
+        
         <div class="form-group">
           <label>Sort By</label>
           <select id="sortBy">
             <option value="">Select Sort Field</option>
           </select>
         </div>
-
+        
         <button class="btn btn-primary" onclick="generateCustomReport()">Generate Custom Report</button>
         <button class="btn btn-success" onclick="saveCustomReport()">Save Report Template</button>
       </div>
@@ -247,19 +240,21 @@
 
   <script>
     // Advanced Reporting Engine JavaScript
-
-    document.addEventListener('DOMContentLoaded', async function() {
-      if (!window.db) await window.db.init(); if (!(await window.checkAuth('school-manager'))) return;
-
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      if (!checkAuth()) return;
+      
       initializeReportingEngine();
-      await loadReportData();
+      loadReportData();
     });
 
     async function initializeReportingEngine() {
-      // Initialize reporting data structures in IndexedDB if not exists
-      const templates = await window.db.get(window.DB_STORES.SETTINGS, 'reportTemplates');
-      if (!templates) {
-          await window.db.put(window.DB_STORES.SETTINGS, { id: 'reportTemplates', value: [] });
+      // Initialize reporting data structures
+      if (!localStorage.getItem('customReports')) {
+        localStorage.setItem('customReports', JSON.stringify([]));
+      }
+      if (!localStorage.getItem('reportTemplates')) {
+        localStorage.setItem('reportTemplates', JSON.stringify([]));
       }
     }
 
@@ -278,23 +273,21 @@
       loadStaff();
     }
 
-    async function loadClasses() {
-      const admissions = await window.db.getAll(window.DB_STORES.ADMISSIONS);
-      const uniqueClasses = [...new Set(admissions.map(a => a.classAdmitted || a.grade))].filter(Boolean);
-
+    function loadClasses() {
+      const classes = JSON.parse(localStorage.getItem('classes') || '[]');
       const select = document.getElementById('classSelect');
       if(select) {
         select.innerHTML = '<option value="">All Classes</option>' +
-          uniqueClasses.map(cls => `<option value="${cls}">${cls}</option>`).join('');
+          classes.map(cls => `<option value="${cls.id}">${cls.name}</option>`).join('');
       }
     }
 
-    async function loadStudents() {
+    function loadStudents() {
       const students = await window.db.getAll(window.DB_STORES.ADMISSIONS);
       const select = document.getElementById('studentSelect');
       if (select) {
         select.innerHTML = '<option value="">All Students</option>' +
-          students.map(student =>
+          students.map(student => 
             `<option value="${student.id}">${student.firstName} ${student.lastName}</option>`
           ).join('');
       }
@@ -314,7 +307,7 @@
       const select = document.getElementById('staffSelect');
       if (select) {
         select.innerHTML = '<option value="">All Staff</option>' +
-          staff.map(member =>
+          staff.map(member => 
             `<option value="${member.id}">${member.firstName} ${member.lastName}</option>`
           ).join('');
       }
@@ -324,7 +317,7 @@
     async function generateStudentAnalytics() {
       const students = await window.db.getAll(window.DB_STORES.ADMISSIONS);
       const results = await window.db.getAll(window.DB_STORES.ASSESSMENTS);
-
+      
       const analytics = {
         totalStudents: students.length,
         averagePerformance: calculateAveragePerformance(results),
@@ -333,7 +326,7 @@
         needsImprovement: getStudentsNeedingImprovement(results),
         reportDate: new Date().toISOString()
       };
-
+      
       downloadReport(analytics, 'student_analytics_report.json');
       alert('Student Analytics Report generated successfully!');
     }
@@ -341,7 +334,7 @@
     async function generateFinancialAnalytics() {
       const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
       const invoices = await window.db.getAll(window.DB_STORES.FINANCIAL);
-
+      
       const analytics = {
         totalRevenue: payments.reduce((sum, p) => sum + p.amount, 0),
         pendingAmount: invoices.filter(inv => inv.status === 'pending')
@@ -352,7 +345,7 @@
         revenueTrends: calculateRevenueTrends(payments),
         reportDate: new Date().toISOString()
       };
-
+      
       downloadReport(analytics, 'financial_analytics_report.json');
       alert('Financial Analytics Report generated successfully!');
     }
@@ -360,7 +353,7 @@
     async function generateStaffAnalytics() {
       const staff = await window.db.getAll(window.DB_STORES.STAFF);
       const attendance = await window.db.getAll(window.DB_STORES.ATTENDANCE);
-
+      
       const analytics = {
         totalStaff: staff.length,
         activeStaff: staff.filter(s => s.status === 'active').length,
@@ -369,7 +362,7 @@
         departmentDistribution: calculateDepartmentDistribution(staff),
         reportDate: new Date().toISOString()
       };
-
+      
       downloadReport(analytics, 'staff_analytics_report.json');
       alert('Staff Analytics Report generated successfully!');
     }
@@ -377,7 +370,7 @@
     async function generateOperationalAnalytics() {
       const users = await window.db.getAll(window.DB_STORES.USERS);
       const auditLogs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
-
+      
       const analytics = {
         totalUsers: users.length,
         activeUsers: users.filter(u => u.status === 'active').length,
@@ -387,7 +380,7 @@
         performanceMetrics: calculatePerformanceMetrics(auditLogs),
         reportDate: new Date().toISOString()
       };
-
+      
       downloadReport(analytics, 'operational_analytics_report.json');
       alert('Operational Analytics Report generated successfully!');
     }
@@ -397,7 +390,7 @@
       const classId = document.getElementById('classSelect').value;
       const startDate = document.getElementById('academicStartDate').value;
       const endDate = document.getElementById('academicEndDate').value;
-
+      
       const report = {
         classId: classId,
         dateRange: { start: startDate, end: endDate },
@@ -406,14 +399,14 @@
         subjectBreakdown: calculateSubjectBreakdown(classId),
         reportDate: new Date().toISOString()
       };
-
+      
       downloadReport(report, 'class_performance_report.json');
       alert('Class Performance Report generated successfully!');
     }
 
     async function generateStudentProgressReport() {
       const studentId = document.getElementById('studentSelect').value;
-
+      
       const report = {
         studentId: studentId,
         academicProgress: calculateStudentProgress(studentId),
@@ -422,7 +415,7 @@
         recommendations: generateRecommendations(studentId),
         reportDate: new Date().toISOString()
       };
-
+      
       downloadReport(report, 'student_progress_report.json');
       alert('Student Progress Report generated successfully!');
     }
@@ -430,7 +423,7 @@
     // Financial Report Functions
     function generateRevenueReport() {
       const period = document.getElementById('financialPeriod').value;
-
+      
       const report = {
         period: period,
         revenueData: calculateRevenueData(period),
@@ -438,14 +431,14 @@
         projections: calculateRevenueProjections(period),
         reportDate: new Date().toISOString()
       };
-
+      
       downloadReport(report, 'revenue_report.json');
       alert('Revenue Report generated successfully!');
     }
 
     function generatePaymentReport() {
       const status = document.getElementById('paymentStatus').value;
-
+      
       const report = {
         paymentStatus: status,
         paymentData: calculatePaymentData(status),
@@ -453,7 +446,7 @@
         outstandingAmounts: calculateOutstandingAmounts(status),
         reportDate: new Date().toISOString()
       };
-
+      
       downloadReport(report, 'payment_report.json');
       alert('Payment Report generated successfully!');
     }
@@ -462,12 +455,12 @@
     function generateCustomReport() {
       const reportType = document.getElementById('customReportType').value;
       const sortBy = document.getElementById('sortBy').value;
-
+      
       if(!reportType) {
         alert('Please select a report type');
         return;
       }
-
+      
       const report = {
         type: reportType,
         data: generateCustomData(reportType),
@@ -475,12 +468,12 @@
         filters: getCustomFilters(),
         reportDate: new Date().toISOString()
       };
-
+      
       downloadReport(report, `custom_${reportType}_report.json`);
       alert('Custom Report generated successfully!');
     }
 
-    async function saveCustomReport() {
+    function saveCustomReport() {
       const reportType = document.getElementById('customReportType').value;
       const template = {
         id: Date.now().toString(),
@@ -491,12 +484,11 @@
         sortBy: document.getElementById('sortBy').value,
         createdAt: new Date().toISOString()
       };
-
-      const settings = await window.db.get(window.DB_STORES.SETTINGS, 'reportTemplates');
-      const templates = settings ? settings.value : [];
+      
+      const templates = JSON.parse(localStorage.getItem('reportTemplates') || '[]');
       templates.push(template);
-      await window.db.put(window.DB_STORES.SETTINGS, { id: 'reportTemplates', value: templates });
-
+      localStorage.setItem('reportTemplates', JSON.stringify(templates));
+      
       alert('Report template saved successfully!');
     }
 
@@ -526,7 +518,7 @@
         average: 0,
         below: 0
       };
-
+      
       results.forEach(result => {
         const score = result.score || 0;
         if (score >= 90) distribution.excellent++;
@@ -534,7 +526,7 @@
         else if (score >= 70) distribution.average++;
         else distribution.below++;
       });
-
+      
       return distribution;
     }
 
@@ -646,7 +638,7 @@
       // Get real student data from localStorage
       const students = await window.db.getAll(window.DB_STORES.ADMISSIONS);
       const student = students.find(s => s.id === studentId);
-
+      
       if (!student) {
         return {
           currentGrade: 'N/A',
@@ -654,7 +646,7 @@
           subjects: []
         };
       }
-
+      
       return {
         currentGrade: student.grade || 'N/A',
         improvement: student.improvement || 'N/A',
@@ -666,20 +658,20 @@
       // Get real attendance data from localStorage
       const attendance = await window.db.getAll(window.DB_STORES.ATTENDANCE);
       const studentAttendance = attendance.filter(a => a.studentId === studentId);
-
+      
       if(studentAttendance.length === 0) {
         return 0;
       }
-
+      
       const presentDays = studentAttendance.filter(a => a.status === 'present').length;
       return (presentDays / studentAttendance.length) * 100;
     }
 
     async function calculatePerformanceTrends(studentId) {
-      // Get real performance data from IndexedDB
-      const assessments = await window.db.getAll(window.DB_STORES.ASSESSMENTS);
-      const studentPerformance = assessments.filter(p => p.studentId === studentId);
-
+      // Get real performance data from localStorage
+      const performance = JSON.parse(localStorage.getItem('performance') || '[]');
+      const studentPerformance = performance.filter(p => p.studentId === studentId);
+      
       if (studentPerformance.length < 2) {
         return {
           trend: 'insufficient data',
@@ -687,17 +679,17 @@
           period: 'N/A'
         };
       }
-
+      
       // Calculate trend based on recent performance
       const recent = studentPerformance.slice(-3);
       const older = studentPerformance.slice(-6, -3);
-
+      
       const recentAvg = recent.reduce((sum, p) => sum + p.score, 0) / recent.length;
       const olderAvg = older.reduce((sum, p) => sum + p.score, 0) / older.length;
-
+      
       const change = recentAvg - olderAvg;
       const trend = change > 0 ? 'improving' : change < 0 ? 'declining' : 'stable';
-
+      
       return {
         trend: trend,
         change: `${change > 0 ? '+' : ''}${change.toFixed(1)}%`,
@@ -709,30 +701,30 @@
       // Get real student data and generate recommendations
       const students = await window.db.getAll(window.DB_STORES.ADMISSIONS);
       const student = students.find(s => s.id === studentId);
-
+      
       if (!student) {
         return ['No data available for recommendations'];
       }
-
+      
       const recommendations = [];
-
+      
       // Generate recommendations based on available data
       if(student.attendance && student.attendance < 80) {
         recommendations.push('Improve attendance rate');
       }
-
+      
       if (student.grade && student.grade === 'F') {
         recommendations.push('Seek additional academic support');
       }
-
+      
       if (student.subjects && student.subjects.length > 0) {
         recommendations.push('Focus on core subjects');
       }
-
+      
       if (recommendations.length === 0) {
         recommendations.push('Continue current academic performance');
       }
-
+      
       return recommendations;
     }
 
@@ -741,18 +733,18 @@
       const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
       const currentPeriod = new Date();
       const previousPeriod = new Date(currentPeriod.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
-
+      
       const currentPayments = payments.filter(p => new Date(p.date) >= currentPeriod);
       const previousPayments = payments.filter(p => {
         const paymentDate = new Date(p.date);
         return paymentDate >= previousPeriod && paymentDate < currentPeriod;
       });
-
+      
       const currentTotal = currentPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
       const previousTotal = previousPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-
+      
       const growth = previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal) * 100 : 0;
-
+      
       return {
         current: currentTotal,
         previous: previousTotal,
@@ -770,28 +762,28 @@
       // Calculate projections based on historical data
       const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
       const monthlyAverages = [];
-
+      
       // Calculate monthly averages for the last 12 months
       for(let i = 0; i < 12; i++) {
         const monthStart = new Date();
         monthStart.setMonth(monthStart.getMonth() - i);
         monthStart.setDate(1);
-
+        
         const monthEnd = new Date(monthStart);
         monthEnd.setMonth(monthEnd.getMonth() + 1);
         monthEnd.setDate(0);
-
+        
         const monthPayments = payments.filter(p => {
           const paymentDate = new Date(p.date);
           return paymentDate >= monthStart && paymentDate <= monthEnd;
         });
-
+        
         const monthTotal = monthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
         monthlyAverages.push(monthTotal);
       }
-
+      
       const averageMonthly = monthlyAverages.reduce((sum, avg) => sum + avg, 0) / monthlyAverages.length;
-
+      
       return {
         nextMonth: averageMonthly * 1.05, // 5% growth assumption
         nextQuarter: averageMonthly * 3 * 1.05,
@@ -803,11 +795,11 @@
       // Get real payment data from localStorage
       const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
       const filteredPayments = status ? payments.filter(p => p.status === status) : payments;
-
+      
       const total = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
       const count = filteredPayments.length;
       const average = count > 0 ? total / count : 0;
-
+      
       return {
         total: total,
         count: count,
@@ -820,7 +812,7 @@
       const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
       const totalPayments = payments.length;
       const successfulPayments = payments.filter(p => p.status === 'completed').length;
-
+      
       return totalPayments > 0 ? (successfulPayments / totalPayments) * 100 : 0;
     }
 
@@ -828,7 +820,7 @@
       // Calculate outstanding amounts from real data
       const payments = await window.db.getAll(window.DB_STORES.FINANCIAL);
       const outstandingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
-
+      
       return outstandingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
     }
 
