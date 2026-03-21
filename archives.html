@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Archives - School Management System</title>
+    <script src="shared-db.js"></script>
+    <script src="shared-auth.js"></script>
+    <script src="shared-utils.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .archive-list {
+            margin-top: 20px;
+        }
+        .archive-item {
+            border: 1px solid #eee;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        .archive-item:hover {
+            background: #fcfcfc;
+        }
+        .archive-info h3 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        .archive-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9em;
+        }
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-view {
+            background: #667eea;
+            color: white;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 1000px;
+            border-radius: 10px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .close {
+            float: right;
+            font-size: 28px;
+            cursor: pointer;
+        }
+        .report-card-view {
+            border: 2px solid #333;
+            padding: 20px;
+            margin-top: 20px;
+        }
+    </style>
+    <link rel="stylesheet" href="shared-styles.css">
+</head>
+<body>
+    <div class="container">
+        <button onclick="window.goToDashboard()" class="btn" style="background: #6c757d; color: white; margin-bottom: 20px;">← Back to Dashboard</button>
+        <h1>📜 Student Archives</h1>
+
+        <div class="filters">
+            <div class="form-group">
+                <label>Student ID/Name</label>
+                <input type="text" id="searchFilter" class="form-control" placeholder="Search..." oninput="filterArchives()">
+            </div>
+            <div class="form-group">
+                <label>Academic Year</label>
+                <select id="yearFilter" class="form-control" onchange="filterArchives()">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Class</label>
+                <select id="classFilter" class="form-control" onchange="filterArchives()">
+                    <option value="">All Classes</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="archive-list" id="archiveList">
+            <p style="text-align: center;">Loading archives...</p>
+        </div>
+    </div>
+
+    <!-- View Modal -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        let allArchives = [];
+
+        async function init() {
+            if (!window.db) await window.db.init();
+            if (!(await window.checkAuth('staff'))) return;
+
+            await loadArchives();
+            populateFilters();
+            renderArchives(allArchives);
+        }
+
+        async function loadArchives() {
+            allArchives = await window.db.getAll(window.DB_STORES.ARCHIVES);
+            // Sort by timestamp descending
+            allArchives.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        }
+
+        function populateFilters() {
+            const years = [...new Set(allArchives.map(a => a.academicYear))];
+            const classes = [...new Set(allArchives.map(a => a.class))];
+
+            const yearSelect = document.getElementById('yearFilter');
+            years.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                yearSelect.appendChild(opt);
+            });
+
+            const classSelect = document.getElementById('classFilter');
+            classes.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                classSelect.appendChild(opt);
+            });
+        }
+
+        function filterArchives() {
+            const search = document.getElementById('searchFilter').value.toLowerCase();
+            const year = document.getElementById('yearFilter').value;
+            const className = document.getElementById('classFilter').value;
+
+            const filtered = allArchives.filter(a => {
+                const matchesSearch = a.studentName.toLowerCase().includes(search) || a.studentId.toLowerCase().includes(search);
+                const matchesYear = year === "" || a.academicYear.toString() === year;
+                const matchesClass = className === "" || a.class === className;
+                return matchesSearch && matchesYear && matchesClass;
+            });
+
+            renderArchives(filtered);
+        }
+
+        function renderArchives(archives) {
+            const container = document.getElementById('archiveList');
+            if (archives.length === 0) {
+                container.innerHTML = '<p style="text-align: center;">No archived records found.</p>';
+                return;
+            }
+
+            container.innerHTML = archives.map(a => `
+                <div class="archive-item">
+                    <div class="archive-info">
+                        <h3>${a.studentName} (${a.studentId})</h3>
+                        <p><strong>Year:</strong> ${a.academicYear} | <strong>Term:</strong> ${a.term} | <strong>Class:</strong> ${a.class}</p>
+                        <p><small>Archived on: ${new Date(a.timestamp).toLocaleString()}</small></p>
+                    </div>
+                    <button class="btn btn-view" onclick="viewArchive('${a.id}')">👁️ View Report</button>
+                </div>
+            `).join('');
+        }
+
+        async function viewArchive(archiveId) {
+            const archive = allArchives.find(a => a.id.toString() === archiveId.toString());
+            if (!archive) return;
+
+            const report = archive.reportCard;
+            let html = `
+                <div class="report-card-view">
+                    <h2 style="text-align:center;">ARCHIVED REPORT CARD - ${archive.academicYear}</h2>
+                    <p><strong>Name:</strong> ${report.studentName} | <strong>ID:</strong> ${archive.studentId}</p>
+                    <p><strong>Class:</strong> ${archive.class} | <strong>Term:</strong> ${report.term}</p>
+
+                    <div class="responsive-table-container"><table>
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Class</th>
+                                <th>Exam</th>
+                                <th>Total</th>
+                                <th>Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${report.scores.map(s => `
+                                <tr>
+                                    <td>${s.subject}</td>
+                                    <td>${s.classScore}</td>
+                                    <td>${s.examScore}</td>
+                                    <td>${s.total}</td>
+                                    <td>${s.grade}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table></div>
+                    <div style="margin-top:20px;">
+                        <p><strong>Teacher's Remarks:</strong> ${report.remarks.teacher}</p>
+                        <p><strong>Head Teacher's Remarks:</strong> ${report.remarks.head}</p>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn" onclick="window.print()" style="background: #28a745; color: white;">🖨️ Print Archive</button>
+                </div>
+            `;
+
+            document.getElementById('modalBody').innerHTML = html;
+            document.getElementById('viewModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('viewModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('viewModal')) {
+                closeModal();
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -6,7 +6,6 @@
 
 const DB_NAME = 'SchoolManagementDB';
 const DB_VERSION = 2;
-const DB_VERSION = 1;
 
 const STORES = {
     USERS: 'users',
@@ -22,8 +21,8 @@ const STORES = {
     SCHEDULES: 'schedules',
     OFFERS: 'offers',
     SETTINGS: 'settings',
-    REPORTS: 'reports'
-    OFFERS: 'offers'
+    REPORTS: 'reports',
+    ARCHIVES: 'archives'
 };
 
 class SchoolDB {
@@ -92,6 +91,9 @@ class SchoolDB {
                 }
                 if (!db.objectStoreNames.contains(STORES.REPORTS)) {
                     db.createObjectStore(STORES.REPORTS, { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains(STORES.ARCHIVES)) {
+                    db.createObjectStore(STORES.ARCHIVES, { keyPath: 'id', autoIncrement: true });
                 }
             };
         });

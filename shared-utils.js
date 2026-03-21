@@ -191,7 +191,6 @@ async function syncEntityToUser(entityData, role) {
         const allUsers = await window.db.getAll(window.DB_STORES.USERS);
         const nameField = entityData.fullName || entityData.studentName || entityData.name;
         const username = entityData.username || (nameField ? nameField.replace(/\s+/g, '').toLowerCase() : null);
-        const username = entityData.username || (entityData.fullName ? entityData.fullName.replace(/\s+/g, '').toLowerCase() : null);
 
         if (!username) return null;
 
