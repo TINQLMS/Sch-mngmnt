@@ -99,9 +99,10 @@
     }
     
     // Check auth on page load
-    window.onload = function() {
-      if (checkPageAuth()) {
-        // Continue with page initialization
+    window.onload = async function() {
+      if (await checkPageAuth()) {
+        showTab(0);
+        await refreshTable();
       }
     };
   </script>
@@ -593,12 +594,6 @@
       }
     };
 
-    window.onload = async function() {
-      if (window.db) await window.db.init();
-      if (!(await checkPageAuth())) return;
-      showTab(0);
-      await refreshTable();
-    };
   </script>
 
 </body>

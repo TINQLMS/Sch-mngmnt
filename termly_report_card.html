@@ -515,18 +515,20 @@
             document.getElementById('form').value = student.classAdmitted;
 
             // Auto-populate Financials
-            const financialData = await window.db.get(window.DB_STORES.FINANCIAL, 'main');
+            const allFinancialData = await window.db.getAll(window.DB_STORES.FINANCIAL);
+            const financialData = allFinancialData.find(f => f.id === 'main');
+
             if (financialData && financialData.fees) {
                 const studentFees = financialData.fees.filter(f => f.studentId === studentId);
                 const totalDue = studentFees.reduce((sum, f) => sum + parseFloat(f.amount), 0);
                 const totalPaid = studentFees.filter(f => f.status === 'paid').reduce((sum, f) => sum + parseFloat(f.amount), 0);
                 const arrears = totalDue - totalPaid;
 
-                document.getElementById('approvedFees').value = totalDue.toFixed(2);
-                document.getElementById('paymentMade').value = totalPaid.toFixed(2);
-                document.getElementById('arrears').value = arrears.toFixed(2);
-                document.getElementById('amountDue').value = arrears.toFixed(2);
-                document.getElementById('finalArrears').value = arrears.toFixed(2);
+                if (document.getElementById('approvedFees')) document.getElementById('approvedFees').value = totalDue.toFixed(2);
+                if (document.getElementById('paymentMade')) document.getElementById('paymentMade').value = totalPaid.toFixed(2);
+                if (document.getElementById('arrears')) document.getElementById('arrears').value = arrears.toFixed(2);
+                if (document.getElementById('amountDue')) document.getElementById('amountDue').value = arrears.toFixed(2);
+                if (document.getElementById('finalArrears')) document.getElementById('finalArrears').value = arrears.toFixed(2);
             }
 
             // Auto-populate Attendance
@@ -545,13 +547,30 @@
             const rows = document.querySelectorAll('#subjectTable tr');
             rows.forEach(row => {
                 const subjectName = row.cells[0].textContent;
-                const match = studentAssessments.find(a => a.subject.toLowerCase() === subjectName.toLowerCase());
-                if (match) {
-                    if (match.type.toLowerCase() === 'exam') {
-                        row.cells[2].children[0].value = match.score;
+                const subjectAssessments = studentAssessments.filter(a => a.subject.toLowerCase() === subjectName.toLowerCase());
+
+                if (subjectAssessments.length > 0) {
+                    // Separate Exam from others
+                    const examData = subjectAssessments.find(a => a.type.toLowerCase() === 'exam');
+                    const classData = subjectAssessments.filter(a => a.type.toLowerCase() !== 'exam');
+
+                    // Class Score (50%) = 50% of the average of (homework + project + exercise + quiz + assignment)
+                    if (classData.length > 0) {
+                        const totalClassPct = classData.reduce((sum, a) => sum + parseFloat(a.percent), 0);
+                        const avgClassPct = totalClassPct / classData.length;
+                        row.cells[1].children[0].value = (avgClassPct * 0.5).toFixed(1);
                     } else {
-                        row.cells[1].children[0].value = match.score;
+                        row.cells[1].children[0].value = 0;
                     }
+
+                    // Exams Score (50%) = 50% of exam percentage
+                    if (examData) {
+                        const examPct = parseFloat(examData.percent);
+                        row.cells[2].children[0].value = (examPct * 0.5).toFixed(1);
+                    } else {
+                        row.cells[2].children[0].value = 0;
+                    }
+
                     calculateTotal(row.cells[1].children[0]);
                 }
             });
