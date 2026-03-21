@@ -5,6 +5,7 @@
  */
 
 const DB_NAME = 'SchoolManagementDB';
+const DB_VERSION = 2;
 const DB_VERSION = 1;
 
 const STORES = {
@@ -19,6 +20,9 @@ const STORES = {
     MESSAGES: 'messages',
     PERFORMANCES: 'performances',
     SCHEDULES: 'schedules',
+    OFFERS: 'offers',
+    SETTINGS: 'settings',
+    REPORTS: 'reports'
     OFFERS: 'offers'
 };
 
@@ -82,6 +86,12 @@ class SchoolDB {
                 }
                 if (!db.objectStoreNames.contains(STORES.OFFERS)) {
                     db.createObjectStore(STORES.OFFERS, { keyPath: 'id', autoIncrement: true });
+                }
+                if (!db.objectStoreNames.contains(STORES.SETTINGS)) {
+                    db.createObjectStore(STORES.SETTINGS, { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains(STORES.REPORTS)) {
+                    db.createObjectStore(STORES.REPORTS, { keyPath: 'id' });
                 }
             };
         });

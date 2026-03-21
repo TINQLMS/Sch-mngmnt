@@ -115,6 +115,7 @@
       color: #424242;
     }
   </style>
+    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
   <!-- Access Control Check -->
@@ -137,6 +138,12 @@
   <div class="report-card" id="reportCard">
     <h2>VISION PREPARATORY SCHOOL<br>LEARNER'S REPORT CARD</h2>
     <div class="section">
+      <div class="form-group">
+        <label>Select Student to Generate Report</label>
+        <select id="studentSelector" onchange="loadStudentData(this.value)">
+            <option value="">-- Select Student --</option>
+        </select>
+      </div>
       <div class="responsive-table-container"><table class="no-border">
         <tr>
           <td>Name of Student: <input type="text" id="studentName" style="width: 80%;"></td>
@@ -246,8 +253,8 @@
     }
 
     // Function to check authentication - using shared function
-    function checkAuth() {
-      return window.checkAuth('staff', 'Standard');
+    async function checkAuthPage() {
+      return await window.checkAuth('staff', 'Standard');
     }
 
     // Function to display user info
@@ -283,8 +290,8 @@
     }
 
     // Initialize access control
-    function initializeAccessControl() {
-      if (!checkAuth()) return;
+    async function initializeAccessControl() {
+      if (!window.db) await window.db.init(); if (!(await checkAuthPage())) return;
       
       if (!hasModuleAccess()) {
         document.getElementById('accessControl').style.display = 'block';
@@ -303,12 +310,14 @@
 
     // Initialize report card functionality
     function initializeReportCard() {
+    populateStudentSelector();
     const subjects = [
       'Eng. Language', 'Literacy', 'Mathematics', 'Numeracy', 'Creative Art and Design', 'Science',
       'R.M.E', 'History', 'Asante Twi', 'Computing', 'Social Studies', 'Career Technology'
     ];
 
     const table = document.getElementById('subjectTable');
+    table.innerHTML = '';
     subjects.forEach((sub, index) => {
       const row = document.createElement('tr');
       row.innerHTML = `
@@ -357,40 +366,94 @@
       });
     }
 
-    function saveToIndexedDB() {
-      const data = document.getElementById('reportCard').innerHTML;
-      const request = indexedDB.open("ReportDB", 1);
-
-      request.onupgradeneeded = event => {
-        const db = event.target.result;
-        db.createObjectStore("Reports", { keyPath: "id" });
+    async function saveToIndexedDB() {
+      const reportData = {
+          id: document.getElementById('studentSelector').value || 'manual-' + Date.now(),
+          studentName: document.getElementById('studentName').value,
+          form: document.getElementById('form').value,
+          term: document.getElementById('term').value,
+          scores: Array.from(document.querySelectorAll('#subjectTable tr')).map(row => ({
+              subject: row.cells[0].textContent,
+              classScore: row.cells[1].children[0].value,
+              examScore: row.cells[2].children[0].value,
+              total: row.cells[3].children[0].value,
+              grade: row.querySelector('.grade').textContent,
+              proficiency: row.querySelector('.proficiency').textContent
+          })),
+          remarks: {
+              teacher: document.getElementById('teacherRemarks').value,
+              head: document.getElementById('headRemarks').value
+          },
+          timestamp: new Date().toISOString()
       };
 
-      request.onsuccess = event => {
-        const db = event.target.result;
-        const tx = db.transaction("Reports", "readwrite");
-        const store = tx.objectStore("Reports");
-        store.put({ id: 1, content: data });
-        alert("Saved to IndexedDB");
-      };
+      await window.db.put(window.DB_STORES.REPORTS, reportData);
+      alert("Report saved successfully to central database.");
     }
 
-    function loadFromIndexedDB() {
-      const request = indexedDB.open("ReportDB", 1);
-      request.onsuccess = event => {
-        const db = event.target.result;
-        const tx = db.transaction("Reports", "readonly");
-        const store = tx.objectStore("Reports");
-        const getRequest = store.get(1);
-        getRequest.onsuccess = () => {
-          if (getRequest.result) {
-            document.getElementById('reportCard').innerHTML = getRequest.result.content;
-            alert("Loaded from IndexedDB");
-          } else {
-            alert("No saved report found");
-          }
-        };
-      };
+    async function loadFromIndexedDB() {
+      const studentId = document.getElementById('studentSelector').value;
+      if (!studentId) return alert("Please select a student first.");
+
+      const report = await window.db.get(window.DB_STORES.REPORTS, studentId);
+      if (report) {
+          document.getElementById('studentName').value = report.studentName;
+          document.getElementById('form').value = report.form;
+          document.getElementById('term').value = report.term;
+
+          const rows = document.querySelectorAll('#subjectTable tr');
+          report.scores.forEach((scoreData, index) => {
+              if (rows[index]) {
+                  rows[index].cells[1].children[0].value = scoreData.classScore;
+                  rows[index].cells[2].children[0].value = scoreData.examScore;
+                  calculateTotal(rows[index].cells[1].children[0]);
+              }
+          });
+
+          document.getElementById('teacherRemarks').value = report.remarks.teacher;
+          document.getElementById('headRemarks').value = report.remarks.head;
+          alert("Report loaded.");
+      } else {
+          alert("No saved report found for this student.");
+      }
+    }
+
+    async function loadStudentData(studentId) {
+        if (!studentId) return;
+        const student = await window.db.get(window.DB_STORES.ADMISSIONS, studentId);
+        if (student) {
+            document.getElementById('studentName').value = student.studentName;
+            document.getElementById('form').value = student.classAdmitted;
+
+            // Auto-load assessments
+            const allAssessments = await window.db.getAll(window.DB_STORES.ASSESSMENTS);
+            const studentAssessments = allAssessments.filter(a => a.studentId === studentId);
+
+            const rows = document.querySelectorAll('#subjectTable tr');
+            rows.forEach(row => {
+                const subjectName = row.cells[0].textContent;
+                const match = studentAssessments.find(a => a.subject.toLowerCase() === subjectName.toLowerCase());
+                if (match) {
+                    if (match.type.toLowerCase() === 'exam') {
+                        row.cells[2].children[0].value = match.score;
+                    } else {
+                        row.cells[1].children[0].value = match.score;
+                    }
+                    calculateTotal(row.cells[1].children[0]);
+                }
+            });
+        }
+    }
+
+    async function populateStudentSelector() {
+        const students = await window.db.getAll(window.DB_STORES.ADMISSIONS);
+        const selector = document.getElementById('studentSelector');
+        students.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.admissionNo;
+            opt.textContent = `${s.studentName} (${s.admissionNo})`;
+            selector.appendChild(opt);
+        });
     }
 
     function printReport() {
@@ -410,7 +473,7 @@
     }
 
     // Initialize on page load
-    window.addEventListener('DOMContentLoaded', initializeAccessControl);
+    window.addEventListener('DOMContentLoaded', async () => { await initializeAccessControl(); });
   </script>
 </body>
 </html>

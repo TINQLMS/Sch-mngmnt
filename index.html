@@ -353,6 +353,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
     <header>
@@ -643,11 +644,11 @@
                 if(failedUser) {
                     failedUser.loginAttempts = (failedUser.loginAttempts || 0) + 1;
                     
-                    // Lock account after too many failed attempts
                     const maxAttempts = 5;
                     if (failedUser.loginAttempts >= maxAttempts) {
-                        const lockoutDuration = 15; // minutes
+                        const lockoutDuration = 15;
                         failedUser.lockedUntil = new Date(Date.now() + lockoutDuration * 60 * 1000).toISOString();
+                        if (window.addAuditLog) await window.addAuditLog('account_locked', `User ${usernameInput} account locked`, failedUser);
                         await addAuditLog('account_locked', `User ${username} account locked due to ${failedUser.loginAttempts} failed login attempts`);
                         showLoginError(`Account locked due to too many failed attempts. Try again in ${lockoutDuration} minutes.`);
                     } else {
@@ -684,6 +685,7 @@
     <script src="shared-auth.js"></script>
     <script src="shared-db.js"></script>
     <script src="shared-utils.js"></script>
+    <link rel="stylesheet" href="shared-styles.css">
     <script>
         // Initialize on page load
         window.onload = async function() {

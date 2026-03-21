@@ -9,6 +9,88 @@
   <script src="shared-utils.js"></script>
   <script>
     // Authentication check - using shared function
+
+    async function generateReport() {
+        const type = document.getElementById('reportType').value;
+        const month = document.getElementById('reportMonth').value;
+        const admissions = await getAllFromDatabase();
+        const content = document.getElementById('reportContent');
+
+        let filtered = admissions;
+        if (month) {
+            filtered = admissions.filter(a => a.admissionDate && a.admissionDate.startsWith(month));
+        }
+
+        let html = `<h3>${type.replace('-', ' ').toUpperCase()}</h3>`;
+        html += `<div class="responsive-table-container"><table class="table"><thead><tr>`;
+        
+        if (type === 'class') {
+            const classes = [...new Set(admissions.map(a => a.classAdmitted))];
+            html += '<th>Class</th><th>Count</th></tr></thead><tbody>';
+            classes.forEach(c => {
+                const count = admissions.filter(a => a.classAdmitted === c).length;
+                html += `<tr><td>${c}</td><td>${count}</td></tr>`;
+            });
+        } else if (type === 'gender') {
+            const genders = ['Male', 'Female', 'Other'];
+            html += '<th>Gender</th><th>Count</th></tr></thead><tbody>';
+            genders.forEach(g => {
+                const count = admissions.filter(a => a.gender === g).length;
+                html += `<tr><td>${g}</td><td>${count}</td></tr>`;
+            });
+        } else {
+            html += '<th>Name</th><th>Adm No</th><th>Class</th><th>Date</th></tr></thead><tbody>';
+            filtered.forEach(a => {
+                html += `<tr><td>${a.studentName}</td><td>${a.admissionNo}</td><td>${a.classAdmitted}</td><td>${a.admissionDate || 'N/A'}</td></tr>`;
+            });
+        }
+
+        html += '</tbody></table></div>';
+        content.innerHTML = html;
+
+        // Stats
+        const stats = document.getElementById('reportStats');
+        stats.innerHTML = `
+            <div style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 4px #0001;text-align:center;">
+                <h4>Total Admissions</h4>
+                <div style="font-size:24px;font-weight:bold;color:#667eea;">${filtered.length}</div>
+            </div>
+        `;
+    }
+
+    async function loadAnalytics() {
+        const type = document.getElementById('analyticsType').value;
+        const content = document.getElementById('analyticsContent');
+        const admissions = await getAllFromDatabase();
+
+        content.innerHTML = `<h3>Analytics: ${type.toUpperCase()}</h3><p>Data visualization for ${type} based on ${admissions.length} records.</p>`;
+
+        const charts = document.getElementById('analyticsCharts');
+        charts.innerHTML = `
+            <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 4px #0001;">
+                <h4>Class Distribution</h4>
+                <div style="height:200px;display:flex;align-items:flex-end;gap:10px;">
+                    ${[...new Set(admissions.map(a => a.classAdmitted))].map(c => {
+                        const count = admissions.filter(ad => ad.classAdmitted === c).length;
+                        const height = admissions.length > 0 ? (count / admissions.length) * 100 : 0;
+                        return `<div style="flex:1;background:#667eea;height:${height}%;position:relative;" title="${c}: ${count}">
+                            <span style="position:absolute;bottom:-25px;left:0;font-size:10px;transform:rotate(-45deg);white-space:nowrap;">${c}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function showSection(id) {
+        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    async function checkPageAuth() {
+      return window.checkAuth('school-manager');
     async function checkPageAuth() {
       return window.checkAuth('super-admin');
     }
@@ -113,6 +195,7 @@
       color: white;
     }
   </style>
+    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
   <header>
@@ -233,6 +316,17 @@
       { title: 'Student Info', fields: [
         { label: 'Admission No', name: 'admissionNo', required: true },
         { label: 'Student Name', name: 'studentName', required: true },
+        { label: 'Date of Birth', name: 'dob', type: 'date', required: true },
+        { label: 'Gender', name: 'gender', type: 'select', options: ['Male','Female','Other'], required: true },
+        { label: 'Class', name: 'classAdmitted', type: 'select', options: ['Creche', 'Nursery', 'KG1', 'KG2', 'Class 1','Class 2','Class 3', 'Class 4', 'Class 5', 'Class 6', 'JHS1','JHS2','JHS3'], required: true },
+        { label: 'Admission Date', name: 'admissionDate', type: 'date', required: true }
+      ]},
+      { title: 'Parent Info', fields: [
+        { label: 'Father Name', name: 'fatherName', required: true },
+        { label: 'Mother Name', name: 'motherName', required: true },
+        { label: 'Contact Phone', name: 'contactNumber', required: true },
+        { label: 'Email Address', name: 'email' },
+        { label: 'Home Address', name: 'address' }
         { label: 'Gender', name: 'gender', type: 'select', options: ['Male','Female','Other'], required: true },
         { label: 'Class', name: 'classAdmitted', type: 'select', options: ['Class 1','Class 2','Class 3','JHS1','JHS2','JHS3'], required: true }
       ]},
@@ -249,6 +343,88 @@
     let sortDir = 1;
     let searchVal = '', filterClass = '', filterGender = '';
 
+
+    async function generateReport() {
+        const type = document.getElementById('reportType').value;
+        const month = document.getElementById('reportMonth').value;
+        const admissions = await getAllFromDatabase();
+        const content = document.getElementById('reportContent');
+
+        let filtered = admissions;
+        if (month) {
+            filtered = admissions.filter(a => a.admissionDate && a.admissionDate.startsWith(month));
+        }
+
+        let html = `<h3>${type.replace('-', ' ').toUpperCase()}</h3>`;
+        html += `<div class="responsive-table-container"><table class="table"><thead><tr>`;
+
+        if (type === 'class') {
+            const classes = [...new Set(admissions.map(a => a.classAdmitted))];
+            html += '<th>Class</th><th>Count</th></tr></thead><tbody>';
+            classes.forEach(c => {
+                const count = admissions.filter(a => a.classAdmitted === c).length;
+                html += `<tr><td>${c}</td><td>${count}</td></tr>`;
+            });
+        } else if (type === 'gender') {
+            const genders = ['Male', 'Female', 'Other'];
+            html += '<th>Gender</th><th>Count</th></tr></thead><tbody>';
+            genders.forEach(g => {
+                const count = admissions.filter(a => a.gender === g).length;
+                html += `<tr><td>${g}</td><td>${count}</td></tr>`;
+            });
+        } else {
+            html += '<th>Name</th><th>Adm No</th><th>Class</th><th>Date</th></tr></thead><tbody>';
+            filtered.forEach(a => {
+                html += `<tr><td>${a.studentName}</td><td>${a.admissionNo}</td><td>${a.classAdmitted}</td><td>${a.admissionDate || 'N/A'}</td></tr>`;
+            });
+        }
+
+        html += '</tbody></table></div>';
+        content.innerHTML = html;
+
+        // Stats
+        const stats = document.getElementById('reportStats');
+        stats.innerHTML = `
+            <div style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 4px #0001;text-align:center;">
+                <h4>Total Admissions</h4>
+                <div style="font-size:24px;font-weight:bold;color:#667eea;">${filtered.length}</div>
+            </div>
+        `;
+    }
+
+    async function loadAnalytics() {
+        const type = document.getElementById('analyticsType').value;
+        const content = document.getElementById('analyticsContent');
+        const admissions = await getAllFromDatabase();
+
+        content.innerHTML = `<h3>Analytics: ${type.toUpperCase()}</h3><p>Data visualization for ${type} based on ${admissions.length} records.</p>`;
+
+        const charts = document.getElementById('analyticsCharts');
+        charts.innerHTML = `
+            <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 4px #0001;">
+                <h4>Class Distribution</h4>
+                <div style="height:200px;display:flex;align-items:flex-end;gap:10px;">
+                    ${[...new Set(admissions.map(a => a.classAdmitted))].map(c => {
+                        const count = admissions.filter(ad => ad.classAdmitted === c).length;
+                        const height = admissions.length > 0 ? (count / admissions.length) * 100 : 0;
+                        return `<div style="flex:1;background:#667eea;height:${height}%;position:relative;" title="${c}: ${count}">
+                            <span style="position:absolute;bottom:-25px;left:0;font-size:10px;transform:rotate(-45deg);white-space:nowrap;">${c}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function showSection(id) {
+        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    async function checkPageAuth() {
+      return await window.checkAuth('school-manager');
     async function checkPageAuth() {
       return await window.checkAuth('super-admin');
     }
@@ -271,6 +447,7 @@
         }
         input.name = field.name;
         input.value = formData[field.name] || '';
+        input.onchange = (e) => formData[field.name] = e.target.value;
         input.oninput = (e) => formData[field.name] = e.target.value;
         div.appendChild(input);
         form.appendChild(div);

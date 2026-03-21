@@ -76,6 +76,7 @@
       color: white;
     }
   </style>
+    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
   <div class="container">
@@ -110,18 +111,28 @@
     <div id="attendanceRecords"></div>
   </div>
   <script>
+    // --- Data Management ---
+    async function saveAttendanceRecord(record) {
+        return await window.db.put(window.DB_STORES.ATTENDANCE, record);
+    }
+    
+    async function updateAttendanceRecord(record) {
+      const existingRecords = await window.db.getAll(window.DB_STORES.ATTENDANCE);
+      const existingRecord = existingRecords.find(r =>
+        r.class === record.class && r.date === record.date
+      );
 
-    // --- IndexedDB/localStorage Fallback Setup ---
-    let db, useLocalStorage = false, dbInitialized = false;
-    function initializeDatabase() {
-      const request = indexedDB.open("SchoolDB", 2);
-      request.onerror = () => { useLocalStorage = true; dbInitialized = true; loadAll(); };
-      request.onsuccess = e => { db = e.target.result; dbInitialized = true; loadAll(); };
-      request.onupgradeneeded = e => {
-        db = e.target.result;
-        if (!db.objectStoreNames.contains("admissions")) db.createObjectStore("admissions", { keyPath: "admissionNo" });
-        if (!db.objectStoreNames.contains("staff")) db.createObjectStore("staff", { keyPath: "staffId" });
-        if (!db.objectStoreNames.contains("attendance")) db.createObjectStore("attendance", { keyPath: "id", autoIncrement: true });
+      if (!existingRecord) {
+        throw new Error('No existing record to update');
+      }
+
+      // Merge the new statuses with existing ones
+      const updatedRecord = {
+        ...existingRecord,
+        statuses: { ...existingRecord.statuses, ...record.statuses },
+        attendanceDetails: [...existingRecord.attendanceDetails, ...record.attendanceDetails],
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentRole === 'teacher' && currentUser ? currentUser.staffId : 'admin'
       };
     }
     function getAllFromStore(storeName) {
@@ -633,7 +644,14 @@
     }
     
     // --- Init ---
-    initializeDatabase();
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (window.db) {
+            await window.db.init();
+            if (await checkAuth()) {
+                loadAll();
+            }
+        }
+    });
   </script>
 </body>
 </html> 

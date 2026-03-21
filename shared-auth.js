@@ -46,11 +46,16 @@ async function checkAuth(requiredRole = null, requiredAccessLevel = null) {
         return false;
     }
     
-    // Role-based access control
-    if (requiredRole && currentUser.role !== requiredRole) {
-        console.log('Insufficient role permissions');
-        showNotification('Access denied. Insufficient permissions.', 'error');
-        return false;
+    // Role-based access control with hierarchy
+    if (requiredRole) {
+        const userLevel = getAccessLevel(currentUser.role);
+        const requiredLevel = getAccessLevel(requiredRole);
+
+        if (userLevel < requiredLevel) {
+            console.log('Insufficient role permissions: ' + currentUser.role + ' < ' + requiredRole);
+            showNotification('Access denied. Insufficient permissions.', 'error');
+            return false;
+        }
     }
     
     // Access level validation
@@ -296,6 +301,7 @@ function getAccessLevel(role) {
         'super-admin': 4,
         'school-manager': 3,
         'staff': 2,
+        'teacher': 2,
         'student': 1,
         'parent': 1
     };

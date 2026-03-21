@@ -151,6 +151,7 @@
       color: white;
     }
   </style>
+    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
   <div class="container">
@@ -211,6 +212,16 @@
   </div>
 
   <script>
+    // --- Data and UI Logic ---
+    let assessments = [], attendanceData = [], admissionsData = [], editingId = null;
+    let studentList = [];
+
+    async function saveAssessment(assessment) {
+        return await window.db.put(window.DB_STORES.ASSESSMENTS, assessment);
+    }
+
+    async function deleteAssessment(id) {
+        return await window.db.delete(window.DB_STORES.ASSESSMENTS, id);
     // --- IndexedDB/localStorage Fallback Setup ---
     let db, useLocalStorage = false, dbInitialized = false;
     function initializeDatabase() {
@@ -289,9 +300,13 @@
       });
     }
 
-    // --- Data and UI Logic ---
-    let assessments = [], attendanceData = [], admissionsData = [], editIndex = null;
-    let studentList = [];
+    async function loadAll() {
+      try {
+        const [assess, attend, admis] = await Promise.all([
+            window.db.getAll(window.DB_STORES.ASSESSMENTS),
+            window.db.getAll(window.DB_STORES.ATTENDANCE),
+            window.db.getAll(window.DB_STORES.ADMISSIONS)
+        ]);
 
     function loadAll() {
       Promise.all([
@@ -303,25 +318,33 @@
         attendanceData = attend;
         admissionsData = admis;
         
-        // Extract unique students from attendance data
-        const uniqueStudents = new Set();
+        // Extract unique students from admissions data (primary source)
+        studentList = admissionsData.map(a => ({
+            studentId: a.admissionNo,
+            studentName: a.studentName,
+            class: a.classAdmitted
+        }));
+
+        // Merge with any students found in attendance but not admissions (fallback)
         attendanceData.forEach(record => {
           if (record.attendanceDetails) {
             record.attendanceDetails.forEach(detail => {
-              uniqueStudents.add(JSON.stringify({
-                studentId: detail.studentId,
-                studentName: detail.studentName,
-                class: detail.class
-              }));
+              if (!studentList.find(s => s.studentId === detail.studentId)) {
+                studentList.push({
+                    studentId: detail.studentId,
+                    studentName: detail.studentName,
+                    class: detail.class
+                });
+              }
             });
           }
         });
         
-        studentList = Array.from(uniqueStudents).map(s => JSON.parse(s));
-        
         populateStudentDropdowns();
         renderTable();
-      });
+      } catch (error) {
+        console.error("Error loading assessment data:", error);
+      }
     }
 
     function populateStudentDropdowns() {
@@ -369,7 +392,7 @@
 
     document.getElementById("student").addEventListener("change", onStudentChange);
 
-    document.getElementById("assessmentForm").addEventListener("submit", e => {
+    document.getElementById("assessmentForm").addEventListener("submit", async e => {
       e.preventDefault();
 
       const studentId = document.getElementById("student").value;
@@ -392,21 +415,18 @@
         remark: document.getElementById("remark").value,
         createdAt: new Date().toISOString()
       };
+
+      if (editingId) {
+        data.id = editingId;
+      }
+
       data.percent = ((data.score / data.outOf) * 100).toFixed(2);
 
-      if (editIndex !== null) {
-        updateAssessment(data, editIndex).then(() => {
-        editIndex = null;
-          document.getElementById("assessmentForm").reset();
-          document.getElementById("submitBtn").textContent = "Add Assessment";
-          renderTable();
-        });
-      } else {
-        saveAssessment(data).then(() => {
-          document.getElementById("assessmentForm").reset();
-          renderTable();
-        });
-      }
+      await saveAssessment(data);
+      editingId = null;
+      document.getElementById("assessmentForm").reset();
+      document.getElementById("submitBtn").textContent = "Add Assessment";
+      await loadAll();
     });
 
     function renderTable() {
@@ -424,23 +444,25 @@
         (!fsub || a.subject.toLowerCase().includes(fsub))
       );
 
-      filtered.forEach((a, i) => {
+      filtered.forEach((a) => {
         const row = table.insertRow();
         row.innerHTML = `
           <td>${a.studentName}</td><td>${a.class}</td><td>${a.term}</td><td>${a.subject}</td>
           <td>${a.type}</td><td>${a.score}</td><td>${a.outOf}</td>
           <td>${a.percent}%</td><td>${a.remark || ''}</td>
           <td>
-            <button onclick="editAssessment(${i})">Edit</button>
-            <button onclick="deleteAssessmentRecord(${i})" style="background:red;">Delete</button>
+            <button onclick="editAssessment('${a.id}')">Edit</button>
+            <button onclick="deleteAssessmentRecord('${a.id}')" style="background:red;">Delete</button>
           </td>`;
       });
 
       drawChart(filtered);
     }
 
-    function editAssessment(index) {
-      const a = assessments[index];
+    function editAssessment(id) {
+      const a = assessments.find(a => String(a.id) === String(id));
+      if (!a) return;
+
       document.getElementById("student").value = a.studentId;
       document.getElementById("class").value = a.class;
       document.getElementById("term").value = a.term;
@@ -449,16 +471,15 @@
       document.getElementById("score").value = a.score;
       document.getElementById("outOf").value = a.outOf;
       document.getElementById("remark").value = a.remark || '';
-      editIndex = index;
+      editingId = a.id;
       document.getElementById("submitBtn").textContent = "Update Assessment";
       onStudentChange();
     }
 
-    function deleteAssessmentRecord(index) {
+    async function deleteAssessmentRecord(id) {
       if (confirm("Delete this assessment record?")) {
-        deleteAssessment(index).then(() => {
-        renderTable();
-        });
+        await deleteAssessment(id);
+        await loadAll();
       }
     }
 
