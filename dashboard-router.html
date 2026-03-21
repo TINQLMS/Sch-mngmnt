@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Routing...</title>
+    <script src="shared-auth.js"></script>
+    <script>
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+        const role = currentUser.role;
+
+        if (role === 'parent') {
+            window.location.href = 'parent_dashboard.html';
+        } else if (role === 'student') {
+            window.location.href = 'student_dashboard.html';
+        } else {
+            window.location.href = 'Enhanced_School_Management_Portal.html';
+        }
+    </script>
+</head>
+<body>
+    <p>Redirecting to dashboard...</p>
+</body>
+</html>

@@ -3,236 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>User Management System</title>
+  <title>User Management - School Management System</title>
   <script src="shared-db.js"></script>
   <script src="shared-auth.js"></script>
   <script src="shared-utils.js"></script>
+  <script src="shared-notifications.js"></script>
+  <link rel="stylesheet" href="shared-styles.css">
   <style>
-    /* Existing styles */
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
+    /* Local overrides for User Management */
+    .dashboard-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
     }
 
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
+    .stat-card {
+      background: white;
       padding: 20px;
-    }
-
-    .header {
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       text-align: center;
-      color: white;
-      margin-bottom: 30px;
+      transition: transform 0.3s ease;
     }
 
-    .header h1 {
-      font-size: 2.5em;
-      margin-bottom: 10px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    .stat-card:hover {
+      transform: translateY(-5px);
     }
 
-    .user-section {
-      background: white;
-      border-radius: 15px;
-      padding: 30px;
-      margin-bottom: 30px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-
-    .user-section h2 {
-      color: #333;
-      margin-bottom: 20px;
-      border-bottom: 2px solid #667eea;
-      padding-bottom: 10px;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 8px;
+    .stat-number {
+      font-size: 2.5rem;
       font-weight: bold;
-      color: #555;
+      color: #667eea;
+      margin: 10px 0;
     }
 
-    .form-group input, .form-group select, .form-group textarea {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      font-size: 16px;
-      transition: border-color 0.3s ease;
+    .stat-label {
+      color: #666;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-      outline: none;
-      border-color: #667eea;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    .search-filter {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
     }
 
-    .btn {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 12px 30px;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-    }
-
-    .btn-secondary {
-      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-    }
-
-    .btn-success {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    }
-
-    .btn-danger {
-      background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
-    }
-
-    .btn-warning {
-      background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-    }
-
-    .user-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background: white;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-
-    .user-table th, .user-table td {
-      padding: 15px;
-      text-align: left;
-      border-bottom: 1px solid #eee;
-    }
-
-    .user-table th {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      font-weight: bold;
-    }
-
-    .user-table tr:hover {
-      background-color: #f8f9fa;
+    .search-filter input, .search-filter select {
+      flex: 1;
+      min-width: 200px;
     }
 
     .role-badge {
-      padding: 5px 10px;
-      border-radius: 15px;
-      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
       font-weight: bold;
       color: white;
     }
 
-    .role-super-admin {
-      background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
-    }
-
-    .role-school-manager {
-      background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
-    }
-
-    .role-teacher {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    }
-
-    .role-non-teaching {
-      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-    }
-
-    .role-student {
-      background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);
-    }
-
-    .role-parent {
-      background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%);
-    }
-
-    .department-badge {
-      padding: 5px 10px;
-      border-radius: 15px;
-      font-size: 12px;
-      font-weight: bold;
-      color: white;
-    }
-
-    .department-administration {
-      background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
-    }
-
-    .department-academic {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    }
-
-    .department-non-academic {
-      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-    }
-
-    .department-others {
-      background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
-    }
-
-    .status-badge {
-      padding: 5px 10px;
-      border-radius: 15px;
-      font-size: 12px;
-      font-weight: bold;
-      color: white;
-    }
-
-    .status-active {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    }
-
-    .status-inactive {
-      background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
-    }
-
-    .status-pending {
-      background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-    }
-
-    .access-level-badge {
-      padding: 5px 10px;
-      border-radius: 15px;
-      font-size: 12px;
-      font-weight: bold;
-      color: white;
-    }
-
-    .access-super-administrator {
-      background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
-    }
-
-    .access-administrator {
-      background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
-    }
-
-    .access-standard {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    }
-
-    .access-basic {
-      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-    }
+    .role-super-admin { background: #dc2626; }
+    .role-admin { background: #ea580c; }
+    .role-teacher { background: #16a34a; }
+    .role-staff { background: #4b5563; }
+    .role-student { background: #2563eb; }
+    .role-parent { background: #7c3aed; }
 
     .modal {
       display: none;
@@ -245,2931 +83,623 @@
       background-color: rgba(0,0,0,0.5);
       align-items: center;
       justify-content: center;
+      backdrop-filter: blur(5px);
     }
+
     .modal.show {
-        display: flex;
+      display: flex;
     }
 
     .modal-content {
       background-color: white;
-      margin: 5% auto;
       padding: 30px;
       border-radius: 15px;
-      width: 90%;
-      max-width: 600px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      width: 95%;
+      max-width: 700px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #f3f4f6;
+      padding-bottom: 10px;
     }
 
     .close {
-      color: #aaa;
-      float: right;
-      font-size: 28px;
-      font-weight: bold;
+      font-size: 1.5rem;
       cursor: pointer;
-    }
-
-    .close:hover {
-      color: #000;
+      color: #666;
     }
 
     .conditional-field {
       display: none;
+      animation: slideDown 0.3s ease-out;
     }
 
     .conditional-field.show {
       display: block;
     }
 
-    .conditional-field.hide {
-      display: none;
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .permissions-section {
-      margin-top: 20px;
-      padding: 20px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      border: 1px solid #dee2e6;
-    }
-
-    .permissions-section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
+      background: #f9fafb;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
     }
 
     .permissions-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 10px;
+      margin-top: 10px;
     }
 
     .permission-item {
       display: flex;
       align-items: center;
-      padding: 8px;
-      background: white;
-      border-radius: 5px;
-      border: 1px solid #dee2e6;
-      cursor: pointer;
-      transition: all 0.2s ease;
+      gap: 8px;
+      font-size: 0.9rem;
     }
 
-    .permission-item:hover {
-      background: #e9ecef;
-      transform: translateY(-1px);
-    }
-
-    .permission-item input[type="checkbox"] {
-      margin-right: 8px;
-    }
-
-    .access-level-info {
-      margin-top: 10px;
-      padding: 10px;
-      background: #e3f2fd;
-      border-radius: 5px;
-      border-left: 4px solid #2196f3;
-    }
-
-    .access-level-badge {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: bold;
-      color: white;
-      margin-left: 10px;
-    }
-
-    /* Notification System Styles */
-    .notification-badge {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #dc3545;
-      color: white;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
+    .form-actions {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: pointer;
-      z-index: 10000;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-      transition: all 0.3s ease;
-    }
-
-    .notification-badge:hover {
-      transform: scale(1.1);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-    }
-
-    .notification-toast {
-      position: fixed;
-      top: 80px;
-      right: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-      padding: 15px;
-      min-width: 300px;
-      max-width: 400px;
-      z-index: 10001;
-      animation: slideIn 0.3s ease;
-      border-left: 4px solid #007bff;
-    }
-
-    .notification-toast.notification-success {
-      border-left-color: #28a745;
-    }
-
-    .notification-toast.notification-error {
-      border-left-color: #dc3545;
-    }
-
-    .notification-toast.notification-warning {
-      border-left-color: #ffc107;
-    }
-
-    .notification-toast.notification-info {
-      border-left-color: #17a2b8;
-    }
-
-    .notification-toast.notification-system {
-      border-left-color: #6c757d;
-    }
-
-    .toast-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-    }
-
-    .toast-icon {
-      font-size: 16px;
-      margin-right: 8px;
-    }
-
-    .toast-title {
-      font-weight: bold;
-      flex-grow: 1;
-    }
-
-    .toast-close {
-      background: none;
-      border: none;
-      font-size: 18px;
-      cursor: pointer;
-      color: #666;
-    }
-
-    .toast-message {
-      margin-bottom: 5px;
-      color: #333;
-    }
-
-    .toast-time {
-      font-size: 11px;
-      color: #666;
-    }
-
-    .notification-panel {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-      width: 90%;
-      max-width: 600px;
-      max-height: 80vh;
-      z-index: 10002;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px;
-      border-bottom: 1px solid #eee;
-    }
-
-    .panel-header h3 {
-      margin: 0;
-      color: #333;
-    }
-
-    .panel-header button {
-      background: none;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
-      color: #666;
-    }
-
-    .panel-content {
-      flex-grow: 1;
-      overflow-y: auto;
-      max-height: 400px;
-    }
-
-    .notification-item {
-      display: flex;
-      padding: 15px 20px;
-      border-bottom: 1px solid #f0f0f0;
-      cursor: pointer;
-      transition: background-color 0.2s ease;
-    }
-
-    .notification-item:hover {
-      background-color: #f8f9fa;
-    }
-
-    .notification-item.unread {
-      background-color: #f0f8ff;
-      border-left: 3px solid #007bff;
-    }
-
-    .notification-item.read {
-      opacity: 0.7;
-    }
-
-    .notification-icon {
-      font-size: 20px;
-      margin-right: 15px;
-      margin-top: 2px;
-    }
-
-    .notification-content {
-      flex-grow: 1;
-    }
-
-    .notification-title {
-      font-weight: bold;
-      margin-bottom: 5px;
-      color: #333;
-    }
-
-    .notification-message {
-      color: #666;
-      margin-bottom: 5px;
-      line-height: 1.4;
-    }
-
-    .notification-time {
-      font-size: 11px;
-      color: #999;
-    }
-
-    .panel-footer {
-      display: flex;
-      justify-content: space-between;
-      padding: 15px 20px;
-      border-top: 1px solid #eee;
-      background: #f8f9fa;
-    }
-
-    .panel-footer button {
-      padding: 8px 16px;
-      border: 1px solid #ddd;
-      background: white;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .panel-footer button:hover {
-      background: #f0f0f0;
-    }
-
-    @keyframes slideIn {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #f3f4f6;
     }
   </style>
-    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
-  <header>
-    <div class="header-content">
-      <div class="header-title">
-        <h1>User Management System</h1>
-        <p>Comprehensive User Account Management</p>
+  <div class="container">
+    <header class="header">
+      <h1>User Management System</h1>
+      <p>Securely manage accounts, roles, and permissions</p>
+      <div style="margin-top: 20px;">
+        <a href="Enhanced_School_Management_Portal.html" class="btn btn-secondary">← Back to Dashboard</a>
+        <button class="btn btn-danger" onclick="window.logout()">Logout</button>
       </div>
-      <div class="user-controls">
-        <div class="user-info" id="userInfo">
-          <!-- User info will be populated here -->
+    </header>
+
+    <main>
+      <!-- Dashboard Stats -->
+      <div class="dashboard-stats" id="dashboardStats">
+        <div class="stat-card">
+          <div class="stat-label">Total Users</div>
+          <div class="stat-number" id="totalUsers">0</div>
         </div>
-        <a href="Enhanced_School_Management_Portal.html" class="back-btn">← Back to Portal</a>
-        <button class="logout-btn" onclick="window.logout()">Logout</button>
-      </div>
-    </div>
-  </header>
-
-  <div class="main-container">
-    <!-- Dashboard Stats -->
-    <div class="dashboard-stats" id="dashboardStats">
-      <div class="stat-card">
-        <h3>Total Users</h3>
-        <div class="stat-number" id="totalUsers">0</div>
-        <div class="stat-label">Registered Users</div>
-      </div>
-      <div class="stat-card">
-        <h3>Active Users</h3>
-        <div class="stat-number" id="activeUsers">0</div>
-        <div class="stat-label">Currently Active</div>
-      </div>
-      <div class="stat-card">
-        <h3>Suspended Users</h3>
-        <div class="stat-number" id="suspendedUsers">0</div>
-        <div class="stat-label">Account Suspensions</div>
-      </div>
-      <div class="stat-card">
-        <h3>Recent Activity</h3>
-        <div class="stat-number" id="recentActivity">0</div>
-        <div class="stat-label">Last 24 Hours</div>
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" onclick="showTab('users')">User Management</button>
-      <button class="tab-btn" onclick="showTab('security')">Security Settings</button>
-      <button class="tab-btn" onclick="showTab('audit')">Audit Logs</button>
-    </div>
-
-    <!-- User Management Tab -->
-    <div id="usersTab" class="tab-content active">
-      <div class="user-management-section">
-        <div class="section-header">
-          <h2>User Management</h2>
-          <div class="header-actions">
-            <button class="btn-primary" onclick="openAddUserModal()">Add New User</button>
-            <button class="btn-secondary" onclick="exportUsers()">Export Users</button>
-            <button class="btn-secondary" onclick="bulkImportUsers()">Bulk Import</button>
-            <button class="btn-secondary" onclick="bulkExportUsers()">Bulk Export</button>
-          </div>
+        <div class="stat-card">
+          <div class="stat-label">Active Users</div>
+          <div class="stat-number" id="activeUsers">0</div>
         </div>
-
-        <div class="search-filter">
-          <input type="text" id="searchUsers" placeholder="Search users..." onkeyup="filterUsers()">
-          <select id="roleFilter" onchange="filterUsers()">
-            <option value="">All Roles</option>
-            <option value="super-admin">Super Admin</option>
-            <option value="school-manager">School Manager</option>
-            <option value="staff">Staff</option>
-            <option value="student">Student</option>
-            <option value="parent">Parent</option>
-          </select>
-          <select id="statusFilter" onchange="filterUsers()">
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="suspended">Suspended</option>
-          </select>
+        <div class="stat-card">
+          <div class="stat-label">Suspended</div>
+          <div class="stat-number" id="suspendedUsers">0</div>
         </div>
-
-        <div class="table-container">
-          <div class="responsive-table-container"><table class="users-table" id="usersTable">
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Full Name</th>
-                <th>Email</th>
-                <th>Gender</th>
-                <th>Role</th>
-                <th>Access Level</th>
-                <th>Status</th>
-                <th>Last Login</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="usersTableBody">
-              <!-- User rows will be populated here -->
-            </tbody>
-          </table></div>
+        <div class="stat-card">
+          <div class="stat-label">New Users (24h)</div>
+          <div class="stat-number" id="newUsersCount">0</div>
         </div>
       </div>
-    </div>
 
-    <!-- Security Settings Tab -->
-    <div id="securityTab" class="tab-content">
-      <div class="user-management-section">
-        <div class="section-header">
-          <h2>Security Settings</h2>
-        </div>
-        <div id="securityContent">
-          <div style="text-align: center; padding: 40px;">
-            <h3>Security Settings</h3>
-            <p>Security settings management coming soon...</p>
-          </div>
-        </div>
+      <!-- Tabs -->
+      <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showTab('users', event)">👥 Users</button>
+        <button class="nav-tab" onclick="showTab('security', event)">🔒 Security</button>
+        <button class="nav-tab" onclick="showTab('audit', event)">📜 Audit Logs</button>
       </div>
-    </div>
 
-    <!-- Audit Logs Tab -->
-    <div id="auditTab" class="tab-content">
-      <div class="user-management-section">
-        <div class="section-header">
-          <h2>Audit Logs</h2>
-          <div class="header-actions">
-            <button class="btn-secondary" onclick="exportAuditLogs()">Export Logs</button>
-            <button class="btn-danger" onclick="clearAuditLogs()">Clear Logs</button>
-          </div>
-        </div>
-        <div id="auditContent">
-          <!-- Audit logs content will be populated here -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add User Modal -->
-  <div id="addUserModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Add New User</h3>
-        <span class="close" onclick="closeModal('addUserModal')">&times;</span>
-      </div>
-      <div class="modal-body">
-        <form id="addUserForm">
-          <div class="form-group">
-            <label for="newUsername">Username *</label>
-            <input type="text" id="newUsername" required>
-          </div>
-          <div class="form-group">
-            <label for="newFullName">Full Name *</label>
-            <input type="text" id="newFullName" required>
-          </div>
-          <div class="form-group">
-            <label for="newEmail">Email *</label>
-            <input type="email" id="newEmail" required>
-          </div>
-          <div class="form-group">
-            <label for="newGender">Gender *</label>
-            <select id="newGender" required onchange="toggleGenderOther()">
-              <option value="">Select Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-          <div class="form-group conditional-field hide" id="newGenderOtherGroup">
-            <label for="newGenderOther">Specify Gender</label>
-            <input type="text" id="newGenderOther" placeholder="Please specify your gender identity">
-          </div>
-          <div class="form-group">
-            <label for="newRole">Role *</label>
-            <select id="newRole" required onchange="updatePermissions(); toggleClassField(); updateAccessLevel();">
-              <option value="">Select Role</option>
-              <option value="Super Admin">Super Admin</option>
-              <option value="School Manager">School Manager</option>
-              <option value="Teacher">Teacher</option>
-              <option value="Non-Teaching">Non-Teaching</option>
-              <option value="Student">Student</option>
-              <option value="Parent">Parent</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="newAccessLevel">Access Level *</label>
-            <select id="newAccessLevel" required onchange="onAccessLevelChange()">
-              <option value="">Select Access Level</option>
-              <option value="Super Administrator">Super Administrator</option>
-              <option value="Administrator">Administrator</option>
-              <option value="Standard">Standard</option>
-              <option value="Basic">Basic</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="newAccessDescription">Access Description</label>
-            <textarea id="newAccessDescription" rows="3" placeholder="Description of user's access permissions and capabilities" readonly></textarea>
-          </div>
-          <div class="form-group conditional-field hide" id="newStaffIdGroup">
-            <label for="newStaffId">Staff ID (Auto-generated)</label>
-            <input type="text" id="newStaffId" readonly>
-          </div>
-          <div class="form-group conditional-field hide" id="newClassGroup">
-            <label for="newClass">Class *</label>
-            <select id="newClass" name="class">
-              <option value="">Select Class</option>
-              <option value="Creche">Creche</option>
-              <option value="Nursery">Nursery</option>
-              <option value="KG1">KG1</option>
-              <option value="KG2">KG2</option>
-              <option value="Class 1">Class 1</option>
-              <option value="Class 2">Class 2</option>
-              <option value="Class 3">Class 3</option>
-              <option value="Class 4">Class 4</option>
-              <option value="Class 5">Class 5</option>
-              <option value="Class 6">Class 6</option>
-              <option value="JHS1">JHS1</option>
-              <option value="JHS2">JHS2</option>
-              <option value="JHS3">JHS3</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="newDepartment">Department</label>
-            <select id="newDepartment" onchange="toggleDepartmentOther()">
-              <option value="">Select Department</option>
-              <option value="Administration">Administration</option>
-              <option value="Academic">Academic</option>
-              <option value="Non-Academic">Non-Academic</option>
-              <option value="Others">Others</option>
-            </select>
-          </div>
-          <div class="form-group conditional-field hide" id="newDepartmentOtherGroup">
-            <label for="newDepartmentOther">Specify Department</label>
-            <input type="text" id="newDepartmentOther" placeholder="Please specify the department">
-          </div>
-          <div class="form-group">
-            <label for="newPassword">Password *</label>
-            <input type="password" id="newPassword" required>
-          </div>
-          <div class="form-group">
-            <label for="newConfirmPassword">Confirm Password *</label>
-            <input type="password" id="newConfirmPassword" required>
-          </div>
-          <div class="form-group">
-            <label>
-              <input type="checkbox" id="newTwoFactorEnabled"> Enable Two-Factor Authentication
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <input type="checkbox" id="newEmailVerification" checked> Send Email Verification
-            </label>
-          </div>
-          <div id="permissionsSection" style="display: none;">
-            <div class="permissions-section-header">
-              <h4>Advanced Permissions</h4>
-              <span id="currentAccessLevelBadge" class="access-level-badge"></span>
-            </div>
-            <div class="permissions-grid">
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="perm_user_manage" onchange="showPermissionInfo('perm_user_manage')"> Manage Users</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="perm_student_manage" onchange="showPermissionInfo('perm_student_manage')"> Manage Students</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="perm_staff_manage" onchange="showPermissionInfo('perm_staff_manage')"> Manage Staff</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="perm_finance_view" onchange="showPermissionInfo('perm_finance_view')"> View Finance</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="perm_finance_edit" onchange="showPermissionInfo('perm_finance_edit')"> Edit Finance</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="perm_reports_view" onchange="showPermissionInfo('perm_reports_view')"> View Reports</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="perm_reports_edit" onchange="showPermissionInfo('perm_reports_edit')"> Edit Reports</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="perm_settings_manage" onchange="showPermissionInfo('perm_settings_manage')"> Manage Settings</label>
-              </div>
+      <!-- User Management Tab -->
+      <div id="usersTab" class="tab-content active">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <h3>Registered Users</h3>
+            <div class="action-buttons">
+              <button class="btn btn-primary" onclick="openAddUserModal()">+ Add New User</button>
+              <button class="btn btn-secondary" onclick="exportUsers()">Export CSV</button>
             </div>
           </div>
-        </form>
-      </div>
-      <div class="form-actions">
-        <button class="btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
-        <button class="btn-primary" onclick="addNewUser()">Add User</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- Edit User Modal -->
-  <div id="editUserModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Edit User</h3>
-        <span class="close" onclick="closeModal('editUserModal')">&times;</span>
-      </div>
-      <div class="modal-body">
-        <form id="editUserForm">
-          <div class="form-group">
-            <label for="editUsername">Username</label>
-            <input type="text" id="editUsername" readonly>
-          </div>
-          <div class="form-group">
-            <label for="editFullName">Full Name *</label>
-            <input type="text" id="editFullName" required>
-          </div>
-          <div class="form-group">
-            <label for="editEmail">Email *</label>
-            <input type="email" id="editEmail" required>
-          </div>
-          <div class="form-group">
-            <label for="editGender">Gender *</label>
-            <select id="editGender" required onchange="toggleEditGenderOther()">
-              <option value="">Select Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
+          <div class="search-filter">
+            <input type="text" id="searchUsers" placeholder="Search by name, email or username..." onkeyup="filterUsers()" class="form-control">
+            <select id="roleFilter" onchange="filterUsers()" class="form-control">
+              <option value="">All Roles</option>
+              <option value="super-admin">Super Admin</option>
+              <option value="school-manager">School Manager</option>
+              <option value="teacher">Teacher</option>
+              <option value="staff">Staff</option>
+              <option value="student">Student</option>
+              <option value="parent">Parent</option>
             </select>
-          </div>
-          <div class="form-group conditional-field hide" id="editGenderOtherGroup">
-            <label for="editGenderOther">Specify Gender</label>
-            <input type="text" id="editGenderOther" placeholder="Please specify your gender identity">
-          </div>
-          <div class="form-group">
-            <label for="editRole">Role *</label>
-            <select id="editRole" required onchange="updateEditPermissions(); toggleEditClassField(); updateEditAccessLevel();">
-              <option value="">Select Role</option>
-              <option value="Super Admin">Super Admin</option>
-              <option value="School Manager">School Manager</option>
-              <option value="Teacher">Teacher</option>
-              <option value="Non-Teaching">Non-Teaching</option>
-              <option value="Student">Student</option>
-              <option value="Parent">Parent</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="editAccessLevel">Access Level *</label>
-            <select id="editAccessLevel" required onchange="onEditAccessLevelChange()">
-              <option value="">Select Access Level</option>
-              <option value="Super Administrator">Super Administrator</option>
-              <option value="Administrator">Administrator</option>
-              <option value="Standard">Standard</option>
-              <option value="Basic">Basic</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="editAccessDescription">Access Description</label>
-            <textarea id="editAccessDescription" rows="3" placeholder="Description of user's access permissions and capabilities" readonly></textarea>
-          </div>
-          <div class="form-group conditional-field hide" id="editStaffIdGroup">
-            <label for="editStaffId">Staff ID (Auto-generated)</label>
-            <input type="text" id="editStaffId" readonly>
-          </div>
-          <div class="form-group conditional-field hide" id="editClassGroup">
-            <label for="editClass">Class *</label>
-            <select id="editClass" name="class">
-              <option value="">Select Class</option>
-              <option value="Creche">Creche</option>
-              <option value="Nursery">Nursery</option>
-              <option value="KG1">KG1</option>
-              <option value="KG2">KG2</option>
-              <option value="Class 1">Class 1</option>
-              <option value="Class 2">Class 2</option>
-              <option value="Class 3">Class 3</option>
-              <option value="Class 4">Class 4</option>
-              <option value="Class 5">Class 5</option>
-              <option value="Class 6">Class 6</option>
-              <option value="JHS1">JHS1</option>
-              <option value="JHS2">JHS2</option>
-              <option value="JHS3">JHS3</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="editDepartment">Department</label>
-            <select id="editDepartment" onchange="toggleEditDepartmentOther()">
-              <option value="">Select Department</option>
-              <option value="Administration">Administration</option>
-              <option value="Academic">Academic</option>
-              <option value="Non-Academic">Non-Academic</option>
-              <option value="Others">Others</option>
-            </select>
-          </div>
-          <div class="form-group conditional-field hide" id="editDepartmentOtherGroup">
-            <label for="editDepartmentOther">Specify Department</label>
-            <input type="text" id="editDepartmentOther" placeholder="Please specify the department">
-          </div>
-          <div class="form-group">
-            <label for="editStatus">Status</label>
-            <select id="editStatus">
+            <select id="statusFilter" onchange="filterUsers()" class="form-control">
+              <option value="">All Status</option>
               <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
               <option value="suspended">Suspended</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          <div class="responsive-table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Access</th>
+                  <th>Status</th>
+                  <th>Last Login</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <!-- User rows populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Security Tab -->
+      <div id="securityTab" class="tab-content">
+        <div class="grid">
+          <div class="card">
+            <h3>Authentication Policy</h3>
+            <div class="form-group">
+              <label><input type="checkbox" id="requireStrongPassword" checked> Enforce Strong Passwords</label>
+              <small style="display: block; color: #666;">Requires length > 8, mixed case, numbers, and symbols.</small>
+            </div>
+            <div class="form-group">
+              <label><input type="checkbox" id="forcePasswordReset"> Force Reset on Next Login (Global)</label>
+            </div>
+            <button class="btn btn-warning" onclick="applyGlobalPasswordReset()">Apply Global Reset</button>
+          </div>
+
+          <div class="card">
+            <h3>Security Actions</h3>
+            <button class="btn btn-secondary" style="width: 100%;" onclick="clearAllSessions()">Terminate All Sessions</button>
+            <button class="btn btn-danger" style="width: 100%;" onclick="lockNonAdminAccounts()">Lock Non-Admin Accounts</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Tab -->
+      <div id="auditTab" class="tab-content">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>System Audit Logs</h3>
+            <button class="btn btn-secondary" onclick="clearAuditLogs()">Clear Logs</button>
+          </div>
+          <div class="responsive-table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>User</th>
+                  <th>Action</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="auditLogsBody">
+                <!-- Audit logs populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit User Modal -->
+  <div id="userModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add New User</h3>
+        <span class="close" onclick="closeModal('userModal')">&times;</span>
+      </div>
+      <form id="userForm" onsubmit="handleUserSubmit(event)">
+        <input type="hidden" id="editUsernameFlag" value="">
+
+        <div class="grid" style="grid-template-columns: 1fr 1fr;">
+          <div class="form-group">
+            <label for="username">Username *</label>
+            <input type="text" id="username" required>
+          </div>
+          <div class="form-group">
+            <label for="fullName">Full Name *</label>
+            <input type="text" id="fullName" required>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: 1fr 1fr;">
+          <div class="form-group">
+            <label for="email">Email Address *</label>
+            <input type="email" id="email" required>
+          </div>
+          <div class="form-group">
+            <label for="gender">Gender *</label>
+            <select id="gender" required>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: 1fr 1fr;">
+          <div class="form-group">
+            <label for="role">System Role *</label>
+            <select id="role" required onchange="onRoleChange()">
+              <option value="super-admin">Super Admin</option>
+              <option value="school-manager">School Manager</option>
+              <option value="teacher">Teacher</option>
+              <option value="staff">Staff</option>
+              <option value="student">Student</option>
+              <option value="parent">Parent</option>
             </select>
           </div>
           <div class="form-group">
-            <label>
-              <input type="checkbox" id="editTwoFactorEnabled"> Enable Two-Factor Authentication
-            </label>
-          </div>
-          <div id="editPermissionsSection" style="display: none;">
-            <div class="permissions-section-header">
-              <h4>Advanced Permissions</h4>
-              <span id="editCurrentAccessLevelBadge" class="access-level-badge"></span>
-            </div>
-            <div class="permissions-grid">
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="edit_perm_user_manage" onchange="showEditPermissionInfo('edit_perm_user_manage')"> Manage Users</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="edit_perm_student_manage" onchange="showEditPermissionInfo('edit_perm_student_manage')"> Manage Students</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="edit_perm_staff_manage" onchange="showEditPermissionInfo('edit_perm_staff_manage')"> Manage Staff</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="edit_perm_finance_view" onchange="showEditPermissionInfo('edit_perm_finance_view')"> View Finance</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="edit_perm_finance_edit" onchange="showEditPermissionInfo('edit_perm_finance_edit')"> Edit Finance</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="edit_perm_reports_view" onchange="showEditPermissionInfo('edit_perm_reports_view')"> View Reports</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="edit_perm_reports_edit" onchange="showEditPermissionInfo('edit_perm_reports_edit')"> Edit Reports</label>
-              </div>
-              <div class="permission-item" title="Click for more information">
-                <label><input type="checkbox" id="edit_perm_settings_manage" onchange="showEditPermissionInfo('edit_perm_settings_manage')"> Manage Settings</label>
-              </div>
-            </div>
-          </div>
-        </form>
-      </div>
-      <div class="form-actions">
-        <button class="btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
-        <button class="btn-primary" onclick="updateUser()">Update User</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Email Verification Modal -->
-  <div id="emailVerificationModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Email Verification</h3>
-        <span class="close" onclick="closeModal('emailVerificationModal')">&times;</span>
-      </div>
-      <div class="modal-body">
-        <div id="emailVerificationContent">
-          <p>Email verification system is being configured...</p>
-        </div>
-      </div>
-      <div class="form-actions">
-        <button class="btn-secondary" onclick="closeModal('emailVerificationModal')">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Two-Factor Authentication Modal -->
-  <div id="twoFactorModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Two-Factor Authentication Setup</h3>
-        <span class="close" onclick="closeModal('twoFactorModal')">&times;</span>
-      </div>
-      <div class="modal-body">
-        <div id="twoFactorContent">
-          <div class="qr-code-section">
-            <h4>Scan QR Code</h4>
-            <div id="qrCode" style="text-align: center; padding: 20px;">
-              <div style="width: 200px; height: 200px; background: #f0f0f0; margin: 0 auto; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc;">
-                QR Code Placeholder
-              </div>
-            </div>
-            <p><strong>Secret Key:</strong> <span id="secretKey">ABCDEFGHIJKLMNOP</span></p>
-            <button class="btn-secondary" onclick="copySecretKey()">Copy Secret Key</button>
-          </div>
-          <div class="verification-section">
-            <h4>Verify Setup</h4>
-            <div class="form-group">
-              <label for="twoFactorCode">Enter 6-digit code:</label>
-              <input type="text" id="twoFactorCode" maxlength="6" placeholder="000000">
-            </div>
-            <button class="btn-primary" onclick="verifyTwoFactor()">Verify</button>
+            <label for="accessLevel">Access Level *</label>
+            <select id="accessLevel" required>
+              <option value="Super Administrator">Super Administrator</option>
+              <option value="Administrator">Administrator</option>
+              <option value="Standard">Standard</option>
+              <option value="Basic">Basic</option>
+            </select>
           </div>
         </div>
-      </div>
-      <div class="form-actions">
-        <button class="btn-secondary" onclick="closeModal('twoFactorModal')">Cancel</button>
-        <button class="btn-primary" onclick="completeTwoFactorSetup()">Complete Setup</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- Security Settings Modal -->
-  <div id="securitySettingsModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Advanced Security Settings</h3>
-        <span class="close" onclick="closeModal('securitySettingsModal')">&times;</span>
-      </div>
-      <div class="modal-body">
-        <div class="security-sections">
-          <div class="security-section">
-            <h4>IP Access Control</h4>
+        <!-- Conditional Fields -->
+        <div id="teacherFields" class="conditional-field">
+          <div class="grid" style="grid-template-columns: 1fr 1fr;">
             <div class="form-group">
-              <label for="allowedIPs">Allowed IP Addresses (one per line):</label>
-              <textarea id="allowedIPs" rows="4" placeholder="192.168.1.0/24&#10;10.0.0.0/8"></textarea>
-            </div>
-            <button class="btn-secondary" onclick="saveIPRestrictions()">Save IP Restrictions</button>
-          </div>
-
-          <div class="security-section">
-            <h4>Rate Limiting</h4>
-            <div class="form-group">
-              <label for="maxLoginAttempts">Max Login Attempts:</label>
-              <input type="number" id="maxLoginAttempts" value="5" min="1" max="10">
+              <label for="staffId">Staff ID</label>
+              <input type="text" id="staffId" placeholder="Auto-generated if empty">
             </div>
             <div class="form-group">
-              <label for="lockoutDuration">Lockout Duration (minutes):</label>
-              <input type="number" id="lockoutDuration" value="30" min="5" max="1440">
+              <label for="assignedClass">Assigned Class</label>
+              <select id="assignedClass">
+                <option value="">None</option>
+                <option value="Class 1">Class 1</option>
+                <option value="Class 2">Class 2</option>
+                <option value="Class 3">Class 3</option>
+                <option value="Class 4">Class 4</option>
+                <option value="Class 5">Class 5</option>
+                <option value="Class 6">Class 6</option>
+                <option value="JHS1">JHS1</option>
+                <option value="JHS2">JHS2</option>
+                <option value="JHS3">JHS3</option>
+              </select>
             </div>
-            <button class="btn-secondary" onclick="saveRateLimiting()">Save Rate Limiting</button>
-          </div>
-
-          <div class="security-section">
-            <h4>Session Management</h4>
-            <div class="form-group">
-              <label for="sessionTimeout">Session Timeout (minutes):</label>
-              <input type="number" id="sessionTimeout" value="30" min="5" max="480">
-            </div>
-            <div class="form-group">
-              <label for="maxConcurrentSessions">Max Concurrent Sessions:</label>
-              <input type="number" id="maxConcurrentSessions" value="3" min="1" max="10">
-            </div>
-            <button class="btn-secondary" onclick="saveSessionSettings()">Save Session Settings</button>
           </div>
         </div>
-      </div>
-      <div class="form-actions">
-        <button class="btn-secondary" onclick="closeModal('securitySettingsModal')">Close</button>
-        <button class="btn-primary" onclick="applySecuritySettings()">Apply All Settings</button>
-      </div>
+
+        <div id="parentFields" class="conditional-field">
+          <div class="form-group">
+            <label for="studentIds">Student Admission IDs (Comma separated for multiple children) *</label>
+            <input type="text" id="studentIds" placeholder="e.g. ADM001, ADM002">
+          </div>
+        </div>
+
+        <div class="form-group" id="passwordGroup">
+          <label for="password">Password *</label>
+          <input type="password" id="password">
+          <small id="passwordHint">Default: user123 (Force change enabled)</small>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('userModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">Create User</button>
+        </div>
+      </form>
     </div>
   </div>
 
   <script>
-    // Access Control System
-    const ACCESS_LEVELS = {
-      'Super Admin': 4,
-      'Admin': 3,
-      'Standard': 2,
-      'Basic': 1
-    };
+    // Initialize Notification System
+    const notify = initializeNotificationSystem('user-management');
 
-    // Authentication and Access Control Functions
-    async function checkAuth() { if (!window.db) await window.db.init(); return await window.checkAuth("super-admin"); }
+    // Page State
+    let allUsers = [];
 
-    // Enhanced User Management Functions
-        async function resetUserPassword(username) {
-      try {
-        const newPassword = await generateSecurePassword();
-        const user = await window.db.get(window.DB_STORES.USERS, username);
-
-        if(!user) {
-          if (window.showNotification) window.showNotification('User not found.', 'error');
-          return;
-        }
-
-        user.password = btoa(newPassword);
-        user.forcePasswordChange = true;
-        user.passwordResetDate = new Date().toISOString();
-        user.updatedAt = new Date().toISOString();
-
-        await window.db.put(window.DB_STORES.USERS, user);
-
-        if (window.addAuditLog) await window.addAuditLog('password_reset', `Password reset for user ${username}`, user);
-
-        if (window.showNotification) window.showNotification(`Password reset for ${username}. New password: ${newPassword}`, 'success');
-        await loadUsers();
-      } catch (error) {
-        console.error('Error resetting password:', error);
-      }
+    // Auth Check
+    async function checkPageAuth() {
+      if (!window.db) await window.db.init();
+      const auth = await window.checkAuth('super-admin');
+      if (!auth) return false;
+      return true;
     }
 
-    async function generateSecurePassword() {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-      let password = '';
-      for(let i = 0; i < 12; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return password;
-    }
-
-    async function bulkImportUsers() {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.csv';
-      input.onchange = function(e) {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const csv = e.target.result;
-          const lines = csv.split('\n');
-          const headers = lines[0].split(',');
-          const users = [];
-
-          for (let i = 1; i < lines.length; i++) {
-            if (lines[i].trim()) {
-              const values = lines[i].split(',');
-              const user = {
-                username: values[0]?.trim(),
-                fullName: values[1]?.trim(),
-                email: values[2]?.trim(),
-                role: values[3]?.trim(),
-                password: btoa(values[4]?.trim() || 'default123'),
-                status: values[5]?.trim() || 'active',
-                createdAt: new Date().toISOString(),
-                isRealAccount: true
-              };
-              users.push(user);
-            }
-          }
-
-
-
-          for (const u of users) { await window.db.put(window.DB_STORES.USERS, u); }
-
-          addAuditLog('bulk_import', `Imported ${users.length} users`, null);
-          showNotification(`Successfully imported ${users.length} users!`, 'success');
-          loadUsers();
-        };
-        reader.readAsText(file);
-      };
-      input.click();
-    }
-
-    async function bulkExportUsers() {
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      const csvContent = [
-        ['Username', 'Full Name', 'Email', 'Role', 'Status', 'Created At'],
-        ...users.map(user => [
-          user.username,
-          user.fullName || '',
-          user.email || '',
-          user.role || '',
-          user.status || 'active',
-          user.createdAt ? new Date(user.createdAt).toLocaleString() : ''
-        ])
-      ].map(row => row.join(',')).join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    async function manageUserSessions() {
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      const activeSessions = users.filter(u => u.lastActivity &&
-        new Date(u.lastActivity) > new Date(Date.now() - 30 * 60 * 1000)); // Last 30 minutes
-
-      let html = `
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>Active Sessions (${activeSessions.length})</h3>
-            <span class="close" onclick="closeModal('sessionModal')">&times;</span>
-          </div>
-          <div class="modal-body">
-            <div class="responsive-table-container"><table class="users-table">
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>Role</th>
-                  <th>Last Activity</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-      `;
-
-      activeSessions.forEach(user => {
-        const lastActivity = new Date(user.lastActivity);
-        const timeDiff = Math.floor((new Date() - lastActivity) / 1000 / 60);
-        html += `
-          <tr>
-            <td>${user.username}</td>
-            <td>${user.role}</td>
-            <td>${timeDiff} minutes ago</td>
-            <td>
-              <button class="btn-danger" onclick="terminateSession('${user.username}')">Terminate</button>
-            </td>
-          </tr>
-        `;
-      });
-
-      html += `
-              </tbody>
-            </table></div>
-          </div>
-        </div>
-      `;
-
-      const modal = document.createElement('div');
-      modal.id = 'sessionModal';
-      modal.className = 'modal';
-      modal.innerHTML = html;
-      modal.style.display = 'block';
-      document.body.appendChild(modal);
-    }
-
-        async function terminateSession(username) {
-      try {
-        const user = await window.db.get(window.DB_STORES.USERS, username);
-        if(user) {
-          user.lastActivity = null;
-          user.sessionTime = null;
-          await window.db.put(window.DB_STORES.USERS, user);
-          if (window.addAuditLog) await window.addAuditLog('session_terminated', `Session terminated for user ${username}`, user);
-          if (window.showNotification) window.showNotification(`Session terminated for ${username}`, 'success');
-        }
-      } catch (error) {
-        console.error('Error terminating session:', error);
-      }
-      closeModal('sessionModal');
-      await loadUsers();
-    }
-
-    // Enhanced Security Functions
-    async function loadSecuritySettings() {
-      const securityContent = document.getElementById('securityContent');
-      const ipRestrictions = JSON.parse(localStorage.getItem('ipRestrictions') || '[]');
-      const rateLimiting = JSON.parse(localStorage.getItem('rateLimiting') || '{"maxLoginAttempts": 5, "lockoutDuration": 30}');
-      const sessionSettings = JSON.parse(localStorage.getItem('sessionSettings') || '{"sessionTimeout": 30, "maxConcurrentSessions": 3}');
-
-      securityContent.innerHTML = `
-        <div class="security-sections">
-          <div class="security-section">
-            <h4>🔐 Authentication Security</h4>
-            <div class="form-group">
-              <label>Two-Factor Authentication Status:</label>
-              <div style="margin: 10px 0;">
-                <span class="two-factor-status two-factor-enabled">Enabled for Admin Users</span>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Email Verification Status:</label>
-              <div style="margin: 10px 0;">
-                <span class="email-verification-status email-verified">Required for New Users</span>
-              </div>
-            </div>
-            <button class="btn-primary" onclick="openSecuritySettingsModal()">Configure Advanced Security</button>
-          </div>
-
-          <div class="security-section">
-            <h4>📊 Security Statistics</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 15px 0;">
-              <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <div style="font-size: 24px; font-weight: bold; color: #667eea;">${rateLimiting.maxLoginAttempts}</div>
-                <div style="font-size: 12px; color: #666;">Max Login Attempts</div>
-              </div>
-              <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <div style="font-size: 24px; font-weight: bold; color: #667eea;">${rateLimiting.lockoutDuration}m</div>
-                <div style="font-size: 12px; color: #666;">Lockout Duration</div>
-              </div>
-              <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <div style="font-size: 24px; font-weight: bold; color: #667eea;">${sessionSettings.sessionTimeout}m</div>
-                <div style="font-size: 12px; color: #666;">Session Timeout</div>
-              </div>
-              <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <div style="font-size: 24px; font-weight: bold; color: #667eea;">${ipRestrictions.length}</div>
-                <div style="font-size: 12px; color: #666;">IP Restrictions</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="security-section">
-            <h4>🛡️ Security Actions</h4>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              <button class="btn-secondary" onclick="manageUserSessions()">Manage Active Sessions</button>
-              <button class="btn-warning" onclick="forcePasswordChange()">Force Password Change</button>
-              <button class="btn-danger" onclick="lockAllAccounts()">Lock All Non-Admin Accounts</button>
-              <button class="btn-primary" onclick="clearAllSessions()">Clear All Sessions</button>
-              <button class="btn-success" onclick="generateSecurityReport()">Generate Security Report</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    async function openSecuritySettingsModal() {
-      const ipRestrictions = JSON.parse(localStorage.getItem('ipRestrictions') || '[]');
-      const rateLimiting = JSON.parse(localStorage.getItem('rateLimiting') || '{"maxLoginAttempts": 5, "lockoutDuration": 30}');
-      const sessionSettings = JSON.parse(localStorage.getItem('sessionSettings') || '{"sessionTimeout": 30, "maxConcurrentSessions": 3}');
-
-      document.getElementById('allowedIPs').value = ipRestrictions.join('\n');
-      document.getElementById('maxLoginAttempts').value = rateLimiting.maxLoginAttempts;
-      document.getElementById('lockoutDuration').value = rateLimiting.lockoutDuration;
-      document.getElementById('sessionTimeout').value = sessionSettings.sessionTimeout;
-      document.getElementById('maxConcurrentSessions').value = sessionSettings.maxConcurrentSessions;
-
-      document.getElementById('securitySettingsModal').style.display = 'block';
-    }
-
-    function clearAllSessions() {
-      if (!confirm('This will terminate all active user sessions. Continue?')) {
-        return;
-      }
-
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      users.forEach(user => {
-        user.lastActivity = null;
-        user.sessionTime = null;
-      });
-
-      await window.db.put(window.DB_STORES.USERS, newUser);
-      addAuditLog('all_sessions_cleared', 'All user sessions terminated', null);
-      showNotification('All user sessions have been terminated!', 'success');
-    }
-
-    async function generateSecurityReport() {
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      const auditLogs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
-      const ipRestrictions = JSON.parse(localStorage.getItem('ipRestrictions') || '[]');
-      const rateLimiting = JSON.parse(localStorage.getItem('rateLimiting') || '{}');
-
-      const report = {
-        timestamp: new Date().toISOString(),
-        totalUsers: users.length,
-        activeUsers: users.filter(u => u.status === 'active').length,
-        suspendedUsers: users.filter(u => u.status === 'suspended').length,
-        twoFactorEnabled: users.filter(u => u.twoFactorEnabled).length,
-        emailVerified: users.filter(u => u.emailVerified).length,
-        recentAuditLogs: auditLogs.slice(-50),
-        ipRestrictions: ipRestrictions,
-        rateLimiting: rateLimiting,
-        securityScore: calculateSecurityScore(users)
-      };
-
-      const reportBlob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-      const url = window.URL.createObjectURL(reportBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `security_report_${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-
-      addAuditLog('security_report_generated', 'Security report generated', null);
-      showNotification('Security report downloaded successfully!', 'success');
-    }
-
-    async function calculateSecurityScore(users) {
-      let score = 0;
-      const totalUsers = users.length;
-
-      if (totalUsers === 0) return 0;
-
-      // Two-factor authentication
-      const twoFactorUsers = users.filter(u => u.twoFactorEnabled).length;
-      score += (twoFactorUsers / totalUsers) * 30;
-
-      // Email verification
-      const emailVerifiedUsers = users.filter(u => u.emailVerified).length;
-      score += (emailVerifiedUsers / totalUsers) * 25;
-
-      // Strong passwords (assuming users with recent password changes have strong passwords)
-      const recentPasswordChanges = users.filter(u => u.passwordResetDate &&
-        new Date(u.passwordResetDate) > new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)).length;
-      score += (recentPasswordChanges / totalUsers) * 25;
-
-      // Active users (inactive accounts are security risks)
-      const activeUsers = users.filter(u => u.status === 'active').length;
-      score += (activeUsers / totalUsers) * 20;
-
-      return Math.round(score);
-    }
-
-    async function saveSecuritySettings() {
-      const settings = {
-        requireUppercase: document.getElementById('requireUppercase').checked,
-        requireLowercase: document.getElementById('requireLowercase').checked,
-        requireNumbers: document.getElementById('requireNumbers').checked,
-        requireSpecial: document.getElementById('requireSpecial').checked,
-        minLength: parseInt(document.getElementById('minLength').value),
-        sessionTimeout: parseInt(document.getElementById('sessionTimeout').value),
-        maxFailedAttempts: parseInt(document.getElementById('maxFailedAttempts').value),
-        lockoutDuration: parseInt(document.getElementById('lockoutDuration').value)
-      };
-
-      localStorage.setItem('securitySettings', JSON.stringify(settings));
-      addAuditLog('security_settings_updated', 'Security settings updated', null);
-      showNotification('Security settings saved successfully!', 'success');
-    }
-
-    function forcePasswordChange() {
-      if (!confirm('This will force all users to change their passwords on next login. Continue?')) {
-        return;
-      }
-
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      users.forEach(user => {
-        user.forcePasswordChange = true;
-        user.passwordResetDate = new Date().toISOString();
-      });
-
-      await window.db.put(window.DB_STORES.USERS, newUser);
-      addAuditLog('force_password_change', 'All users forced to change passwords', null);
-      showNotification('All users will be required to change passwords on next login!', 'success');
-    }
-
-    async function lockAllAccounts() {
-      if (!confirm('This will lock all user accounts except super administrators. Continue?')) {
-        return;
-      }
-
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      users.forEach(user => {
-        if(user.role !== 'super-admin') {
-          user.status = 'suspended';
-          user.accountLocked = true;
-        }
-      });
-
-      await window.db.put(window.DB_STORES.USERS, newUser);
-      addAuditLog('lock_all_accounts', 'All non-admin accounts locked', null);
-      showNotification('All non-admin accounts have been locked!', 'success');
-      loadUsers();
-    }
-
-    // User Management Functions
-    async function loadUsers() {
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      displayUsers(users);
-      updateDashboardStats(users);
-    }
-
-    async function updateDashboardStats(users) {
-      const totalUsers = users.length;
-      const activeUsers = users.filter(u => u.status === 'active' || !u.status).length;
-      const suspendedUsers = users.filter(u => u.status === 'suspended').length;
-      const recentActivity = users.filter(u => {
-        if (!u.lastLogin) return false;
-        const lastLogin = new Date(u.lastLogin);
-        const now = new Date();
-        return (now - lastLogin) < (24 * 60 * 60 * 1000); // Last 24 hours
-      }).length;
-
-      document.getElementById('totalUsers').textContent = totalUsers;
-      document.getElementById('activeUsers').textContent = activeUsers;
-      document.getElementById('suspendedUsers').textContent = suspendedUsers;
-      document.getElementById('recentActivity').textContent = recentActivity;
-    }
-
-    async function filterUsers() {
-      const searchTerm = document.getElementById('searchUsers').value.toLowerCase();
-      const roleFilter = document.getElementById('roleFilter').value;
-      const statusFilter = document.getElementById('statusFilter').value;
-
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      const filteredUsers = users.filter(user => {
-        const matchesSearch = user.username.toLowerCase().includes(searchTerm) ||
-                            (user.fullName && user.fullName.toLowerCase().includes(searchTerm)) ||
-                            (user.email && user.email.toLowerCase().includes(searchTerm));
-        const matchesRole = !roleFilter || user.role === roleFilter;
-        const matchesStatus = !statusFilter || user.status === statusFilter || (!user.status && statusFilter === 'active');
-
-        return matchesSearch && matchesRole && matchesStatus;
-      });
-
-      displayUsers(filteredUsers);
-    }
-
-    // Modal Functions
-    async function openAddUserModal() {
-      document.getElementById('addUserModal').classList.add('show');
-      document.getElementById('addUserForm').reset();
-      // Reset permissions and department on modal open
-      document.getElementById('newRole').value = '';
-      document.getElementById('newAccessLevel').value = '';
-      document.getElementById('newAccessDescription').value = '';
-      document.getElementById('newDepartment').value = '';
-      document.getElementById('newGender').value = '';
-      document.getElementById('newTwoFactorEnabled').checked = false;
-      document.getElementById('newEmailVerification').checked = true;
-      document.getElementById('permissionsSection').style.display = 'none';
-      // Reset class field
-      document.getElementById('newClass').value = '';
-      document.getElementById('newClassGroup').classList.add('hide');
-      document.getElementById('newClassGroup').classList.remove('show');
-      // Reset gender other field
-      document.getElementById('newGenderOther').value = '';
-      document.getElementById('newGenderOtherGroup').classList.add('hide');
-      document.getElementById('newGenderOtherGroup').classList.remove('show');
-      // Reset department other field
-      document.getElementById('newDepartmentOther').value = '';
-      document.getElementById('newDepartmentOtherGroup').classList.add('hide');
-      document.getElementById('newDepartmentOtherGroup').classList.remove('show');
-    }
-
-    async function closeModal(modalId) {
-      document.getElementById(modalId).classList.remove('show');
-    }
-
-    async function addNewUser() {
-      const username = document.getElementById('newUsername').value.trim();
-      const fullName = document.getElementById('newFullName').value.trim();
-      const email = document.getElementById('newEmail').value.trim();
-      const gender = document.getElementById('newGender').value;
-      const role = document.getElementById('newRole').value;
-      const staffId = document.getElementById('newStaffId').value;
-      const accessLevel = document.getElementById('newAccessLevel').value;
-      const accessDescription = document.getElementById('newAccessDescription').value;
-      const department = document.getElementById('newDepartment').value;
-      const password = document.getElementById('newPassword').value;
-      const confirmPassword = document.getElementById('newConfirmPassword').value;
-      const twoFactorEnabled = document.getElementById('newTwoFactorEnabled').checked;
-      const emailVerification = document.getElementById('newEmailVerification').checked;
-
-      if(!username || !fullName || !email || !gender || !role || !accessLevel) {
-        window.showNotification('error', 'Validation Error', 'Please fill in all required fields');
-        showNotification('Please fill in all required fields.', 'error');
-        return;
-      }
-
-      // Handle gender field
-      if (gender === 'Other') {
-        const genderOther = document.getElementById('newGenderOther').value.trim();
-        if (!genderOther) {
-          window.showNotification('error', 'Gender Specification Required', 'Please specify your gender when selecting "Other"');
-          showNotification('Please specify your gender when selecting "Other".', 'error');
-          return;
-        }
-      }
-
-      // Handle department field
-      if (department === 'Others') {
-        const departmentOther = document.getElementById('newDepartmentOther').value.trim();
-        if (!departmentOther) {
-          window.showNotification('error', 'Department Specification Required', 'Please specify the department when selecting "Others"');
-          showNotification('Please specify the department when selecting "Others".', 'error');
-          return;
-        }
-      }
-
-      // Validate class field for teachers
-      if (role === 'Teacher') {
-        const classValue = document.getElementById('newClass').value;
-        if (!classValue) {
-          window.showNotification('error', 'Class Required', 'Class is required for teachers');
-          showNotification('Class is required for teachers.', 'error');
-          return;
-        }
-      }
-
-      if (password !== confirmPassword) {
-        window.showNotification('error', 'Password Mismatch', 'Passwords do not match');
-        showNotification('Passwords do not match.', 'error');
-        return;
-      }
-
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-
-      if (await window.db.get(window.DB_STORES.USERS, username)) {
-        showNotification('Username already exists.', 'error');
-        return;
-      }
-
-      const newUser = {
-        username: username,
-        fullName: fullName,
-        email: email,
-        gender: gender,
-        role: role,
-        staffId: staffId,
-        accessLevel: accessLevel,
-        accessDescription: accessDescription,
-        department: department, // Add department
-        password: btoa(password), // Base64 encode
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        isRealAccount: true,
-        twoFactorEnabled: twoFactorEnabled, // Add two-factor enabled status
-        emailVerified: emailVerification // Add email verification status
-      };
-
-      // Add class field for teachers
-      if(role === 'Teacher') {
-        newUser.class = document.getElementById('newClass').value;
-      }
-
-      // Handle gender specification
-      if (gender === 'Other') {
-        newUser.gender = `Other: ${document.getElementById('newGenderOther').value}`;
-      }
-
-      // Handle department specification
-      if (department === 'Others') {
-        newUser.department = `Others: ${document.getElementById('newDepartmentOther').value}`;
-      }
-
-      // Add permissions if applicable
-      if (role === 'Super Admin' || role === 'School Manager') {
-        newUser.permissions = {
-          user_manage: true,
-          student_manage: true,
-          staff_manage: true,
-          finance_view: true,
-          finance_edit: true,
-          reports_view: true,
-          reports_edit: true,
-          settings_manage: true
-        };
-      }
-
-
-      await window.db.put(window.DB_STORES.USERS, newUser);
-
-      // If Teacher, also add to Staff store
-      if (role === 'Teacher') {
-          const staffData = {
-              id: newUser.staffId,
-              username: newUser.username,
-              fullName: newUser.fullName,
-              email: newUser.email,
-              gender: newUser.gender,
-              position: 'teacher',
-              department: newUser.department,
-              class: newUser.class,
-              hireDate: new Date().toISOString(),
-              accessLevel: newUser.accessLevel,
-              status: 'active'
-          };
-          await window.db.put(window.DB_STORES.STAFF, staffData);
-      }
-
-      // Add audit log
-      addAuditLog('user_created', `User ${username} was created`, newUser);
-
-      // Send email verification if enabled
-      if(emailVerification) {
-        const verificationCode = sendEmailVerification(email, username);
-        window.showNotification('success', 'User Created', `User ${username} created successfully! Verification email sent to ${email}`);
-        showNotification(`User created successfully! Verification email sent to ${email}`, 'success');
-      } else {
-        window.showNotification('success', 'User Created', `User ${username} created successfully with role: ${role}`);
-        showNotification('User created successfully!', 'success');
-      }
-
-      // Setup two-factor authentication if enabled
-      if (twoFactorEnabled) {
-        setTimeout(async () => {
-          await setupTwoFactorAuthentication(username);
-        }, 1000);
-      }
-
-      closeModal('addUserModal');
-      loadUsers();
-    }
-
-    async function editUser(username) {
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      const user = await window.db.get(window.DB_STORES.USERS, username);
-
-      if (!user) {
-        showNotification('User not found.', 'error');
-        return;
-      }
-
-      document.getElementById('editUserModal').classList.add('show');
-      document.getElementById('editUsername').value = user.username;
-      document.getElementById('editFullName').value = user.fullName || '';
-      document.getElementById('editEmail').value = user.email || '';
-      document.getElementById('editGender').value = user.gender || '';
-      document.getElementById('editRole').value = user.role || '';
-      document.getElementById('editAccessLevel').value = user.accessLevel || '';
-      document.getElementById('editAccessDescription').value = user.accessDescription || '';
-      document.getElementById('editDepartment').value = user.department || ''; // Set department
-      document.getElementById('editStatus').value = user.status || 'active';
-      document.getElementById('editTwoFactorEnabled').checked = user.twoFactorEnabled || false; // Set two-factor enabled
-
-      // Handle class field for teachers
-      if(user.role === 'Teacher') {
-        document.getElementById('editClass').value = user.class || '';
-        document.getElementById('editStaffId').value = user.staffId || '';
-        toggleEditClassField(); // Show the class field
-      } else {
-        document.getElementById('editClass').value = '';
-        document.getElementById('editStaffId').value = '';
-        toggleEditClassField(); // Hide the class field
-      }
-
-      // Handle gender field
-      if (user.gender && user.gender.startsWith('Other:')) {
-        const genderOther = user.gender.replace('Other:', '').trim();
-        document.getElementById('editGender').value = 'Other';
-        document.getElementById('editGenderOther').value = genderOther;
-        toggleEditGenderOther(); // Show the gender other field
-      } else {
-        document.getElementById('editGenderOther').value = '';
-        toggleEditGenderOther(); // Hide the gender other field
-      }
-
-      // Handle department field
-      if (user.department && user.department.startsWith('Others:')) {
-        const departmentOther = user.department.replace('Others:', '').trim();
-        document.getElementById('editDepartment').value = 'Others';
-        document.getElementById('editDepartmentOther').value = departmentOther;
-        toggleEditDepartmentOther(); // Show the department other field
-      } else {
-        document.getElementById('editDepartmentOther').value = '';
-        toggleEditDepartmentOther(); // Hide the department other field
-      }
-
-      // Update access level and description based on role
-      updateEditAccessLevel();
-
-      // Set permissions based on role
-      if (user.role === 'Super Admin' || user.role === 'School Manager') {
-        document.getElementById('edit_perm_user_manage').checked = true;
-        document.getElementById('edit_perm_student_manage').checked = true;
-        document.getElementById('edit_perm_staff_manage').checked = true;
-        document.getElementById('edit_perm_finance_view').checked = true;
-        document.getElementById('edit_perm_finance_edit').checked = true;
-        document.getElementById('edit_perm_reports_view').checked = true;
-        document.getElementById('edit_perm_reports_edit').checked = true;
-        document.getElementById('edit_perm_settings_manage').checked = true;
-        document.getElementById('editPermissionsSection').style.display = 'block';
-      } else {
-        document.getElementById('editPermissionsSection').style.display = 'none';
-      }
-
-      document.getElementById('editUserModal').style.display = 'block';
-    }
-
-    async function updateUser() {
-      const username = document.getElementById('editUsername').value;
-      const fullName = document.getElementById('editFullName').value.trim();
-      const email = document.getElementById('editEmail').value.trim();
-      const gender = document.getElementById('editGender').value;
-      const role = document.getElementById('editRole').value;
-      const accessLevel = document.getElementById('editAccessLevel').value;
-      const accessDescription = document.getElementById('editAccessDescription').value;
-      const department = document.getElementById('editDepartment').value; // Get department
-      const status = document.getElementById('editStatus').value;
-      const twoFactorEnabled = document.getElementById('editTwoFactorEnabled').checked; // Get two-factor enabled
-
-      if (!fullName || !email || !gender || !role || !accessLevel) {
-        showNotification('Please fill in all required fields.', 'error');
-        return;
-      }
-
-      // Handle gender field
-      if (gender === 'Other') {
-        const genderOther = document.getElementById('editGenderOther').value.trim();
-        if (!genderOther) {
-          showNotification('Please specify your gender when selecting "Other".', 'error');
-          return;
-        }
-      }
-
-      // Handle department field
-      if (department === 'Others') {
-        const departmentOther = document.getElementById('editDepartmentOther').value.trim();
-        if (!departmentOther) {
-          showNotification('Please specify the department when selecting "Others".', 'error');
-          return;
-        }
-      }
-
-      // Validate class field for teachers
-      if (role === 'Teacher') {
-        const classValue = document.getElementById('editClass').value;
-        if (!classValue) {
-          showNotification('Class is required for teachers.', 'error');
-          return;
-        }
-      }
-
-      const user = await window.db.get(window.DB_STORES.USERS, username);
-      if (!user) {
-        if (window.showNotification) window.showNotification('User not found.', 'error');
-        return;
-      }
-
-      const updatedUser = {
-        ...user,
-        fullName: fullName,
-        email: email,
-        gender: gender,
-        role: role,
-        accessLevel: accessLevel,
-        accessDescription: accessDescription,
-        department: department,
-        status: status,
-        twoFactorEnabled: twoFactorEnabled,
-        updatedAt: new Date().toISOString()
-      };
-
-      if(role === 'Teacher') {
-        updatedUser.class = document.getElementById('editClass').value;
-        updatedUser.staffId = document.getElementById('editStaffId').value;
-      } else {
-        delete updatedUser.class;
-        delete updatedUser.staffId;
-      }
-
-      if (gender === 'Other') {
-        updatedUser.gender = `Other: ${document.getElementById('editGenderOther').value}`;
-      }
-
-      if (department === 'Others') {
-        updatedUser.department = `Others: ${document.getElementById('editDepartmentOther').value}`;
-      }
-
-      if (role === 'Super Admin' || role === 'School Manager') {
-        updatedUser.permissions = {
-          user_manage: true,
-          student_manage: true,
-          staff_manage: true,
-          finance_view: true,
-          finance_edit: true,
-          reports_view: true,
-          reports_edit: true,
-          settings_manage: true
-        };
-      } else {
-        updatedUser.permissions = null;
-      }
-
-      await window.db.put(window.DB_STORES.USERS, updatedUser);
-
-      // If Teacher, sync with Staff store
-      if (role === 'Teacher') {
-          const staffData = {
-              id: updatedUser.staffId,
-              username: updatedUser.username,
-              fullName: updatedUser.fullName,
-              email: updatedUser.email,
-              gender: updatedUser.gender,
-              position: 'teacher',
-              department: updatedUser.department,
-              class: updatedUser.class,
-              accessLevel: updatedUser.accessLevel,
-              status: updatedUser.status
-          };
-          await window.db.put(window.DB_STORES.STAFF, staffData);
-      }
-
-      // Add audit log
-      addAuditLog('user_updated', `User ${username} was updated`, updatedUser);
-
-      showNotification('User updated successfully!', 'success');
-      closeModal('editUserModal');
-      loadUsers();
-    }
-
-    async function toggleUserStatus(username) {
-      const user = await window.db.get(window.DB_STORES.USERS, username);
-      if(!user) {
-        if (window.showNotification) window.showNotification('User not found.', 'error');
-        return;
-      }
-
-      const newStatus = user.status === 'suspended' ? 'active' : 'suspended';
-      user.status = newStatus;
-      user.updatedAt = new Date().toISOString();
-
-      await window.db.put(window.DB_STORES.USERS, user);
-
-      if (window.addAuditLog) await window.addAuditLog('user_status_changed', `User ${username} status changed to ${newStatus}`, user);
-
-      showNotification(`User ${newStatus === 'suspended' ? 'suspended' : 'activated'} successfully!`, 'success');
-      loadUsers();
-    }
-
-    async function deleteUser(username) {
-      if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
-        return;
-      }
-
-      const deletedUser = await window.db.get(window.DB_STORES.USERS, username);
-      if (!deletedUser) {
-        if (window.showNotification) window.showNotification('User not found.', 'error');
-        return;
-      }
-      await window.db.delete(window.DB_STORES.USERS, username);
-
-      if (window.addAuditLog) await window.addAuditLog('user_deleted', `User ${username} was deleted`, deletedUser);
-
-      showNotification('User deleted successfully!', 'success');
-      loadUsers();
-    }
-
-    // Tab Functions
-    async function showTab(tabName) {
-      // Hide all tab contents
-      const tabContents = document.querySelectorAll('.tab-content');
-      tabContents.forEach(content => content.classList.remove('active'));
-
-      // Remove active class from all tab buttons
-      const tabButtons = document.querySelectorAll('.tab-btn');
-      tabButtons.forEach(button => button.classList.remove('active'));
-
-      // Show selected tab content
+    // Tab Management
+    async function showTab(tabName, event) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+
+      // Show selected
       document.getElementById(tabName + 'Tab').classList.add('active');
-
-      // Add active class to clicked button
-      event.target.classList.add('active');
-
-      // Load tab-specific content
-      switch(tabName) {
-        case 'users':
-          loadUsers();
-          break;
-        case 'security':
-          loadSecuritySettings();
-          break;
-        case 'audit':
-          loadAuditLogs();
-          break;
-      }
-    }
-
-    async function loadSecuritySettings() {
-      const securityContent = document.getElementById('securityContent');
-      securityContent.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-          <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <h4>Password Policy</h4>
-            <div style="margin: 10px 0;">
-              <label><input type="checkbox" id="requireUppercase" checked> Require uppercase letters</label>
-            </div>
-            <div style="margin: 10px 0;">
-              <label><input type="checkbox" id="requireLowercase" checked> Require lowercase letters</label>
-            </div>
-            <div style="margin: 10px 0;">
-              <label><input type="checkbox" id="requireNumbers" checked> Require numbers</label>
-            </div>
-            <div style="margin: 10px 0;">
-              <label><input type="checkbox" id="requireSpecial" checked> Require special characters</label>
-            </div>
-            <div style="margin: 10px 0;">
-              <label>Minimum length: <input type="number" id="minLength" value="8" min="6" max="20"></label>
-            </div>
-          </div>
-
-          <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <h4>Session Management</h4>
-            <div style="margin: 10px 0;">
-              <label>Session timeout (minutes): <input type="number" id="sessionTimeout" value="30" min="5" max="480"></label>
-            </div>
-            <div style="margin: 10px 0;">
-              <label>Max failed attempts: <input type="number" id="maxFailedAttempts" value="5" min="3" max="10"></label>
-            </div>
-            <div style="margin: 10px 0;">
-              <label>Lockout duration (minutes): <input type="number" id="lockoutDuration" value="30" min="5" max="1440"></label>
-            </div>
-            <button class="btn-primary" onclick="saveSecuritySettings()">Save Settings</button>
-          </div>
-
-          <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <h4>Security Actions</h4>
-            <button class="btn-secondary" onclick="manageUserSessions()" style="width: 100%; margin: 5px 0;">Manage Active Sessions</button>
-            <button class="btn-warning" onclick="forcePasswordChange()" style="width: 100%; margin: 5px 0;">Force Password Change</button>
-            <button class="btn-danger" onclick="lockAllAccounts()" style="width: 100%; margin: 5px 0;">Lock All Accounts</button>
-          </div>
-        </div>
-      `;
-    }
-
-    async function loadAuditLogs() {
-      const auditLogs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
-      const auditContent = document.getElementById('auditContent');
-
-      if (auditLogs.length === 0) {
-        auditContent.innerHTML = `
-          <div style="text-align: center; padding: 40px;">
-            <h3>No Audit Logs</h3>
-            <p>No audit logs found.</p>
-          </div>
-        `;
-        return;
+      if (event) {
+        event.target.classList.add('active');
       }
 
-      let html = `
-        <div class="table-container">
-          <div class="responsive-table-container"><table class="users-table">
-            <thead>
-              <tr>
-                <th>Timestamp</th>
-                <th>Event</th>
-                <th>User</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-
-      // Show last 50 logs
-      auditLogs.slice(-50).reverse().forEach(log => {
-        html += `
-          <tr>
-            <td>${new Date(log.timestamp).toLocaleString()}</td>
-            <td>${log.event}</td>
-            <td>${log.user}</td>
-            <td>${log.details}</td>
-          </tr>
-        `;
-      });
-
-      html += `
-            </tbody>
-          </table></div>
-        </div>
-      `;
-
-      auditContent.innerHTML = html;
+      // Load data
+      if (tabName === 'users') loadUsers();
+      if (tabName === 'audit') loadAuditLogs();
     }
 
-    // Export Functions
-    async function exportUsers() {
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      const csvContent = [
-        ['Username', 'Full Name', 'Email', 'Role', 'Status', 'Last Login', 'Created At'],
-        ...users.map(user => [
-          user.username,
-          user.fullName || '',
-          user.email || '',
-          user.role || '',
-          user.status || 'active',
-          user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never',
-          user.createdAt ? new Date(user.createdAt).toLocaleString() : ''
-        ])
-      ].map(row => row.join(',')).join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'users_export.csv';
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    async function exportAuditLogs() {
-      const auditLogs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
-      const csvContent = [
-        ['Timestamp', 'Event', 'User', 'Details'],
-        ...auditLogs.map(log => [
-          new Date(log.timestamp).toLocaleString(),
-          log.event,
-          log.user,
-          log.details
-        ])
-      ].map(row => row.join(',')).join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'audit_logs_export.csv';
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    async function clearAuditLogs() {
-      if (!confirm('Are you sure you want to clear all audit logs? This action cannot be undone.')) {
-        return;
-      }
-
-      localStorage.removeItem('auditLogs');
-      showNotification('Audit logs cleared successfully!', 'success');
-      loadAuditLogs();
-    }
-
-    // User Interface Functions
-    async function displayUserInfo(user) {
-      const userInfoElement = document.getElementById('userInfo');
-      if(userInfoElement && user) {
-        userInfoElement.innerHTML = `
-          <div><strong>${user.fullName || user.username}</strong></div>
-          <div>${user.role ? user.role.replace('-', ' ').toUpperCase() : 'User'}</div>
-        `;
-      }
-    }
-
-    // Initialize the application
-    document.addEventListener('DOMContentLoaded', async function() {
-      // Migrate data if needed
-      if (window.migrateUserData) window.migrateUserData();
-
-      if (!(await checkAuth())) return;
-
+    // Data Loading
+    async function loadUsers() {
       try {
-        initializeUserManagement();
-        console.log('User Management System initialized successfully');
-      } catch (error) {
-        console.error('Error initializing user management:', error);
-      }
-    });
-
-    function initializeUserManagement() {
-      console.log('Initializing User Management System...');
-
-      // Initialize user interface
-      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-      if (currentUser) {
-        displayUserInfo(currentUser);
-      }
-
-      // Load initial data
-      loadUsers();
-
-      console.log('User Management System initialized successfully');
-    }
-
-      try {
-        const newPassword = await generateSecurePassword();
-        const user = await window.db.get(window.DB_STORES.USERS, username);
-
-        if(!user) {
-          if (window.showNotification) window.showNotification('User not found.', 'error');
-          return;
-        }
-
-        user.password = btoa(newPassword);
-        user.forcePasswordChange = true;
-        user.passwordResetDate = new Date().toISOString();
-        user.updatedAt = new Date().toISOString();
-
-        await window.db.put(window.DB_STORES.USERS, user);
-
-        if (window.addAuditLog) await window.addAuditLog('password_reset', `Password reset for user ${username}`, user);
-
-        if (window.showNotification) window.showNotification(`Password reset for ${username}. New password: ${newPassword}`, 'success');
-        await loadUsers();
-      } catch (error) {
-        console.error('Error resetting password:', error);
+        allUsers = await window.db.getAll(window.DB_STORES.USERS);
+        renderUsers(allUsers);
+        updateStats(allUsers);
+      } catch (err) {
+        console.error('Error loading users:', err);
       }
     }
 
-    async function generateSecurePassword() {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-      let password = '';
-      for(let i = 0; i < 12; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return password;
-    }
-
-    async function bulkImportUsers() {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.csv';
-      input.onchange = function(e) {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const csv = e.target.result;
-          const lines = csv.split('\n');
-          const headers = lines[0].split(',');
-          const users = [];
-
-          for (let i = 1; i < lines.length; i++) {
-            if (lines[i].trim()) {
-              const values = lines[i].split(',');
-              const user = {
-                username: values[0]?.trim(),
-                fullName: values[1]?.trim(),
-                email: values[2]?.trim(),
-                role: values[3]?.trim(),
-                password: btoa(values[4]?.trim() || 'default123'),
-                status: values[5]?.trim() || 'active',
-                createdAt: new Date().toISOString(),
-                isRealAccount: true
-              };
-              users.push(user);
-            }
-          }
-
-
-
-          for (const u of users) { await window.db.put(window.DB_STORES.USERS, u); }
-
-          addAuditLog('bulk_import', `Imported ${users.length} users`, null);
-          showNotification(`Successfully imported ${users.length} users!`, 'success');
-          loadUsers();
-        };
-        reader.readAsText(file);
-      };
-      input.click();
-    }
-
-    async function bulkExportUsers() {
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      const csvContent = [
-        ['Username', 'Full Name', 'Email', 'Role', 'Status', 'Created At'],
-        ...users.map(user => [
-          user.username,
-          user.fullName || '',
-          user.email || '',
-          user.role || '',
-          user.status || 'active',
-          user.createdAt ? new Date(user.createdAt).toLocaleString() : ''
-        ])
-      ].map(row => row.join(',')).join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-
-    async function manageUserSessions() {
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      const activeSessions = users.filter(u => u.lastActivity &&
-        new Date(u.lastActivity) > new Date(Date.now() - 30 * 60 * 1000)); // Last 30 minutes
-
-      let html = `
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>Active Sessions (${activeSessions.length})</h3>
-            <span class="close" onclick="closeModal('sessionModal')">&times;</span>
-          </div>
-          <div class="modal-body">
-            <div class="responsive-table-container"><table class="users-table">
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>Role</th>
-                  <th>Last Activity</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-      `;
-
-      activeSessions.forEach(user => {
-        const lastActivity = new Date(user.lastActivity);
-        const timeDiff = Math.floor((new Date() - lastActivity) / 1000 / 60);
-        html += `
-          <tr>
-            <td>${user.username}</td>
-            <td>${user.role}</td>
-            <td>${timeDiff} minutes ago</td>
-            <td>
-              <button class="btn-danger" onclick="terminateSession('${user.username}')">Terminate</button>
-            </td>
-          </tr>
-        `;
-      });
-
-      html += `
-              </tbody>
-            </table></div>
-          </div>
-        </div>
-      `;
-
-      const modal = document.createElement('div');
-      modal.id = 'sessionModal';
-      modal.className = 'modal';
-      modal.innerHTML = html;
-      modal.style.display = 'block';
-      document.body.appendChild(modal);
-    }
-
-        async function terminateSession(username) {
-      try {
-        const user = await window.db.get(window.DB_STORES.USERS, username);
-        if(user) {
-          user.lastActivity = null;
-          user.sessionTime = null;
-          await window.db.put(window.DB_STORES.USERS, user);
-          if (window.addAuditLog) await window.addAuditLog('session_terminated', `Session terminated for user ${username}`, user);
-          if (window.showNotification) window.showNotification(`Session terminated for ${username}`, 'success');
-        }
-      } catch (error) {
-        console.error('Error terminating session:', error);
-      }
-      closeModal('sessionModal');
-      await loadUsers();
-    }
-
-    // Priority 1 Enhancement Functions
-
-    // Email Integration Functions
-    async function sendEmailVerification(email, username) {
-      // Simulate email sending
-      const verificationCode = generateVerificationCode();
-      const emailData = {
-        to: email,
-        subject: 'Email Verification - School Management System',
-        body: `
-          <h2>Email Verification</h2>
-          <p>Hello ${username},</p>
-          <p>Please verify your email address by entering the following code:</p>
-          <h3 style="background: #f0f0f0; padding: 10px; text-align: center; font-size: 24px;">${verificationCode}</h3>
-          <p>This code will expire in 24 hours.</p>
-          <p>If you didn't create this account, please ignore this email.</p>
-        `
-      };
-
-      // Store verification code
-      const verificationCodes = JSON.parse(localStorage.getItem('emailVerificationCodes') || '{}');
-      verificationCodes[email] = {
-        code: verificationCode,
-        username: username,
-        timestamp: new Date().toISOString(),
-        expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      };
-      localStorage.setItem('emailVerificationCodes', JSON.stringify(verificationCodes));
-
-      // Add audit log
-      addAuditLog('email_verification_sent', `Email verification sent to ${email}`, null);
-
-      showNotification(`Verification email sent to ${email}`, 'success');
-      return verificationCode;
-    }
-
-    async function generateVerificationCode() {
-      return Math.floor(100000 + Math.random() * 900000).toString();
-    }
-
-    function verifyEmailCode(email, code) {
-      const verificationCodes = JSON.parse(localStorage.getItem('emailVerificationCodes') || '{}');
-      const verification = verificationCodes[email];
-
-      if(!verification) {
-        return { success: false, message: 'No verification code found for this email' };
-      }
-
-      if (new Date() > new Date(verification.expires)) {
-        delete verificationCodes[email];
-        localStorage.setItem('emailVerificationCodes', JSON.stringify(verificationCodes));
-        return { success: false, message: 'Verification code has expired' };
-      }
-
-      if (verification.code !== code) {
-        return { success: false, message: 'Invalid verification code' };
-      }
-
-      // Mark email as verified
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      const user = users.find(u => u.email === email);
-
-      if(user) {
-        user.emailVerified = true;
-        user.emailVerifiedAt = new Date().toISOString();
-        await window.db.put(window.DB_STORES.USERS, user);
-
-        if (window.addAuditLog) await window.addAuditLog('email_verified', `Email verified for ${email}`, user);
-      }
-
-      delete verificationCodes[email];
-      localStorage.setItem('emailVerificationCodes', JSON.stringify(verificationCodes));
-
-      return { success: true, message: 'Email verified successfully' };
-    }
-
-    // Two-Factor Authentication Functions
-    async function setupTwoFactorAuthentication(username) {
-      const secretKey = generateTOTPSecret();
-      const qrCodeData = `otpauth://totp/SchoolManagement:${username}?secret=${secretKey}&issuer=SchoolManagement`;
-
-      // Store secret key temporarily
-      sessionStorage.setItem('tempTwoFactorSecret', secretKey);
-      sessionStorage.setItem('tempTwoFactorUsername', username);
-
-      // Update QR code display
-      document.getElementById('secretKey').textContent = secretKey;
-      document.getElementById('qrCode').innerHTML = `
-        <div style="width: 200px; height: 200px; background: #f0f0f0; margin: 0 auto; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc;">
-          <div style="text-align: center;">
-            <div style="font-size: 12px; color: #666;">QR Code for</div>
-            <div style="font-weight: bold;">${username}</div>
-            <div style="font-size: 10px; color: #999;">Scan with authenticator app</div>
-          </div>
-        </div>
-      `;
-
-      document.getElementById('twoFactorModal').style.display = 'block';
-    }
-
-    async function generateTOTPSecret() {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-      let secret = '';
-      for(let i = 0; i < 16; i++) {
-        secret += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return secret;
-    }
-
-    function verifyTwoFactor() {
-      const code = document.getElementById('twoFactorCode').value;
-      const secretKey = sessionStorage.getItem('tempTwoFactorSecret');
-
-      if (!code || code.length !== 6) {
-        showNotification('Please enter a valid 6-digit code', 'error');
-        return;
-      }
-
-      // Simple TOTP verification (in real implementation, use proper TOTP library)
-      const expectedCode = generateTOTPCode(secretKey);
-
-      if (code === expectedCode) {
-        showNotification('Two-factor authentication verified successfully!', 'success');
-        document.getElementById('twoFactorCode').value = '';
-      } else {
-        showNotification('Invalid verification code. Please try again.', 'error');
-        document.getElementById('twoFactorCode').value = '';
-      }
-    }
-
-    function generateTOTPCode(secret) {
-      // Simple TOTP implementation (use proper library in production)
-      const timestamp = Math.floor(Date.now() / 30000); // 30-second window
-      const hash = btoa(secret + timestamp).slice(0, 6);
-      return hash.replace(/[^0-9]/g, '').padStart(6, '0');
-    }
-
-    function completeTwoFactorSetup() {
-      const username = sessionStorage.getItem('tempTwoFactorUsername');
-      const secretKey = sessionStorage.getItem('tempTwoFactorSecret');
-
-      if (!username || !secretKey) {
-        showNotification('Two-factor setup failed. Please try again.', 'error');
-        return;
-      }
-
-      const user = await window.db.get(window.DB_STORES.USERS, username);
-
-      if(user) {
-        user.twoFactorEnabled = true;
-        user.twoFactorSecret = secretKey;
-        user.twoFactorSetupAt = new Date().toISOString();
-        await window.db.put(window.DB_STORES.USERS, user);
-
-        if (window.addAuditLog) await window.addAuditLog('two_factor_enabled', `Two-factor authentication enabled for ${username}`, user);
-        if (window.showNotification) window.showNotification('Two-factor authentication setup completed!', 'success');
-      }
-
-      // Clear temporary data
-      sessionStorage.removeItem('tempTwoFactorSecret');
-      sessionStorage.removeItem('tempTwoFactorUsername');
-      closeModal('twoFactorModal');
-      loadUsers();
-    }
-
-    function copySecretKey() {
-      const secretKey = document.getElementById('secretKey').textContent;
-      navigator.clipboard.writeText(secretKey).then(() => {
-        showNotification('Secret key copied to clipboard!', 'success');
-      }).catch(() => {
-        showNotification('Failed to copy secret key', 'error');
-      });
-    }
-
-    // Advanced Permissions Functions
-    function updatePermissions() {
-      const role = document.getElementById('newRole').value;
-      const accessLevel = document.getElementById('newAccessLevel').value;
-      const permissionsSection = document.getElementById('permissionsSection');
-
-      // Show permissions section for all roles except Student and Parent
-      if (role === 'Super Admin' || role === 'School Manager' || role === 'Teacher' || role === 'Non-Teaching') {
-        permissionsSection.style.display = 'block';
-
-        // Auto-configure permissions based on access level
-        configurePermissionsByAccessLevel(accessLevel, 'new');
-      } else {
-        permissionsSection.style.display = 'none';
-        // Uncheck all permissions for Student and Parent roles
-        const checkboxes = permissionsSection.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => checkbox.checked = false);
-      }
-    }
-
-    function configurePermissionsByAccessLevel(accessLevel, formType) {
-      const prefix = formType === 'edit' ? 'edit_' : '';
-      const badgeId = formType === 'edit' ? 'editCurrentAccessLevelBadge' : 'currentAccessLevelBadge';
-
-      // Update access level badge
-      const badge = document.getElementById(badgeId);
-      if (badge) {
-        badge.textContent = accessLevel || 'No Access Level';
-      }
-
-      // Reset all permissions first
-      const permissions = [
-        'perm_user_manage',
-        'perm_student_manage',
-        'perm_staff_manage',
-        'perm_finance_view',
-        'perm_finance_edit',
-        'perm_reports_view',
-        'perm_reports_edit',
-        'perm_settings_manage'
-      ];
-
-      permissions.forEach(perm => {
-        const element = document.getElementById(prefix + perm);
-        if (element) element.checked = false;
-      });
-
-      // Configure permissions based on access level
-      switch (accessLevel) {
-        case 'Super Administrator':
-          // Full access - all permissions
-          permissions.forEach(perm => {
-            const element = document.getElementById(prefix + perm);
-            if (element) element.checked = true;
-          });
-          break;
-
-        case 'Administrator':
-          // High-level administrative access
-          const adminPermissions = [
-            'perm_user_manage',
-            'perm_student_manage',
-            'perm_staff_manage',
-            'perm_finance_view',
-            'perm_reports_view',
-            'perm_settings_manage'
-          ];
-          adminPermissions.forEach(perm => {
-            const element = document.getElementById(prefix + perm);
-            if (element) element.checked = true;
-          });
-          break;
-
-        case 'Standard':
-          // Standard access for teachers and non-teaching staff
-          const standardPermissions = [
-            'perm_student_manage',
-            'perm_finance_view',
-            'perm_reports_view'
-          ];
-          standardPermissions.forEach(perm => {
-            const element = document.getElementById(prefix + perm);
-            if (element) element.checked = true;
-          });
-          break;
-
-        case 'Basic':
-          // Limited access - no administrative permissions
-          // Permissions remain unchecked for basic access
-          break;
-
-        default:
-          // No access level selected - no permissions
-          break;
-      }
-    }
-
-    // Handle manual access level changes
-    function onAccessLevelChange() {
-      const accessLevel = document.getElementById('newAccessLevel').value;
-      const role = document.getElementById('newRole').value;
-
-      if (role === 'Super Admin' || role === 'School Manager' || role === 'Teacher' || role === 'Non-Teaching') {
-        configurePermissionsByAccessLevel(accessLevel, 'new');
-        if (accessLevel) {
-          showAccessLevelSummary(accessLevel);
-        }
-      }
-    }
-
-    function onEditAccessLevelChange() {
-      const accessLevel = document.getElementById('editAccessLevel').value;
-      const role = document.getElementById('editRole').value;
-
-      if (role === 'Super Admin' || role === 'School Manager' || role === 'Teacher' || role === 'Non-Teaching') {
-        configurePermissionsByAccessLevel(accessLevel, 'edit');
-        if (accessLevel) {
-          showAccessLevelSummary(accessLevel);
-        }
-      }
-    }
-
-    // Show permission descriptions and enhance UI
-    function showPermissionInfo(permissionId) {
-      const permissionDescriptions = {
-        'perm_user_manage': 'Allows management of user accounts, including creating, editing, and deleting users',
-        'perm_student_manage': 'Allows management of student records, academic progress, and student-related data',
-        'perm_staff_manage': 'Allows management of staff records, schedules, and staff-related information',
-        'perm_finance_view': 'Allows viewing financial data, reports, and budget information',
-        'perm_finance_edit': 'Allows editing financial data, creating invoices, and managing payments',
-        'perm_reports_view': 'Allows viewing system reports, analytics, and performance data',
-        'perm_reports_edit': 'Allows creating, editing, and managing system reports and analytics',
-        'perm_settings_manage': 'Allows managing system settings, configurations, and administrative options'
-      };
-
-      const description = permissionDescriptions[permissionId];
-      if (description) {
-        showNotification(description, 'info', 5000);
-      }
-    }
-
-    function showEditPermissionInfo(permissionId) {
-      const permissionDescriptions = {
-        'edit_perm_user_manage': 'Allows management of user accounts, including creating, editing, and deleting users',
-        'edit_perm_student_manage': 'Allows management of student records, academic progress, and student-related data',
-        'edit_perm_staff_manage': 'Allows management of staff records, schedules, and staff-related information',
-        'edit_perm_finance_view': 'Allows viewing financial data, reports, and budget information',
-        'edit_perm_finance_edit': 'Allows editing financial data, creating invoices, and managing payments',
-        'edit_perm_reports_view': 'Allows viewing system reports, analytics, and performance data',
-        'edit_perm_reports_edit': 'Allows creating, editing, and managing system reports and analytics',
-        'edit_perm_settings_manage': 'Allows managing system settings, configurations, and administrative options'
-      };
-
-      const description = permissionDescriptions[permissionId];
-      if (description) {
-        showNotification(description, 'info', 5000);
-      }
-    }
-
-    // Show access level summary
-    function showAccessLevelSummary(accessLevel) {
-      const summaries = {
-        'Super Administrator': 'Full system access with all permissions enabled. Can manage users, students, staff, finances, reports, and system settings.',
-        'Administrator': 'High-level administrative access. Can manage users, students, staff, view finances and reports, and manage settings.',
-        'Standard': 'Standard access for staff. Can manage students, view finances and reports.',
-        'Basic': 'Limited access with no administrative permissions. Suitable for students and parents.'
-      };
-
-      const summary = summaries[accessLevel];
-      if (summary) {
-        showNotification(`Access Level: ${accessLevel} - ${summary}`, 'info', 6000);
-      }
-    }
-
-    // Class field toggle functions
-    function toggleClassField() {
-      const roleSelect = document.getElementById('newRole');
-      const classGroup = document.getElementById('newClassGroup');
-      const classSelect = document.getElementById('newClass');
-      const staffIdGroup = document.getElementById('newStaffIdGroup');
-      const staffIdInput = document.getElementById('newStaffId');
-
-      if (roleSelect.value === 'Teacher') {
-        classGroup.classList.remove('hide');
-        classGroup.classList.add('show');
-        classSelect.required = true;
-
-        staffIdGroup.classList.remove('hide');
-        staffIdGroup.classList.add('show');
-        if (!staffIdInput.value) {
-            staffIdInput.value = Math.floor(10000 + Math.random() * 90000).toString();
-        }
-      } else {
-        classGroup.classList.remove('show');
-        classGroup.classList.add('hide');
-        classSelect.required = false;
-        classSelect.value = '';
-
-        staffIdGroup.classList.remove('show');
-        staffIdGroup.classList.add('hide');
-        staffIdInput.value = '';
-      }
-    }
-
-    function toggleEditClassField() {
-      const roleSelect = document.getElementById('editRole');
-      const classGroup = document.getElementById('editClassGroup');
-      const classSelect = document.getElementById('editClass');
-      const staffIdGroup = document.getElementById('editStaffIdGroup');
-      const staffIdInput = document.getElementById('editStaffId');
-
-      if (roleSelect.value === 'Teacher') {
-        classGroup.classList.remove('hide');
-        classGroup.classList.add('show');
-        classSelect.required = true;
-
-        staffIdGroup.classList.remove('hide');
-        staffIdGroup.classList.add('show');
-        if (!staffIdInput.value) {
-            staffIdInput.value = Math.floor(10000 + Math.random() * 90000).toString();
-        }
-      } else {
-        classGroup.classList.remove('show');
-        classGroup.classList.add('hide');
-        classSelect.required = false;
-        classSelect.value = '';
-
-        staffIdGroup.classList.remove('show');
-        staffIdGroup.classList.add('hide');
-        staffIdInput.value = '';
-      }
-    }
-
-    // Gender and Department toggle functions
-    function toggleGenderOther() {
-      const genderSelect = document.getElementById('newGender');
-      const genderOtherGroup = document.getElementById('newGenderOtherGroup');
-      const genderOtherInput = document.getElementById('newGenderOther');
-
-      if (genderSelect.value === 'Other') {
-        genderOtherGroup.classList.remove('hide');
-        genderOtherGroup.classList.add('show');
-        genderOtherInput.required = true;
-      } else {
-        genderOtherGroup.classList.remove('show');
-        genderOtherGroup.classList.add('hide');
-        genderOtherInput.required = false;
-        genderOtherInput.value = '';
-      }
-    }
-
-    function toggleEditGenderOther() {
-      const genderSelect = document.getElementById('editGender');
-      const genderOtherGroup = document.getElementById('editGenderOtherGroup');
-      const genderOtherInput = document.getElementById('editGenderOther');
-
-      if (genderSelect.value === 'Other') {
-        genderOtherGroup.classList.remove('hide');
-        genderOtherGroup.classList.add('show');
-        genderOtherInput.required = true;
-      } else {
-        genderOtherGroup.classList.remove('show');
-        genderOtherGroup.classList.add('hide');
-        genderOtherInput.required = false;
-        genderOtherInput.value = '';
-      }
-    }
-
-    function toggleDepartmentOther() {
-      const departmentSelect = document.getElementById('newDepartment');
-      const departmentOtherGroup = document.getElementById('newDepartmentOtherGroup');
-      const departmentOtherInput = document.getElementById('newDepartmentOther');
-
-      if (departmentSelect.value === 'Others') {
-        departmentOtherGroup.classList.remove('hide');
-        departmentOtherGroup.classList.add('show');
-        departmentOtherInput.required = true;
-      } else {
-        departmentOtherGroup.classList.remove('show');
-        departmentOtherGroup.classList.add('hide');
-        departmentOtherInput.required = false;
-        departmentOtherInput.value = '';
-      }
-    }
-
-    function toggleEditDepartmentOther() {
-      const departmentSelect = document.getElementById('editDepartment');
-      const departmentOtherGroup = document.getElementById('editDepartmentOtherGroup');
-      const departmentOtherInput = document.getElementById('editDepartmentOther');
-
-      if (departmentSelect.value === 'Others') {
-        departmentOtherGroup.classList.remove('hide');
-        departmentOtherGroup.classList.add('show');
-        departmentOtherInput.required = true;
-      } else {
-        departmentOtherGroup.classList.remove('show');
-        departmentOtherGroup.classList.add('hide');
-        departmentOtherInput.required = false;
-        departmentOtherInput.value = '';
-      }
-    }
-
-    // Access Level and Description functions
-    function updateAccessLevel() {
-      const role = document.getElementById('newRole').value;
-      const accessLevelSelect = document.getElementById('newAccessLevel');
-      const accessDescription = document.getElementById('newAccessDescription');
-
-      // Clear previous values
-      accessLevelSelect.value = '';
-      accessDescription.value = '';
-
-      // Set access level and description based on role
-      switch (role) {
-        case 'Super Admin':
-          accessLevelSelect.value = 'Super Administrator';
-          accessDescription.value = 'Full system access with complete administrative privileges. Can manage all users, settings, and system configurations. Has access to all modules and can perform any administrative function.';
-          break;
-        case 'School Manager':
-          accessLevelSelect.value = 'Administrator';
-          accessDescription.value = 'Advanced administrative access for school management. Can manage staff, students, and most school operations. Has access to administrative modules and can perform most management functions.';
-          break;
-        case 'Teacher':
-          accessLevelSelect.value = 'Standard';
-          accessDescription.value = 'Standard access for teaching staff. Can manage class-related activities, student records, and academic functions. Has access to teaching modules and student management features.';
-          break;
-        case 'Non-Teaching':
-          accessLevelSelect.value = 'Standard';
-          accessDescription.value = 'Standard access for non-teaching staff. Can perform administrative tasks within their department and access relevant modules based on their role.';
-          break;
-        case 'Student':
-          accessLevelSelect.value = 'Basic';
-          accessDescription.value = 'Limited access for students. Can view their own records, academic progress, and access student-specific modules. Restricted to personal information and academic features.';
-          break;
-        case 'Parent':
-          accessLevelSelect.value = 'Basic';
-          accessDescription.value = 'Limited access for parents. Can view their children\'s academic progress, communicate with teachers, and access parent-specific modules. Restricted to family-related information.';
-          break;
-        default:
-          accessLevelSelect.value = '';
-          accessDescription.value = '';
-      }
-
-      // Update permissions based on the new access level
-      updatePermissions();
-    }
-
-    function updateEditAccessLevel() {
-      const role = document.getElementById('editRole').value;
-      const accessLevelSelect = document.getElementById('editAccessLevel');
-      const accessDescription = document.getElementById('editAccessDescription');
-
-      // Clear previous values
-      accessLevelSelect.value = '';
-      accessDescription.value = '';
-
-      // Set access level and description based on role
-      switch (role) {
-        case 'Super Admin':
-          accessLevelSelect.value = 'Super Administrator';
-          accessDescription.value = 'Full system access with complete administrative privileges. Can manage all users, settings, and system configurations. Has access to all modules and can perform any administrative function.';
-          break;
-        case 'School Manager':
-          accessLevelSelect.value = 'Administrator';
-          accessDescription.value = 'Advanced administrative access for school management. Can manage staff, students, and most school operations. Has access to administrative modules and can perform most management functions.';
-          break;
-        case 'Teacher':
-          accessLevelSelect.value = 'Standard';
-          accessDescription.value = 'Standard access for teaching staff. Can manage class-related activities, student records, and academic functions. Has access to teaching modules and student management features.';
-          break;
-        case 'Non-Teaching':
-          accessLevelSelect.value = 'Standard';
-          accessDescription.value = 'Standard access for non-teaching staff. Can perform administrative tasks within their department and access relevant modules based on their role.';
-          break;
-        case 'Student':
-          accessLevelSelect.value = 'Basic';
-          accessDescription.value = 'Limited access for students. Can view their own records, academic progress, and access student-specific modules. Restricted to personal information and academic features.';
-          break;
-        case 'Parent':
-          accessLevelSelect.value = 'Basic';
-          accessDescription.value = 'Limited access for parents. Can view their children\'s academic progress, communicate with teachers, and access parent-specific modules. Restricted to family-related information.';
-          break;
-        default:
-          accessLevelSelect.value = '';
-          accessDescription.value = '';
-      }
-
-      // Update permissions based on the new access level
-      updateEditPermissions();
-    }
-
-    function updateEditPermissions() {
-      const role = document.getElementById('editRole').value;
-      const accessLevel = document.getElementById('editAccessLevel').value;
-      const permissionsSection = document.getElementById('editPermissionsSection');
-
-      // Show permissions section for all roles except Student and Parent
-      if (role === 'Super Admin' || role === 'School Manager' || role === 'Teacher' || role === 'Non-Teaching') {
-        permissionsSection.style.display = 'block';
-
-        // Auto-configure permissions based on access level
-        configurePermissionsByAccessLevel(accessLevel, 'edit');
-      } else {
-        permissionsSection.style.display = 'none';
-        // Uncheck all permissions for Student and Parent roles
-        const checkboxes = permissionsSection.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => checkbox.checked = false);
-      }
-    }
-
-    // Advanced Security Functions
-    function saveIPRestrictions() {
-      const allowedIPs = document.getElementById('allowedIPs').value;
-      const ipRestrictions = allowedIPs.split('\n').filter(ip => ip.trim());
-
-      localStorage.setItem('ipRestrictions', JSON.stringify(ipRestrictions));
-      addAuditLog('ip_restrictions_updated', `IP restrictions updated: ${ipRestrictions.length} rules`, null);
-      showNotification('IP restrictions saved successfully!', 'success');
-    }
-
-    function saveRateLimiting() {
-      const maxLoginAttempts = document.getElementById('maxLoginAttempts').value;
-      const lockoutDuration = document.getElementById('lockoutDuration').value;
-
-      const rateLimiting = {
-        maxLoginAttempts: parseInt(maxLoginAttempts),
-        lockoutDuration: parseInt(lockoutDuration)
-      };
-
-      localStorage.setItem('rateLimiting', JSON.stringify(rateLimiting));
-      addAuditLog('rate_limiting_updated', `Rate limiting updated: ${maxLoginAttempts} attempts, ${lockoutDuration} minutes`, null);
-      showNotification('Rate limiting settings saved successfully!', 'success');
-    }
-
-    function saveSessionSettings() {
-      const sessionTimeout = document.getElementById('sessionTimeout').value;
-      const maxConcurrentSessions = document.getElementById('maxConcurrentSessions').value;
-
-      const sessionSettings = {
-        sessionTimeout: parseInt(sessionTimeout),
-        maxConcurrentSessions: parseInt(maxConcurrentSessions)
-      };
-
-      localStorage.setItem('sessionSettings', JSON.stringify(sessionSettings));
-      addAuditLog('session_settings_updated', `Session settings updated: ${sessionTimeout} minutes, ${maxConcurrentSessions} sessions`, null);
-      showNotification('Session settings saved successfully!', 'success');
-    }
-
-    function applySecuritySettings() {
-      saveIPRestrictions();
-      saveRateLimiting();
-      saveSessionSettings();
-
-      showNotification('All security settings applied successfully!', 'success');
-      closeModal('securitySettingsModal');
-    }
-
-    // Enhanced display functions with new features
-    function displayUsers(users) {
+    function renderUsers(users) {
       const tbody = document.getElementById('usersTableBody');
       tbody.innerHTML = '';
 
       users.forEach(user => {
         const row = document.createElement('tr');
-        const departmentBadge = user.department ? `<span class="user-group-badge group-${user.department.toLowerCase().replace(/\s+/g, '-')}">${user.department}</span>` : '';
-        const twoFactorBadge = user.twoFactorEnabled ?
-          '<span class="two-factor-status two-factor-enabled">2FA</span>' :
-          '<span class="two-factor-status two-factor-disabled">No 2FA</span>';
-        const emailVerifiedBadge = user.emailVerified ?
-          '<span class="email-verification-status email-verified">✓ Verified</span>' :
-          '<span class="email-verification-status email-unverified">✗ Unverified</span>';
+        const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never';
+        const roleClass = `role-${user.role}`;
 
         row.innerHTML = `
-          <td>${user.username} ${departmentBadge}</td>
-          <td>${user.fullName || 'N/A'}</td>
-          <td>${user.email || 'N/A'} ${emailVerifiedBadge}</td>
-          <td>${user.gender || 'N/A'}</td>
-          <td>${user.role ? user.role.replace('-', ' ').toUpperCase() : 'N/A'}</td>
-          <td>${user.accessLevel || 'N/A'}</td>
-          <td><span class="user-status status-${user.status || 'active'}">${user.status || 'active'}</span> ${twoFactorBadge}</td>
-          <td>${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</td>
-          <td class="action-buttons">
-            <button class="btn-success" onclick="editUser('${user.username}')">Edit</button>
-            <button class="btn-warning" onclick="toggleUserStatus('${user.username}')">${user.status === 'suspended' ? 'Activate' : 'Suspend'}</button>
-            <button class="btn-secondary" onclick="resetUserPassword('${user.username}')">Reset PW</button>
-            ${!user.twoFactorEnabled ? `<button class="btn-primary" onclick="setupTwoFactorAuthentication('${user.username}')">Setup 2FA</button>` : ''}
-            <button class="btn-danger" onclick="deleteUser('${user.username}')">Delete</button>
+          <td>
+            <div style="font-weight: bold;">${user.fullName}</div>
+            <div style="font-size: 0.8rem; color: #666;">@${user.username}</div>
+          </td>
+          <td><span class="role-badge ${roleClass}">${user.role.toUpperCase()}</span></td>
+          <td>${user.accessLevel}</td>
+          <td><span class="status-${user.status || 'active'}">${(user.status || 'active').toUpperCase()}</span></td>
+          <td>${lastLogin}</td>
+          <td>
+            <button class="btn btn-success btn-sm" style="padding: 5px 10px; font-size: 12px;" onclick="editUser('${user.username}')">Edit</button>
+            <button class="btn btn-warning btn-sm" style="padding: 5px 10px; font-size: 12px;" onclick="toggleUserStatus('${user.username}')">
+              ${user.status === 'suspended' ? 'Activate' : 'Suspend'}
+            </button>
           </td>
         `;
         tbody.appendChild(row);
       });
     }
 
-    , 5000);
+    function updateStats(users) {
+      document.getElementById('totalUsers').textContent = users.length;
+      document.getElementById('activeUsers').textContent = users.filter(u => u.status !== 'suspended').length;
+      document.getElementById('suspendedUsers').textContent = users.filter(u => u.status === 'suspended').length;
+
+      const oneDayAgo = new Date(Date.now() - 86400000);
+      const newUsers = users.filter(u => new Date(u.createdAt) > oneDayAgo).length;
+      document.getElementById('newUsersCount').textContent = newUsers;
+    }
+
+    // Filtering
+    function filterUsers() {
+      const search = document.getElementById('searchUsers').value.toLowerCase();
+      const role = document.getElementById('roleFilter').value;
+      const status = document.getElementById('statusFilter').value;
+
+      const filtered = allUsers.filter(u => {
+        const matchesSearch = u.username.toLowerCase().includes(search) ||
+                              u.fullName.toLowerCase().includes(search) ||
+                              u.email.toLowerCase().includes(search);
+        const matchesRole = !role || u.role === role;
+        const matchesStatus = !status || (u.status || 'active') === status;
+        return matchesSearch && matchesRole && matchesStatus;
+      });
+
+      renderUsers(filtered);
+    }
+
+    // Modal Operations
+    function openAddUserModal() {
+      document.getElementById('modalTitle').textContent = 'Add New User';
+      document.getElementById('userForm').reset();
+      document.getElementById('editUsernameFlag').value = '';
+      document.getElementById('username').readOnly = false;
+      document.getElementById('passwordGroup').style.display = 'block';
+      document.getElementById('password').required = true;
+      document.getElementById('saveBtn').textContent = 'Create User';
+      onRoleChange();
+      document.getElementById('userModal').classList.add('show');
+    }
+
+    async function editUser(username) {
+      const user = await window.db.get(window.DB_STORES.USERS, username);
+      if (!user) return;
+
+      document.getElementById('modalTitle').textContent = 'Edit User';
+      document.getElementById('editUsernameFlag').value = user.username;
+      document.getElementById('username').value = user.username;
+      document.getElementById('username').readOnly = true;
+      document.getElementById('fullName').value = user.fullName;
+      document.getElementById('email').value = user.email;
+      document.getElementById('gender').value = user.gender;
+      document.getElementById('role').value = user.role;
+      document.getElementById('accessLevel').value = user.accessLevel;
+
+      if (user.role === 'teacher') {
+        document.getElementById('staffId').value = user.staffId || '';
+        document.getElementById('assignedClass').value = user.class || '';
+      } else if (user.role === 'parent') {
+        document.getElementById('studentIds').value = user.studentIds ? user.studentIds.join(', ') : (user.admissionNo || '');
       }
 
-      getIcon(type) {
-        const icons = {
-          'success': '✅',
-          'error': '❌',
-          'warning': '⚠️',
-          'info': 'ℹ️',
-          'system': '🔧'
-        };
-        return icons[type] || '📢';
+      document.getElementById('passwordGroup').style.display = 'block';
+      document.getElementById('password').required = false;
+      document.getElementById('passwordHint').textContent = 'Leave blank to keep current password';
+      document.getElementById('saveBtn').textContent = 'Update User';
+
+      onRoleChange();
+      document.getElementById('userModal').classList.add('show');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('show');
+    }
+
+    function onRoleChange() {
+      const role = document.getElementById('role').value;
+      const teacherFields = document.getElementById('teacherFields');
+      const parentFields = document.getElementById('parentFields');
+      const accessLevel = document.getElementById('accessLevel');
+
+      if (role === 'teacher') {
+        teacherFields.classList.add('show');
+        parentFields.classList.remove('show');
+      } else if (role === 'parent') {
+        parentFields.classList.add('show');
+        teacherFields.classList.remove('show');
+      } else {
+        teacherFields.classList.remove('show');
+        parentFields.classList.remove('show');
       }
 
-      updateBadge() {
-        const unreadCount = this.notifications.filter(n => !n.read).length;
-        if (this.notificationBadge) {
-          this.notificationBadge.innerHTML = unreadCount;
-          this.notificationBadge.style.display = unreadCount > 0 ? 'block' : 'none';
-        }
-      }
-
-      showNotificationPanel() {
-        const panel = document.createElement('div');
-        panel.className = 'notification-panel';
-        panel.innerHTML = `
-          <div class="panel-header">
-            <h3>System Notifications</h3>
-            <button onclick="this.parentElement.parentElement.remove()">×</button>
-          </div>
-          <div class="panel-content">
-            ${this.notifications.map(n => `
-              <div class="notification-item ${n.read ? 'read' : 'unread'}" onclick="notificationSystem.markAsRead('${n.id}')">
-                <div class="notification-icon">${this.getIcon(n.type)}</div>
-                <div class="notification-content">
-                  <div class="notification-title">${n.title}</div>
-                  <div class="notification-message">${n.message}</div>
-                  <div class="notification-time">${new Date(n.timestamp).toLocaleString()}</div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-          <div class="panel-footer">
-            <button onclick="notificationSystem.clearAll()">Clear All</button>
-            <button onclick="notificationSystem.markAllAsRead()">Mark All Read</button>
-          </div>
-        `;
-
-        document.body.appendChild(panel);
-      }
-
-      markAsRead(id) {
-        const notification = this.notifications.find(n => n.id == id);
-        if (notification) {
-          notification.read = true;
-          this.saveNotifications();
-          this.updateBadge();
-        }
-      }
-
-      markAllAsRead() {
-        this.notifications.forEach(n => n.read = true);
-        this.saveNotifications();
-        this.updateBadge();
-      }
-
-      clearAll() {
-        this.notifications = [];
-        this.saveNotifications();
-        this.updateBadge();
-      }
-
-      saveNotifications() {
-        try {
-          localStorage.setItem('userManagementNotifications', JSON.stringify(this.notifications));
-        } catch (error) {
-          console.error('Error saving notifications:', error);
-        }
-      }
-
-      loadNotifications() {
-        try {
-          const saved = localStorage.getItem('userManagementNotifications');
-          if (saved) {
-            this.notifications = JSON.parse(saved);
-            this.updateBadge();
-          }
-        } catch (error) {
-          console.error('Error loading notifications:', error);
-        }
-      }
-
-      logEvent(notification) {
-        // Log to console for debugging
-        console.log(`[${notification.type.toUpperCase()}] ${notification.title}: ${notification.message}`, notification.data);
-
-        // Save to audit log
-        this.saveToAuditLog(notification);
-      }
-
-      saveToAuditLog(notification) {
-        try {
-          const auditLog = JSON.parse(localStorage.getItem('auditLogs') || '[]');
-          auditLog.push({
-            id: Date.now(),
-            type: 'notification',
-            action: notification.title,
-            details: notification.message,
-            data: notification.data,
-            timestamp: notification.timestamp,
-            user: JSON.parse(sessionStorage.getItem('currentUser') || 'null')
-          });
-          localStorage.setItem('auditLogs', JSON.stringify(auditLog));
-        } catch (error) {
-          console.error('Error saving to audit log:', error);
-        }
-      }
-
-      startAutoCleanup() {
-        // Clean up old notifications (older than 30 days)
-        setInterval(() => {
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-          this.notifications = this.notifications.filter(n =>
-            new Date(n.timestamp) > thirtyDaysAgo
-          );
-          this.saveNotifications();
-          this.updateBadge();
-        }, 24 * 60 * 60 * 1000); // Run daily
+      // Auto-set access level defaults if adding
+      if (!document.getElementById('editUsernameFlag').value) {
+        if (role === 'super-admin') accessLevel.value = 'Super Administrator';
+        else if (role === 'school-manager') accessLevel.value = 'Administrator';
+        else if (role === 'teacher' || role === 'staff') accessLevel.value = 'Standard';
+        else accessLevel.value = 'Basic';
       }
     }
 
-    // Close modal when clicking outside
-    window.onclick = function(event) {
-      const modals = document.querySelectorAll('.modal');
-      modals.forEach(modal => {
-        if (event.target === modal) {
-          modal.classList.remove('show');
+    async function handleUserSubmit(e) {
+      e.preventDefault();
+      const editUsername = document.getElementById('editUsernameFlag').value;
+      const username = document.getElementById('username').value;
+      const fullName = document.getElementById('fullName').value;
+      const email = document.getElementById('email').value;
+      const role = document.getElementById('role').value;
+      const accessLevel = document.getElementById('accessLevel').value;
+      const gender = document.getElementById('gender').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        let user;
+        if (editUsername) {
+          user = await window.db.get(window.DB_STORES.USERS, editUsername);
+        } else {
+          const exists = await window.db.get(window.DB_STORES.USERS, username);
+          if (exists) {
+            alert('Username already exists!');
+            return;
+          }
+          user = {
+            username,
+            createdAt: new Date().toISOString(),
+            status: 'active',
+            forcePasswordChange: true
+          };
         }
+
+        user.fullName = fullName;
+        user.email = email;
+        user.role = role;
+        user.accessLevel = accessLevel;
+        user.gender = gender;
+        user.updatedAt = new Date().toISOString();
+
+        if (password) {
+          user.password = btoa(password);
+          user.forcePasswordChange = true;
+        } else if (!editUsername) {
+          user.password = btoa('user123');
+        }
+
+        if (role === 'teacher') {
+          user.staffId = document.getElementById('staffId').value || Math.floor(10000 + Math.random() * 90000).toString();
+          user.class = document.getElementById('assignedClass').value;
+
+          // Sync with staff store
+          const staffData = {
+            id: user.staffId,
+            username: user.username,
+            fullName: user.fullName,
+            email: user.email,
+            position: 'teacher',
+            department: 'Academic',
+            class: user.class,
+            hireDate: user.createdAt,
+            status: user.status
+          };
+          await window.db.put(window.DB_STORES.STAFF, staffData);
+        } else if (role === 'parent') {
+            const idsRaw = document.getElementById('studentIds').value;
+            user.studentIds = idsRaw.split(',').map(s => s.trim()).filter(Boolean);
+            if (user.studentIds.length > 0) {
+                user.admissionNo = user.studentIds[0]; // Backward compatibility
+            }
+        }
+
+        await window.db.put(window.DB_STORES.USERS, user);
+
+        await window.addAuditLog('user_management', `${editUsername ? 'Updated' : 'Created'} user ${username}`, user);
+        notify.addNotification('success', 'User Saved', `User ${username} has been successfully ${editUsername ? 'updated' : 'created'}.`);
+
+        closeModal('userModal');
+        loadUsers();
+      } catch (err) {
+        console.error('Error saving user:', err);
+        notify.addNotification('error', 'Error', 'Failed to save user data.');
+      }
+    }
+
+    async function toggleUserStatus(username) {
+      const user = await window.db.get(window.DB_STORES.USERS, username);
+      if (!user) return;
+
+      user.status = user.status === 'suspended' ? 'active' : 'suspended';
+      await window.db.put(window.DB_STORES.USERS, user);
+
+      notify.addNotification('info', 'Status Changed', `User ${username} is now ${user.status}.`);
+      loadUsers();
+    }
+
+    async function loadAuditLogs() {
+      const logs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
+      const tbody = document.getElementById('auditLogsBody');
+      tbody.innerHTML = '';
+
+      logs.sort((a,b) => b.timestamp - a.timestamp).slice(0, 50).forEach(log => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${new Date(log.timestamp).toLocaleString()}</td>
+          <td>${log.user || 'System'}</td>
+          <td><strong>${log.event}</strong></td>
+          <td>${log.details}</td>
+        `;
+        tbody.appendChild(row);
       });
     }
 
-    // System startup notification
-    setTimeout(() => {
-      window.showNotification('system', 'System Ready', 'User Management System initialized and ready for use');
-    }, 1000);
+    // Startup
+    document.addEventListener('DOMContentLoaded', async () => {
+      const authorized = await checkPageAuth();
+      if (authorized) {
+        loadUsers();
+      }
+    });
+
+    window.onclick = function(event) {
+      if (event.target.classList.contains('modal')) {
+        event.target.classList.remove('show');
+      }
+    }
   </script>
 </body>
-</html> 
+</html>

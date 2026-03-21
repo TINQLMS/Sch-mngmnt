@@ -431,6 +431,33 @@
                     </button>
                 </div>
             </form>
+
+            <!-- Force Password Change Form -->
+            <form id="forceChangeForm" class="hidden" onsubmit="handleForceChange(event)">
+                <p style="color: #666; margin-bottom: 20px;">You are using a temporary password. Please set a new strong password.</p>
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" oninput="onPasswordInput(this)" required>
+                    <div id="strengthIndicator" style="margin-top: 5px; height: 4px; background: #eee; border-radius: 2px;">
+                        <div id="strengthBar" style="height: 100%; width: 0; transition: all 0.3s; border-radius: 2px;"></div>
+                    </div>
+                    <ul id="passwordRequirements" style="font-size: 11px; color: #666; margin-top: 10px; padding-left: 15px;">
+                        <li id="req-8">8+ characters</li>
+                        <li id="req-upper">Uppercase letter</li>
+                        <li id="req-lower">Lowercase letter</li>
+                        <li id="req-number">Number</li>
+                        <li id="req-special">Special character</li>
+                    </ul>
+                </div>
+                <div class="form-group">
+                    <label for="confirmNewPassword">Confirm New Password</label>
+                    <input type="password" id="confirmNewPassword" required>
+                </div>
+                <div style="text-align: center;">
+                    <button type="submit" id="forceChangeBtn" class="btn btn-primary" disabled>Update Password</button>
+                </div>
+            </form>
+
             <div id="loginError" class="error hidden"></div>
         </div>
     </div>
@@ -608,35 +635,16 @@
                     return;
                 }
 
-                // Update user metadata
-                user.loginAttempts = 0;
-                user.lockedUntil = null;
-                user.lastLogin = new Date().toISOString();
-                user.lastActivity = new Date().toISOString();
-                user.loginCount = (user.loginCount || 0) + 1;
-                await window.db.put(window.DB_STORES.USERS, user);
+                // Check for forced password change
+                if (user.forcePasswordChange) {
+                    sessionStorage.setItem('pendingUser', JSON.stringify(user));
+                    document.getElementById('loginForm').classList.add('hidden');
+                    document.getElementById('forceChangeForm').classList.remove('hidden');
+                    document.getElementById('loginTitle').textContent = 'Update Password';
+                    return;
+                }
 
-                // Store session data
-                const sessionData = {
-                    userId: user.id,
-                    username: user.username,
-                    fullName: user.fullName,
-                    role: standardizedRole,
-                    accessLevel: user.accessLevel || 'Standard',
-                    status: user.status,
-                    loginTime: new Date().toISOString()
-                };
-                
-                sessionStorage.setItem('currentUser', JSON.stringify(sessionData));
-                sessionStorage.setItem('loginCredentials', JSON.stringify({
-                    username: user.username,
-                    role: standardizedRole
-                }));
-
-                await addAuditLog('login', `Successful login for ${user.username}`, user);
-
-                // Redirect using shared logic
-                redirectToDashboard(standardizedRole);
+                await completeLogin(user);
 
             } else {
                 // Handle failed login attempts
@@ -678,6 +686,86 @@
 
         function showForgotPassword() {
             alert('Please contact your system administrator to reset your password.');
+        }
+
+        async function completeLogin(user) {
+            const standardizedRole = user.role.toLowerCase();
+            sessionStorage.setItem('selectedRole', standardizedRole);
+
+            // Update user metadata
+            user.loginAttempts = 0;
+            user.lockedUntil = null;
+            user.lastLogin = new Date().toISOString();
+            user.lastActivity = new Date().toISOString();
+            user.loginCount = (user.loginCount || 0) + 1;
+            await window.db.put(window.DB_STORES.USERS, user);
+
+            // Store session data
+            const sessionData = {
+                userId: user.id,
+                username: user.username,
+                fullName: user.fullName,
+                role: standardizedRole,
+                accessLevel: user.accessLevel || 'Standard',
+                status: user.status,
+                loginTime: new Date().toISOString(),
+                admissionNo: user.admissionNo // Important for student/parent dashboards
+            };
+
+            sessionStorage.setItem('currentUser', JSON.stringify(sessionData));
+            sessionStorage.setItem('loginCredentials', JSON.stringify({
+                username: user.username,
+                role: standardizedRole
+            }));
+
+            await addAuditLog('login', `Successful login for ${user.username}`, user);
+
+            // Redirect using shared logic
+            redirectToDashboard(standardizedRole);
+        }
+
+        function onPasswordInput(input) {
+            const result = window.checkPasswordStrength(input.value);
+            const bar = document.getElementById('strengthBar');
+            const btn = document.getElementById('forceChangeBtn');
+
+            const colors = ['#ff4d4d', '#ffa64d', '#ffff4d', '#4dff4d', '#00e600'];
+            bar.style.width = (result.score * 20) + '%';
+            bar.style.background = colors[result.score - 1] || '#eee';
+
+            document.getElementById('req-8').style.color = input.value.length >= 8 ? '#28a745' : '#666';
+            document.getElementById('req-upper').style.color = /[A-Z]/.test(input.value) ? '#28a745' : '#666';
+            document.getElementById('req-lower').style.color = /[a-z]/.test(input.value) ? '#28a745' : '#666';
+            document.getElementById('req-number').style.color = /[0-9]/.test(input.value) ? '#28a745' : '#666';
+            document.getElementById('req-special').style.color = /[!@#$%^&*(),.?":{}|<>]/.test(input.value) ? '#28a745' : '#666';
+
+            btn.disabled = !result.isStrong;
+        }
+
+        async function handleForceChange(event) {
+            event.preventDefault();
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmNewPassword').value;
+            const errorDiv = document.getElementById('loginError');
+
+            if (newPassword !== confirmPassword) {
+                errorDiv.textContent = 'Passwords do not match.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            const user = JSON.parse(sessionStorage.getItem('pendingUser'));
+            if (!user) return;
+
+            user.password = btoa(newPassword);
+            user.forcePasswordChange = false;
+            user.passwordResetDate = new Date().toISOString();
+
+            await window.db.put(window.DB_STORES.USERS, user);
+            sessionStorage.removeItem('pendingUser');
+
+            alert('Password updated successfully! Please login with your new password.');
+            location.reload();
         }
     </script>
     <script src="shared-auth.js"></script>

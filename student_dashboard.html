@@ -63,6 +63,25 @@
             margin-bottom: 30px;
         }
 
+        .report-link-card {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .btn-view {
+            background: #16a34a;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
         .card {
             background: white;
             border-radius: 10px;
@@ -215,6 +234,13 @@
 
         <div class="dashboard-grid">
             <div class="card">
+                <h3>Academic Reports</h3>
+                <div id="reportsList">
+                    <p>No reports available yet.</p>
+                </div>
+            </div>
+
+            <div class="card">
                 <h3>Personal Information</h3>
                 <div id="personalInfo">
                     <div class="info-item">
@@ -263,7 +289,7 @@
         </div>
 
         <!-- Messaging Section -->
-        <div class="message-section">
+        <div class="message-section" id="messages">
             <h3>Messages</h3>
             <button class="compose-btn" onclick="showComposeForm()">Compose Message</button>
             <div id="messageList">
@@ -297,72 +323,118 @@
     </div>
 
     <script>
-        let db, useLocalStorage = false;
-
-        ;
-        }
-
-
-
         async function loadStudentData() {
             const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
             if (!currentUser) return;
 
+            const studentId = currentUser.admissionNo || currentUser.username;
+
             // Load student information
-            window.db.getAll(window.DB_STORES.ADMISSIONS).then(admissions => {
-                const student = admissions.find(a => a.admissionNo === currentUser.admissionNo);
-                if (student) {
-                    document.getElementById('studentName').textContent = student.studentName;
-                    document.getElementById('studentClass').textContent = student.classAdmitted;
-                    document.getElementById('admissionNo').textContent = student.admissionNo;
-                    document.getElementById('fullName').textContent = student.studentName;
-                    document.getElementById('classInfo').textContent = student.classAdmitted;
-                    document.getElementById('admissionDate').textContent = new Date(student.createdAt).toLocaleDateString();
-                }
-            });
+            const admissions = await window.db.getAll(window.DB_STORES.ADMISSIONS);
+            const student = admissions.find(a => a.admissionNo === studentId);
+            if (student) {
+                document.getElementById('studentName').textContent = student.studentName;
+                document.getElementById('studentClass').textContent = student.classAdmitted;
+                document.getElementById('admissionNo').textContent = student.admissionNo;
+                document.getElementById('fullName').textContent = student.studentName;
+                document.getElementById('classInfo').textContent = student.classAdmitted;
+                document.getElementById('admissionDate').textContent = new Date(student.createdAt).toLocaleDateString();
+            }
 
             // Load attendance data
-            window.db.getAll(window.DB_STORES.ATTENDANCE).then(attendanceRecords => {
-                const studentAttendance = attendanceRecords.filter(record =>
-                    record.statuses && record.statuses[currentUser.admissionNo]
-                );
+            const attendanceRecords = await window.db.getAll(window.DB_STORES.ATTENDANCE);
+            const studentAttendance = attendanceRecords.filter(record =>
+                record.statuses && record.statuses[studentId]
+            );
 
-                if (studentAttendance.length > 0) {
-                    const totalDays = studentAttendance.length;
-                    const presentDays = studentAttendance.filter(record =>
-                        record.statuses[currentUser.admissionNo] === 'Present'
-                    ).length;
-                    const absentDays = totalDays - presentDays;
-                    const attendanceRate = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(1) : 0;
+            if (studentAttendance.length > 0) {
+                const totalDays = studentAttendance.length;
+                const presentDays = studentAttendance.filter(record =>
+                    record.statuses[studentId] === 'Present'
+                ).length;
+                const absentDays = totalDays - presentDays;
+                const attendanceRate = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(1) : 0;
 
-                    document.getElementById('totalDays').textContent = totalDays;
-                    document.getElementById('presentDays').textContent = presentDays;
-                    document.getElementById('absentDays').textContent = absentDays;
-                    document.getElementById('attendanceRate').textContent = attendanceRate + '%';
+                document.getElementById('totalDays').textContent = totalDays;
+                document.getElementById('presentDays').textContent = presentDays;
+                document.getElementById('absentDays').textContent = absentDays;
+                document.getElementById('attendanceRate').textContent = attendanceRate + '%';
 
-                    // Show recent attendance
-                    const recentAttendance = studentAttendance.slice(-5).reverse();
-                    let html = '<div class="responsive-table-container"><table class="attendance-table">';
-                    html += '<thead><tr><th>Date</th><th>Status</th></tr></thead><tbody>';
-                    recentAttendance.forEach(record => {
-                        const status = record.statuses[currentUser.admissionNo];
-                        const statusClass = status === 'Present' ? 'status-present' : 'status-absent';
-                        html += `<tr><td>${record.date}</td><td class="${statusClass}">${status}</td></tr>`;
-                    });
-                    html += '</tbody></table></div>';
-                    document.getElementById('recentAttendance').innerHTML = html;
-                } else {
-                    document.getElementById('recentAttendance').innerHTML = '<p>No attendance records found.</p>';
-                }
-            });
+                const recentAttendance = studentAttendance.slice(-5).reverse();
+                let html = '<div class="responsive-table-container"><table class="attendance-table">';
+                html += '<thead><tr><th>Date</th><th>Status</th></tr></thead><tbody>';
+                recentAttendance.forEach(record => {
+                    const status = record.statuses[studentId];
+                    const statusClass = status === 'Present' ? 'status-present' : 'status-absent';
+                    html += `<tr><td>${record.date}</td><td class="${statusClass}">${status}</td></tr>`;
+                });
+                html += '</tbody></table></div>';
+                document.getElementById('recentAttendance').innerHTML = html;
+            } else {
+                document.getElementById('recentAttendance').innerHTML = '<p>No attendance records found.</p>';
+            }
+
+            // Load Reports
+            const reports = await window.db.getAll(window.DB_STORES.REPORTS);
+            const studentReport = reports.find(r => r.id === studentId);
+            const reportsList = document.getElementById('reportsList');
+            if (studentReport) {
+                reportsList.innerHTML = `
+                    <div class="report-link-card">
+                        <strong>${studentReport.term} Report Card</strong><br>
+                        <small>Generated on ${new Date(studentReport.timestamp).toLocaleDateString()}</small><br>
+                        <a href="termly_report_card.html?studentId=${studentId}&viewOnly=true" class="btn-view">View Report Card</a>
+                    </div>
+                `;
+            } else {
+                reportsList.innerHTML = '<p>No reports available yet.</p>';
+            }
         }
 
 
 
 
 
+        async function loadMessages() {
+            const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+            if (!currentUser) return;
+
+            const allMessages = await window.db.getAll(window.DB_STORES.MESSAGES);
+            const userMessages = allMessages.filter(m =>
+                m.recipient === currentUser.username || m.sender === currentUser.username
+            ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            displayMessages(userMessages, currentUser.username);
+            await loadRecipients();
+        }
+
+        function displayMessages(messages, username) {
+            const list = document.getElementById('messageList');
+            if (!list) return;
+
+            if (messages.length === 0) {
+                list.innerHTML = '<p>No messages found.</p>';
+                return;
+            }
+
+            list.innerHTML = messages.map(m => {
+                const isUnread = m.recipient === username && !m.read;
+                const isSent = m.sender === username;
+                return `
+                    <div class="message-item ${isUnread ? 'unread' : ''}" onclick="viewMessage('${m.id}')">
+                        <div style="display: flex; justify-content: space-between;">
+                            <strong>${m.subject}</strong>
+                            <small>${new Date(m.timestamp).toLocaleDateString()}</small>
+                        </div>
+                        <div style="font-size: 0.9em; color: #666;">
+                            ${isSent ? 'To: ' + m.recipient : 'From: ' + m.sender}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         async function viewMessage(messageId) {
-            const messages = await window.db.getAll(window.DB_STORES.MESSAGES);
             const message = (await window.db.getAll(window.DB_STORES.MESSAGES)).find(m => m.id === messageId);
             const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
 
@@ -374,10 +446,8 @@
             // Mark as read if it's an inbox message
             if (isInbox && !message.read) {
                 message.read = true;
-                await window.db.put(window.DB_STORES.MESSAGES, newMessage);
-                displayMessages(messages.filter(m =>
-                    m.recipient === currentUser.username || m.sender === currentUser.username
-                ), currentUser.username);
+                await window.db.put(window.DB_STORES.MESSAGES, message);
+                await loadMessages();
             }
 
             messageContent.style.display = 'block';
@@ -420,7 +490,7 @@
             recipientSelect.innerHTML = options;
         }
 
-        function sendMessage(event) {
+        async function sendMessage(event) {
             event.preventDefault();
 
             const recipient = document.getElementById('recipient').value;
@@ -443,35 +513,18 @@
                 read: false
             };
 
-            const messages = await window.db.getAll(window.DB_STORES.MESSAGES);
-            messages.push(newMessage);
             await window.db.put(window.DB_STORES.MESSAGES, newMessage);
-
-            // Create notification for recipient
-            const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-            const notification = {
-                id: Date.now().toString(),
-                title: `New Message from ${currentUser.fullName || currentUser.username}`,
-                message: subject,
-                timestamp: new Date().toISOString(),
-                read: false,
-                type: 'message',
-                messageId: newMessage.id
-            };
-            notifications.push(notification);
-            localStorage.setItem('notifications', JSON.stringify(notifications));
 
             alert('Message sent successfully!');
             hideComposeForm();
-            loadMessages();
+            await loadMessages();
 
             // Clear form
             document.getElementById('subject').value = '';
             document.getElementById('messageText').value = '';
         }
 
-        function replyToMessage(messageId) {
-            const messages = await window.db.getAll(window.DB_STORES.MESSAGES);
+        async function replyToMessage(messageId) {
             const message = (await window.db.getAll(window.DB_STORES.MESSAGES)).find(m => m.id === messageId);
             const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
 
@@ -493,8 +546,11 @@
         }
 
         // Initialize
-        if (window.db) await window.db.init();
-        loadMessages();
+        (async () => {
+            if (window.db) await window.db.init();
+            await loadStudentData();
+            await loadMessages();
+        })();
     </script>
 </body>
 </html> 

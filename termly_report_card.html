@@ -118,6 +118,10 @@
     <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; max-width: 1000px; margin: 0 auto 20px auto;">
+      <a href="Enhanced_School_Management_Portal.html" class="btn btn-secondary">← Back to Dashboard</a>
+      <button class="btn btn-danger" onclick="window.logout()">Logout</button>
+  </div>
   <!-- Access Control Check -->
   <div id="accessControl" class="access-control" style="display: none;">
     <h3>Access Denied</h3>
@@ -264,11 +268,27 @@
     function hasModuleAccess() {
       const userRole = getUserRole();
       const userAccessLevel = getUserAccessLevel();
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewOnly = urlParams.get('viewOnly') === 'true';
+      const studentId = urlParams.get('studentId');
       
       if (!userRole || !userAccessLevel) return false;
+
+      // Parents/Students can access only in viewOnly mode for their own records
+      if (userRole === 'parent' || userRole === 'student') {
+        if (!viewOnly) return false;
+
+        // In real system, verify studentId belongs to parent
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+        const allowedIds = currentUser.studentIds || (currentUser.admissionNo ? [currentUser.admissionNo] : []);
+        if (userRole === 'parent' && !allowedIds.includes(studentId)) return false;
+        if (userRole === 'student' && currentUser.username !== studentId) return false;
+
+        return true;
+      }
       
-      // Check if user's role is allowed for this module
-      const allowedRoles = ['super-admin', 'school-manager', 'staff'];
+      // Check if user's role is allowed for this module (Editing)
+      const allowedRoles = ['super-admin', 'school-manager', 'staff', 'teacher'];
       if (!allowedRoles.includes(userRole)) return false;
       
       // Check if user's access level is sufficient (Standard or higher)
@@ -336,7 +356,25 @@
 
     // Initialize report card functionality
     function initializeReportCard() {
-    populateStudentSelector();
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewOnly = urlParams.get('viewOnly') === 'true';
+      const studentId = urlParams.get('studentId');
+
+      if (viewOnly) {
+        // Hide edit controls
+        document.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+        document.querySelectorAll('button').forEach(btn => {
+          if (!btn.textContent.includes('Print') && !btn.textContent.includes('Export PDF') && !btn.textContent.includes('Dashboard')) {
+            btn.style.display = 'none';
+          }
+        });
+        document.querySelector('.grid').style.display = 'none'; // Hide selector
+        if (studentId) {
+          loadStudentData(studentId);
+        }
+      } else {
+        populateStudentSelector();
+      }
     const subjects = [
       'Eng. Language', 'Literacy', 'Mathematics', 'Numeracy', 'Creative Art and Design', 'Science',
       'R.M.E', 'History', 'Asante Twi', 'Computing', 'Social Studies', 'Career Technology'
