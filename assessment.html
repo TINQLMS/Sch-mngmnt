@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <title>Assessment Management</title>
+  <script src="shared-db.js"></script>
   <script src="shared-auth.js"></script>
+  <script src="shared-utils.js"></script>
   <script>
-          // Authentication check - using shared function
-      function checkAuth() {
-        return window.checkAuth('staff', 'Standard');
+      async function checkAuthPage() { if (!window.db) await window.db.init(); return await window.checkAuth("staff"); }
+    window.onload = async function() {
+      if (await checkAuthPage()) {
+        if (window.db) { await window.db.init(); loadAll(); }
       }
-    
-    // Check auth on page load
-    window.onload = checkAuth;
+    };
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
@@ -148,13 +149,14 @@
       color: white;
     }
   </style>
+    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
   <div class="container">
     <div class="header">
       
       <div class="header-content">
-        <button onclick="goToDashboard()" class="btn-back">← Back to Dashboard</button>
+        <button onclick="window.goToDashboard()" class="btn-back">← Back to Dashboard</button>
         <h2>Assessment Management</h2>
       </div>
     </div>
@@ -191,7 +193,7 @@
 
     <div id="studentInfoContainer"></div>
 
-    <table>
+    <div class="responsive-table-container"><table>
       <thead>
         <tr>
           <th>Student</th><th>Class</th><th>Term</th><th>Subject</th>
@@ -199,7 +201,7 @@
         </tr>
       </thead>
       <tbody id="assessmentTable"></tbody>
-    </table>
+    </table></div>
 
     <div>
       <h3>Subject Performance</h3>
@@ -208,159 +210,57 @@
   </div>
 
   <script>
-    // Function to go to dashboard based on user role
-    function goToDashboard() {
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-        const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
-        
-        if (currentUser && currentUser.role) {
-            switch (currentUser.role) {
-                case 'super-admin':
-                case 'school-manager':
-                case 'staff':
-                    window.location.href = 'Enhanced_School_Management_Portal.html';
-                    break;
-                case 'student':
-                    window.location.href = 'student_dashboard.html';
-                    break;
-                case 'parent':
-                    window.location.href = 'parent_dashboard.html';
-                    break;
-                default:
-                    window.location.href = 'index.html';
-            }
-        } else if (loginCredentials && loginCredentials.role) {
-            switch (loginCredentials.role) {
-                case 'super-admin':
-                case 'school-manager':
-                case 'staff':
-                    window.location.href = 'Enhanced_School_Management_Portal.html';
-                    break;
-                case 'student':
-                    window.location.href = 'student_dashboard.html';
-                    break;
-                case 'parent':
-                    window.location.href = 'parent_dashboard.html';
-                    break;
-                default:
-                    window.location.href = 'index.html';
-            }
-        } else {
-            window.location.href = 'index.html';
-        }
-    }
-
-    // --- IndexedDB/localStorage Fallback Setup ---
-    let db, useLocalStorage = false, dbInitialized = false;
-    function initializeDatabase() {
-      const request = indexedDB.open("SchoolDB", 2);
-      request.onerror = () => { useLocalStorage = true; dbInitialized = true; loadAll(); };
-      request.onsuccess = e => { db = e.target.result; dbInitialized = true; loadAll(); };
-      request.onupgradeneeded = e => {
-        db = e.target.result;
-        if (!db.objectStoreNames.contains("admissions")) db.createObjectStore("admissions", { keyPath: "admissionNo" });
-        if (!db.objectStoreNames.contains("attendance")) db.createObjectStore("attendance", { keyPath: "id", autoIncrement: true });
-        if (!db.objectStoreNames.contains("assessments")) db.createObjectStore("assessments", { keyPath: "id", autoIncrement: true });
-      };
-    }
-    function getAllFromStore(storeName) {
-      return new Promise((resolve, reject) => {
-        if (useLocalStorage) {
-          const data = JSON.parse(localStorage.getItem(storeName) || '[]');
-          resolve(data);
-        } else {
-          try {
-            const tx = db.transaction(storeName, "readonly");
-            const store = tx.objectStore(storeName);
-            const req = store.getAll();
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-          } catch (e) { useLocalStorage = true; resolve(JSON.parse(localStorage.getItem(storeName) || '[]')); }
-        }
-      });
-    }
-    function saveAssessment(assessment) {
-      return new Promise((resolve, reject) => {
-        if (useLocalStorage) {
-          const arr = JSON.parse(localStorage.getItem('assessments') || '[]');
-          arr.push(assessment);
-          localStorage.setItem('assessments', JSON.stringify(arr));
-          resolve();
-        } else {
-          try {
-            const tx = db.transaction("assessments", "readwrite");
-            const store = tx.objectStore("assessments");
-            store.add(assessment).onsuccess = () => resolve();
-          } catch (e) { useLocalStorage = true; saveAssessment(assessment).then(resolve); }
-        }
-      });
-    }
-    function updateAssessment(assessment, index) {
-      return new Promise((resolve, reject) => {
-        if (useLocalStorage) {
-          const arr = JSON.parse(localStorage.getItem('assessments') || '[]');
-          arr[index] = assessment;
-          localStorage.setItem('assessments', JSON.stringify(arr));
-          resolve();
-        } else {
-          try {
-            const tx = db.transaction("assessments", "readwrite");
-            const store = tx.objectStore("assessments");
-            store.put(assessment).onsuccess = () => resolve();
-          } catch (e) { useLocalStorage = true; updateAssessment(assessment, index).then(resolve); }
-        }
-      });
-    }
-    function deleteAssessment(index) {
-      return new Promise((resolve, reject) => {
-        if (useLocalStorage) {
-          const arr = JSON.parse(localStorage.getItem('assessments') || '[]');
-          arr.splice(index, 1);
-          localStorage.setItem('assessments', JSON.stringify(arr));
-          resolve();
-        } else {
-          try {
-            const tx = db.transaction("assessments", "readwrite");
-            const store = tx.objectStore("assessments");
-            store.delete(index).onsuccess = () => resolve();
-          } catch (e) { useLocalStorage = true; deleteAssessment(index).then(resolve); }
-        }
-      });
-    }
-
     // --- Data and UI Logic ---
-    let assessments = [], attendanceData = [], admissionsData = [], editIndex = null;
+    let assessments = [], attendanceData = [], admissionsData = [], editingId = null;
     let studentList = [];
 
-    function loadAll() {
-      Promise.all([
-        getAllFromStore('assessments'),
-        getAllFromStore('attendance'),
-        getAllFromStore('admissions')
-      ]).then(([assess, attend, admis]) => {
+    async function saveAssessment(assessment) {
+        return await window.db.put(window.DB_STORES.ASSESSMENTS, assessment);
+    }
+
+    async function deleteAssessment(id) {
+        return await window.db.delete(window.DB_STORES.ASSESSMENTS, id);
+    }
+
+    async function loadAll() {
+      try {
+        const [assess, attend, admis] = await Promise.all([
+            window.db.getAll(window.DB_STORES.ASSESSMENTS),
+            window.db.getAll(window.DB_STORES.ATTENDANCE),
+            window.db.getAll(window.DB_STORES.ADMISSIONS)
+        ]);
+
         assessments = assess;
         attendanceData = attend;
         admissionsData = admis;
         
-        // Extract unique students from attendance data
-        const uniqueStudents = new Set();
+        // Extract unique students from admissions data (primary source)
+        studentList = admissionsData.map(a => ({
+            studentId: a.admissionNo,
+            studentName: a.studentName,
+            class: a.classAdmitted
+        }));
+
+        // Merge with any students found in attendance but not admissions (fallback)
         attendanceData.forEach(record => {
           if (record.attendanceDetails) {
             record.attendanceDetails.forEach(detail => {
-              uniqueStudents.add(JSON.stringify({
-                studentId: detail.studentId,
-                studentName: detail.studentName,
-                class: detail.class
-              }));
+              if (!studentList.find(s => s.studentId === detail.studentId)) {
+                studentList.push({
+                    studentId: detail.studentId,
+                    studentName: detail.studentName,
+                    class: detail.class
+                });
+              }
             });
           }
         });
         
-        studentList = Array.from(uniqueStudents).map(s => JSON.parse(s));
-        
         populateStudentDropdowns();
         renderTable();
-      });
+      } catch (error) {
+        console.error("Error loading assessment data:", error);
+      }
     }
 
     function populateStudentDropdowns() {
@@ -401,14 +301,14 @@
           html += `<div class="detail-item"><span class="detail-label">Parent:</span><span class="detail-value">${studentInfo.fatherName || studentInfo.motherName || 'N/A'}</span></div>`;
           html += `<div class="detail-item"><span class="detail-label">Contact:</span><span class="detail-value">${studentInfo.contactNumber || 'N/A'}</span></div>`;
         }
-        html += '</div></div>';
+        html += '</div>';
         document.getElementById("studentInfoContainer").innerHTML = html;
       }
     }
 
     document.getElementById("student").addEventListener("change", onStudentChange);
 
-    document.getElementById("assessmentForm").addEventListener("submit", e => {
+    document.getElementById("assessmentForm").addEventListener("submit", async e => {
       e.preventDefault();
 
       const studentId = document.getElementById("student").value;
@@ -431,21 +331,18 @@
         remark: document.getElementById("remark").value,
         createdAt: new Date().toISOString()
       };
+
+      if (editingId) {
+        data.id = editingId;
+      }
+
       data.percent = ((data.score / data.outOf) * 100).toFixed(2);
 
-      if (editIndex !== null) {
-        updateAssessment(data, editIndex).then(() => {
-        editIndex = null;
-          document.getElementById("assessmentForm").reset();
-          document.getElementById("submitBtn").textContent = "Add Assessment";
-          renderTable();
-        });
-      } else {
-        saveAssessment(data).then(() => {
-          document.getElementById("assessmentForm").reset();
-          renderTable();
-        });
-      }
+      await saveAssessment(data);
+      editingId = null;
+      document.getElementById("assessmentForm").reset();
+      document.getElementById("submitBtn").textContent = "Add Assessment";
+      await loadAll();
     });
 
     function renderTable() {
@@ -463,23 +360,25 @@
         (!fsub || a.subject.toLowerCase().includes(fsub))
       );
 
-      filtered.forEach((a, i) => {
+      filtered.forEach((a) => {
         const row = table.insertRow();
         row.innerHTML = `
           <td>${a.studentName}</td><td>${a.class}</td><td>${a.term}</td><td>${a.subject}</td>
           <td>${a.type}</td><td>${a.score}</td><td>${a.outOf}</td>
           <td>${a.percent}%</td><td>${a.remark || ''}</td>
           <td>
-            <button onclick="editAssessment(${i})">Edit</button>
-            <button onclick="deleteAssessmentRecord(${i})" style="background:red;">Delete</button>
+            <button onclick="editAssessment('${a.id}')">Edit</button>
+            <button onclick="deleteAssessmentRecord('${a.id}')" style="background:red;">Delete</button>
           </td>`;
       });
 
       drawChart(filtered);
     }
 
-    function editAssessment(index) {
-      const a = assessments[index];
+    function editAssessment(id) {
+      const a = assessments.find(a => String(a.id) === String(id));
+      if (!a) return;
+
       document.getElementById("student").value = a.studentId;
       document.getElementById("class").value = a.class;
       document.getElementById("term").value = a.term;
@@ -488,16 +387,15 @@
       document.getElementById("score").value = a.score;
       document.getElementById("outOf").value = a.outOf;
       document.getElementById("remark").value = a.remark || '';
-      editIndex = index;
+      editingId = a.id;
       document.getElementById("submitBtn").textContent = "Update Assessment";
       onStudentChange();
     }
 
-    function deleteAssessmentRecord(index) {
+    async function deleteAssessmentRecord(id) {
       if (confirm("Delete this assessment record?")) {
-        deleteAssessment(index).then(() => {
-        renderTable();
-        });
+        await deleteAssessment(id);
+        await loadAll();
       }
     }
 
@@ -515,7 +413,7 @@
       
       let html = `<h3>Assessment Report for ${student.studentName}</h3>`;
       html += `<p><strong>Student ID:</strong> ${studentId} | <strong>Class:</strong> ${student.class}</p>`;
-      html += `<table border="1" style="width:100%; border-collapse:collapse;">`;
+      html += `<div class="responsive-table-container"><table border="1" style="width:100%; border-collapse:collapse;">`;
       html += `<tr><th>Subject</th><th>Type</th><th>Term</th><th>Score</th><th>Out Of</th><th>%</th><th>Remark</th></tr>`;
       
       rows.forEach(r => {
@@ -523,7 +421,7 @@
         <td>${r.outOf}</td><td>${r.percent}%</td><td>${r.remark || ''}</td></tr>`;
       });
       
-      html += "</table>";
+      html += "</table></div>";
       
       // Calculate averages
       const subjects = {};
@@ -564,7 +462,7 @@
 
       let csv = "Student Name,Class,Term,Subject,Type,Score,Out Of,Percentage,Remark\n";
       filtered.forEach(a => {
-        csv += `"${a.studentName}","${a.class}","${a.term}","${a.subject}","${a.type}",${a.score},${a.outOf},${a.percent}%,"${a.remark || ''}"\n`;
+        csv += `\"${a.studentName}\",\"${a.class}\",\"${a.term}\",\"${a.subject}\",\"${a.type}\",${a.score},${a.outOf},${a.percent}%,\"${a.remark || ''}\"\n`;
       });
 
       const blob = new Blob([csv], { type: 'text/csv' });
@@ -621,9 +519,6 @@
         });
       }
     }
-
-    // Initialize
-    initializeDatabase();
   </script>
 </body>
 </html>

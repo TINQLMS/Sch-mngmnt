@@ -326,7 +326,7 @@
 
         function loadAllData() {
             try {
-                allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+                allUsers = await window.db.getAll(window.DB_STORES.USERS);
                 systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
                 staff = JSON.parse(localStorage.getItem('staff') || '[]');
                 auditLogs = JSON.parse(localStorage.getItem('auditLogs') || '[]');
@@ -337,11 +337,11 @@
 
         function analyzeAllUsers() {
             loadAllData();
-            
+
             const combinedUsers = [...allUsers, ...systemUsers];
             const stats = calculateStats(combinedUsers);
             const issues = detectIssues(combinedUsers);
-            
+
             let html = `
                 <div class="stats-grid">
                     <div class="stat-card ${stats.totalUsers > 0 ? 'success' : 'danger'}">
@@ -434,10 +434,10 @@
 
         function checkSchoolManagers() {
             loadAllData();
-            
+
             const combinedUsers = [...allUsers, ...systemUsers];
             const schoolManagers = combinedUsers.filter(u => u.role === 'school-manager');
-            
+
             let html = `
                 <div class="stats-grid">
                     <div class="stat-card ${schoolManagers.length > 0 ? 'success' : 'warning'}">
@@ -489,10 +489,10 @@
 
         function validateDataIntegrity() {
             loadAllData();
-            
+
             const combinedUsers = [...allUsers, ...systemUsers];
             const issues = [];
-            
+
             const usernames = combinedUsers.map(u => u.username);
             const duplicateUsernames = usernames.filter((username, index) => usernames.indexOf(username) !== index);
             if (duplicateUsernames.length > 0) {
@@ -563,10 +563,10 @@
 
         function checkMigrationStatus() {
             loadAllData();
-            
+
             const migrationIssues = [];
             const migrationWarnings = [];
-            
+
             if (systemUsers.length > 0) {
                 migrationIssues.push(`${systemUsers.length} users still in old systemUsers storage`);
             }
@@ -705,7 +705,7 @@
 
         function detectIssues(users) {
             const issues = [];
-            
+
             const usernames = users.map(u => u.username);
             const duplicateUsernames = usernames.filter((username, index) => usernames.indexOf(username) !== index);
             if (duplicateUsernames.length > 0) {
@@ -733,9 +733,9 @@
                 'Admin User', 'Test User', 'Demo User', 'Sample User',
                 'admin', 'manager', 'user', 'test', 'demo'
             ];
-            
+
             const userData = JSON.stringify(user).toLowerCase();
-            return demoIndicators.some(indicator => 
+            return demoIndicators.some(indicator =>
                 userData.includes(indicator.toLowerCase())
             );
         }
@@ -746,9 +746,9 @@
                 'Admin User', 'Test User', 'Demo User', 'Sample User',
                 'admin', 'manager', 'user', 'test', 'demo'
             ];
-            
+
             const staffData = JSON.stringify(staff).toLowerCase();
-            return demoIndicators.some(indicator => 
+            return demoIndicators.some(indicator =>
                 staffData.includes(indicator.toLowerCase())
             );
         }
@@ -767,32 +767,32 @@
 
         function validateUserAccount(user) {
             const issues = [];
-            
+
             // Check for weak passwords
             if (user.password && user.password.length < 8) {
                 issues.push('Weak password (less than 8 characters)');
             }
-            
+
             // Check for generic usernames
             const genericUsernames = ['admin', 'user', 'test', 'demo', 'guest'];
             if (genericUsernames.includes(user.username.toLowerCase())) {
                 issues.push('Generic username detected');
             }
-            
+
             // Check for invalid email format
             if (user.email && !user.email.includes('@')) {
                 issues.push('Invalid email format');
             }
-            
+
             // Check for missing required fields
             if (!user.fullName || user.fullName.trim() === '') {
                 issues.push('Missing full name');
             }
-            
+
             if (!user.email || user.email.trim() === '') {
                 issues.push('Missing email address');
             }
-            
+
             return issues;
         }
 
@@ -807,10 +807,10 @@
 
         function createUserCard(user) {
             const securityStatus = getUserSecurityStatus(user);
-            const userClass = user.role === 'school-manager' ? 'school-manager' : 
+            const userClass = user.role === 'school-manager' ? 'school-manager' :
                             user.role === 'super-admin' ? 'super-admin' : 'staff';
             const securityClass = securityStatus.securityLevel;
-            
+
             return `
                 <div class="user-card ${userClass} ${securityClass}">
                     <div class="user-header">
@@ -880,7 +880,7 @@
 
         function createStaffCard(staffMember) {
             const securityStatus = getUserSecurityStatus(staffMember);
-            
+
             return `
                 <div class="user-card staff ${securityStatus.securityLevel}">
                     <div class="user-header">
@@ -930,10 +930,10 @@
 
         function showAdvancedAnalytics() {
             loadAllData();
-            
+
             const combinedUsers = [...allUsers, ...systemUsers];
             const analytics = generateAdvancedAnalytics(combinedUsers);
-            
+
             let html = `
                 <div class="stats-grid">
                     <div class="stat-card ${analytics.avgLoginCount > 0 ? 'success' : 'warning'}">
@@ -1023,10 +1023,10 @@
 
         function showSecurityAudit() {
             loadAllData();
-            
+
             const combinedUsers = [...allUsers, ...systemUsers];
             const securityIssues = performSecurityAudit(combinedUsers);
-            
+
             let html = `
                 <div class="stats-grid">
                     <div class="stat-card ${securityIssues.criticalIssues === 0 ? 'success' : 'danger'}">
@@ -1087,10 +1087,10 @@
 
         function showUserActivity() {
             loadAllData();
-            
+
             const combinedUsers = [...allUsers, ...systemUsers];
             const activityData = analyzeUserActivity(combinedUsers);
-            
+
             let html = `
                 <div class="stats-grid">
                     <div class="stat-card ${activityData.activeUsers > 0 ? 'success' : 'warning'}">
@@ -1152,10 +1152,10 @@
 
         function showSystemHealth() {
             loadAllData();
-            
+
             const combinedUsers = [...allUsers, ...systemUsers];
             const healthData = analyzeSystemHealth(combinedUsers);
-            
+
             let html = `
                 <div class="stats-grid">
                     <div class="stat-card ${healthData.overallHealth > 0.8 ? 'success' : healthData.overallHealth > 0.6 ? 'warning' : 'danger'}">
@@ -1291,7 +1291,7 @@
         function generateUserReport() {
             const combinedUsers = [...allUsers, ...systemUsers];
             const stats = calculateStats(combinedUsers);
-            
+
             const report = `
 USER ANALYSIS REPORT
 Generated: ${new Date().toLocaleString()}
@@ -1349,7 +1349,7 @@ Staff: ${staffMember.fullName}
         function togglePasswordVisibility(userId) {
             const passwordSpan = event.target.previousElementSibling;
             const currentText = passwordSpan.textContent;
-            
+
             if (currentText === '••••••••') {
                 // Show password
                 const user = [...allUsers, ...systemUsers].find(u => u.id == userId);
@@ -1369,11 +1369,11 @@ Staff: ${staffMember.fullName}
             const roleDistribution = {};
             const passwordAnalysis = { strong: 0, medium: 0, weak: 0, default: 0 };
             const passwordRecommendations = [];
-            
+
             users.forEach(user => {
                 // Role distribution
                 roleDistribution[user.role] = (roleDistribution[user.role] || 0) + 1;
-                
+
                 // Password analysis
                 if (user.password) {
                     const password = atob(user.password);
@@ -1554,7 +1554,7 @@ Staff: ${staffMember.fullName}
             // Calculate average session time based on user activity
             const activeUsers = users.filter(user => user.lastActivity);
             if (activeUsers.length === 0) return 0;
-            
+
             const totalSessionTime = activeUsers.reduce((sum, user) => {
                 if (user.lastActivity && user.lastLogin && user.lastLogin !== 'Never') {
                     const loginTime = new Date(user.lastLogin);
@@ -1563,7 +1563,7 @@ Staff: ${staffMember.fullName}
                 }
                 return sum;
             }, 0);
-            
+
             return Math.round(totalSessionTime / activeUsers.length);
         }
 
@@ -1574,11 +1574,11 @@ Staff: ${staffMember.fullName}
                 const failedAttempts = user.failedAttempts || 0;
                 return sum + loginCount + failedAttempts;
             }, 0);
-            
+
             const successfulLogins = users.reduce((sum, user) => {
                 return sum + (user.loginCount || 0);
             }, 0);
-            
+
             return totalAttempts > 0 ? successfulLogins / totalAttempts : 0;
         }
 
@@ -1587,22 +1587,22 @@ Staff: ${staffMember.fullName}
             const loginHours = users
                 .filter(user => user.lastLogin && user.lastLogin !== 'Never')
                 .map(user => new Date(user.lastLogin).getHours());
-            
+
             if (loginHours.length === 0) return 12; // Default to noon
-            
+
             // Find the hour with most logins
             const hourCounts = {};
             loginHours.forEach(hour => {
                 hourCounts[hour] = (hourCounts[hour] || 0) + 1;
             });
-            
-            return Object.keys(hourCounts).reduce((peak, hour) => 
+
+            return Object.keys(hourCounts).reduce((peak, hour) =>
                 hourCounts[hour] > hourCounts[peak] ? hour : peak
             );
         }
 
         function analyzeSystemHealth(users) {
-            const dataIntegrity = users.filter(user => 
+            const dataIntegrity = users.filter(user =>
                 user.id && user.username && user.role && user.status
             ).length / users.length || 0;
 
@@ -1642,57 +1642,57 @@ Staff: ${staffMember.fullName}
             // Calculate performance based on user activity and system usage
             const activeUsers = users.filter(user => user.lastActivity);
             const totalUsers = users.length;
-            
+
             if (totalUsers === 0) return 0;
-            
+
             // Performance based on active users ratio
             const activityRatio = activeUsers.length / totalUsers;
-            
+
             // Performance based on login success rate
             const loginSuccessRate = calculateLoginSuccessRate(users);
-            
+
             // Performance based on session times
             const avgSessionTime = calculateAverageSessionTime(users);
             const sessionScore = Math.min(avgSessionTime / 60, 1); // Normalize to 0-1
-            
+
             return (activityRatio + loginSuccessRate + sessionScore) / 3;
         }
 
         function calculateSecurityScore(users) {
             // Calculate security score based on password strength and account security
             if (users.length === 0) return 0;
-            
+
             let securityScore = 0;
             let totalChecks = 0;
-            
+
             users.forEach(user => {
                 // Check password strength
                 if (user.password) {
                     const password = atob(user.password);
                     let passwordScore = 0;
-                    
+
                     if (password.length >= 8) passwordScore += 0.25;
                     if (/[A-Z]/.test(password)) passwordScore += 0.25;
                     if (/[a-z]/.test(password)) passwordScore += 0.25;
                     if (/[0-9]/.test(password)) passwordScore += 0.25;
-                    
+
                     securityScore += passwordScore;
                     totalChecks++;
                 }
-                
+
                 // Check for account locks
                 if (!user.accountLocked) {
                     securityScore += 1;
                     totalChecks++;
                 }
-                
+
                 // Check for failed attempts
                 if (!user.failedAttempts || user.failedAttempts === 0) {
                     securityScore += 1;
                     totalChecks++;
                 }
             });
-            
+
             return totalChecks > 0 ? securityScore / totalChecks : 0;
         }
 
@@ -1705,38 +1705,38 @@ Staff: ${staffMember.fullName}
                 const hoursDiff = (now - lastActivity) / (1000 * 60 * 60);
                 return hoursDiff < 24;
             });
-            
+
             // Uptime based on recent activity
             const activityRatio = activeUsers.length / users.length;
-            
+
             // Uptime based on system stability (no locked accounts)
             const lockedAccounts = users.filter(user => user.accountLocked).length;
             const stabilityScore = users.length > 0 ? 1 - (lockedAccounts / users.length) : 1;
-            
+
             return (activityRatio + stabilityScore) / 2;
         }
 
         function calculateErrorRate(users) {
             // Calculate error rate based on failed login attempts and account issues
             if (users.length === 0) return 0;
-            
+
             const totalFailedAttempts = users.reduce((sum, user) => {
                 return sum + (user.failedAttempts || 0);
             }, 0);
-            
+
             const totalLoginAttempts = users.reduce((sum, user) => {
                 return sum + (user.loginCount || 0) + (user.failedAttempts || 0);
             }, 0);
-            
+
             const lockedAccounts = users.filter(user => user.accountLocked).length;
             const suspendedAccounts = users.filter(user => user.status === 'suspended').length;
-            
+
             // Error rate based on failed attempts
             const attemptErrorRate = totalLoginAttempts > 0 ? totalFailedAttempts / totalLoginAttempts : 0;
-            
+
             // Error rate based on account issues
             const accountErrorRate = users.length > 0 ? (lockedAccounts + suspendedAccounts) / users.length : 0;
-            
+
             return (attemptErrorRate + accountErrorRate) / 2;
         }
 

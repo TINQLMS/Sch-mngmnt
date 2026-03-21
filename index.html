@@ -353,6 +353,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
     <header>
@@ -517,9 +518,9 @@
         };
 
         let selectedRole = '';
-        // Use shared notification system from shared-auth.js
+        async function initializeNotifications() { console.log("Notifications initialized"); }
 
-        function showLoginModal(role) {
+        async function showLoginModal(role) {
             selectedRole = role;
             console.log('Login modal opened for role:', role);
             console.log('Selected role set to:', selectedRole);
@@ -552,45 +553,34 @@
             }
         }
 
-        // Use shared audit log function from shared-auth.js
+        // Shared audit log used from shared-auth.js
 
-        function handleLogin(event) {
+        async function handleLogin(event) {
             event.preventDefault();
             
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
+            const usernameInput = document.getElementById('username').value.trim();
+            const passwordInput = document.getElementById('password').value;
             
-            if (!username || !password) {
+            if(!usernameInput || !passwordInput) {
                 showLoginError('Please enter both username and password.');
                 return;
             }
             
-            // Authenticate user - use unified storage
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const user = users.find(u => 
-                u.username.toLowerCase() === username.toLowerCase() && 
-                atob(u.password) === password
-            );
+            // Authenticate user - use IndexedDB
+            const user = await window.db.get(window.DB_STORES.USERS, usernameInput);
 
-            // Debug logging
-            console.log('Login attempt:', { username, selectedRole });
-            console.log('Available users:', users.length);
-            console.log('Found user:', user ? user.username : 'none');
-            console.log('User role:', user ? user.role : 'none');
-            console.log('Selected role:', selectedRole);
-
-            if (user) {
+            if (user && atob(user.password) === passwordInput) {
                 // Check if user is suspended
                 if (user.status === 'suspended') {
                     showLoginError('Account is suspended. Please contact administrator.');
-                    addAuditLog('login_failed', `Suspended user ${username} attempted to login`, username);
+                    await addAuditLog('login_failed', `Suspended user ${usernameInput} attempted to login`, user);
                     return;
                 }
                 
                 // Check if account is locked
-                if (user.accountLocked) {
+                if(user.accountLocked) {
                     showLoginError('Account is locked. Please contact administrator.');
-                    addAuditLog('login_failed', `Locked user ${username} attempted to login`, username);
+                    await addAuditLog('login_failed', `Locked user ${usernameInput} attempted to login`, user);
                     return;
                 }
                 
@@ -598,253 +588,122 @@
                 if (user.lockedUntil && new Date() < new Date(user.lockedUntil)) {
                     const remainingTime = Math.ceil((new Date(user.lockedUntil) - new Date()) / (1000 * 60));
                     showLoginError(`Account is temporarily locked. Try again in ${remainingTime} minutes.`);
-                    addAuditLog('login_failed', `Temporarily locked user ${username} attempted to login`, username);
+                    await addAuditLog('login_failed', `Temporarily locked user ${username} attempted to login`, user);
                     return;
                 }
                 
-                // Map role for consistency
-                const roleMapping = {
-                    'super-admin': 'super-admin',
-                    'school-manager': 'school-manager',
-                    'staff': 'staff',
-                    'teacher': 'staff',
-                    'student': 'student',
-                    'parent': 'parent'
-                };
-                
-                const standardizedRole = roleMapping[user.role] || user.role;
-                
-                // Check if user role matches selected role (only if selectedRole is set)
-                if (selectedRole && selectedRole !== '' && standardizedRole !== selectedRole) {
-                    console.log('Role mismatch:', { selectedRole, userRole: standardizedRole });
-                    showLoginError(`Invalid role. This account is for ${standardizedRole.replace('-', ' ')} role.`);
-                    return;
-                }
-                
-                // If no selectedRole is set or it's empty, use the user's actual role
-                if (!selectedRole || selectedRole === '') {
-                    console.log('No selectedRole set, using user role:', standardizedRole);
-                    selectedRole = standardizedRole;
-                } else {
-                    console.log('Using selectedRole:', selectedRole);
+                // Role-based access check if a card was clicked
+                const standardizedRole = user.role.toLowerCase();
+                if(selectedRole && selectedRole !== '' && standardizedRole !== selectedRole) {
+                    // Special case for 'staff' vs 'teacher' mapping
+                    if (!(selectedRole === 'staff' && standardizedRole === 'teacher')) {
+                        showLoginError(`Invalid role. This account is for ${standardizedRole.replace('-', ' ')} role.`);
+                        return;
+                    }
                 }
 
                 // Check if user is active (case-insensitive)
-                const userStatus = user.status ? user.status.toLowerCase() : '';
-                if (userStatus !== 'active') {
+                if (user.status && user.status.toLowerCase() !== 'active') {
                     showLoginError('Account is not active. Please contact administrator.');
                     return;
                 }
 
-                // Clear any failed login attempts on successful login
+                // Update user metadata
                 user.loginAttempts = 0;
                 user.lockedUntil = null;
-                
-                // Update user login info
                 user.lastLogin = new Date().toISOString();
                 user.lastActivity = new Date().toISOString();
                 user.loginCount = (user.loginCount || 0) + 1;
-                localStorage.setItem('users', JSON.stringify(users));
+                await window.db.put(window.DB_STORES.USERS, user);
 
-                // Store session data consistently
+                // Store session data
                 const sessionData = {
                     userId: user.id,
                     username: user.username,
                     fullName: user.fullName,
                     role: standardizedRole,
-                    accessLevel: user.accessLevel || user.staffRole || 'Standard',
+                    accessLevel: user.accessLevel || 'Standard',
                     status: user.status,
-                    accountLocked: user.accountLocked,
-                    lockedUntil: user.lockedUntil,
                     loginTime: new Date().toISOString()
                 };
                 
-                // Store all session data consistently
                 sessionStorage.setItem('currentUser', JSON.stringify(sessionData));
-                sessionStorage.setItem('selectedRole', standardizedRole);
-                sessionStorage.setItem('accessLevel', user.accessLevel || user.staffRole || 'Standard');
                 sessionStorage.setItem('loginCredentials', JSON.stringify({
                     username: user.username,
-                    role: standardizedRole,
-                    accessLevel: user.accessLevel || user.staffRole || 'Standard',
-                    status: user.status
+                    role: standardizedRole
                 }));
-                
-                console.log('Session data stored:', sessionData);
-                console.log('Session storage verification:');
-                console.log('- currentUser:', sessionStorage.getItem('currentUser'));
-                console.log('- selectedRole:', sessionStorage.getItem('selectedRole'));
-                console.log('- loginCredentials:', sessionStorage.getItem('loginCredentials'));
 
-                // Add audit log
-                addAuditLog('login', `Successful login for ${user.username}`, user.username);
+                await addAuditLog('login', `Successful login for ${user.username}`, user);
 
-                // Redirect immediately
-                console.log('About to redirect user with role:', standardizedRole);
-                console.log('Calling redirectToDashboard function...');
+                // Redirect using shared logic
                 redirectToDashboard(standardizedRole);
-                console.log('redirectToDashboard function called successfully');
 
             } else {
                 // Handle failed login attempts
-                const failedUser = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-                if (failedUser) {
+                const failedUser = await window.db.get(window.DB_STORES.USERS, usernameInput);
+                if(failedUser) {
                     failedUser.loginAttempts = (failedUser.loginAttempts || 0) + 1;
                     
-                    // Lock account after too many failed attempts
                     const maxAttempts = 5;
                     if (failedUser.loginAttempts >= maxAttempts) {
-                        const lockoutDuration = 15; // minutes
+                        const lockoutDuration = 15;
                         failedUser.lockedUntil = new Date(Date.now() + lockoutDuration * 60 * 1000).toISOString();
-                        addAuditLog('account_locked', `User ${username} account locked due to ${failedUser.loginAttempts} failed login attempts`);
+                        if (window.addAuditLog) await window.addAuditLog('account_locked', `User ${usernameInput} account locked`, failedUser);
                         showLoginError(`Account locked due to too many failed attempts. Try again in ${lockoutDuration} minutes.`);
                     } else {
                         showLoginError('Invalid username or password.');
                     }
-                    
-                    localStorage.setItem('users', JSON.stringify(users));
+                    await window.db.put(window.DB_STORES.USERS, failedUser);
                 } else {
                     showLoginError('Invalid username or password.');
                 }
                 
-                addAuditLog('login_failed', `Failed login attempt for ${username}`, 'unknown');
+                if (window.addAuditLog) await window.addAuditLog('login_failed', `Failed login attempt for ${usernameInput}`);
             }
         }
 
-        function showLoginError(message) {
+        async function showLoginError(message) {
             const errorDiv = document.getElementById('loginError');
             errorDiv.textContent = message;
             errorDiv.classList.remove('hidden');
         }
 
-        function showLoginSuccess(message) {
+        async function showLoginSuccess(message) {
             const errorDiv = document.getElementById('loginError');
             errorDiv.textContent = message;
             errorDiv.className = 'success';
             errorDiv.classList.remove('hidden');
         }
 
-        function redirectToDashboard(role) {
-            console.log('=== REDIRECT DEBUG ===');
-            console.log('Redirecting to dashboard for role:', role);
-            console.log('Role type:', typeof role);
-            console.log('Current window.location:', window.location.href);
-            console.log('Session storage - currentUser:', sessionStorage.getItem('currentUser'));
-            console.log('Session storage - selectedRole:', sessionStorage.getItem('selectedRole'));
-            console.log('Session storage - loginCredentials:', sessionStorage.getItem('loginCredentials'));
-            
-            // Clear any existing error messages
-            const errorDiv = document.getElementById('loginError');
-            if (errorDiv) {
-                errorDiv.classList.add('hidden');
-            }
-            
-            let redirectUrl = '';
-            switch (role) {
-                case 'super-admin':
-                    console.log('Redirecting super-admin to Enhanced_School_Management_Portal.html');
-                    redirectUrl = 'Enhanced_School_Management_Portal.html';
-                    break;
-                case 'school-manager':
-                    console.log('Redirecting school-manager to Enhanced_School_Management_Portal.html');
-                    redirectUrl = 'Enhanced_School_Management_Portal.html';
-                    break;
-                case 'staff':
-                    console.log('Redirecting staff to Enhanced_School_Management_Portal.html');
-                    redirectUrl = 'Enhanced_School_Management_Portal.html';
-                    break;
-                case 'student':
-                    console.log('Redirecting student to student_dashboard.html');
-                    redirectUrl = 'student_dashboard.html';
-                    break;
-                case 'parent':
-                    console.log('Redirecting parent to parent_dashboard.html');
-                    redirectUrl = 'parent_dashboard.html';
-                    break;
-                default:
-                    console.log('Unknown role, redirecting to index.html');
-                    console.log('Role not matched in switch statement:', role);
-                    redirectUrl = 'index.html';
-            }
-            
-            console.log('About to redirect to:', redirectUrl);
-            
-            // Use a more reliable redirect method
-            try {
-                // Store the redirect URL in session storage for debugging
-                sessionStorage.setItem('lastRedirectUrl', redirectUrl);
-                sessionStorage.setItem('lastRedirectRole', role);
-                
-                console.log('About to redirect to:', redirectUrl);
-                
-                // First try window.location.href
-                window.location.href = redirectUrl;
-                
-                // Fallback: if redirect doesn't work after 1 second, try replace
-                setTimeout(() => {
-                    const currentUrl = window.location.href;
-                    console.log('Checking redirect status, current URL:', currentUrl);
-                    if (currentUrl.includes('index.html') && !currentUrl.includes('login')) {
-                        console.log('Redirect may have failed, trying window.location.replace...');
-                        window.location.replace(redirectUrl);
-                    } else {
-                        console.log('Redirect appears to have succeeded');
-                    }
-                }, 1000);
-                
-                // Additional fallback: if still on index.html after 3 seconds, force redirect
-                setTimeout(() => {
-                    const currentUrl = window.location.href;
-                    if (currentUrl.includes('index.html') && !currentUrl.includes('login')) {
-                        console.log('Force redirect after 3 seconds...');
-                        window.location.replace(redirectUrl);
-                    }
-                }, 3000);
-                
-            } catch (error) {
-                console.error('Error during redirect:', error);
-                // Final fallback: try using location.replace
-                try {
-                    window.location.replace(redirectUrl);
-                } catch (replaceError) {
-                    console.error('Fallback redirect also failed:', replaceError);
-                    // Last resort: show error message and provide manual link
-                    showLoginError(`Redirect failed. Please <a href="${redirectUrl}" style="color: #007bff; text-decoration: underline;">click here</a> to continue.`);
-                }
-            }
-        }
 
         function showForgotPassword() {
             alert('Please contact your system administrator to reset your password.');
         }
     </script>
     <script src="shared-auth.js"></script>
+    <script src="shared-db.js"></script>
+    <script src="shared-utils.js"></script>
+    <link rel="stylesheet" href="shared-styles.css">
     <script>
         // Initialize on page load
-        window.onload = function() {
+        window.onload = async function() {
+            // Initialize DB first
+            if (window.db) await window.db.init();
+
+            // Migrate legacy data to IndexedDB
+            if (window.migrateToIndexedDB) await window.migrateToIndexedDB();
+
             initializeAuditLogs();
             initializeNotifications();
             
-            // Check if super admin exists
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const superAdmins = users.filter(user => user.role === 'super-admin');
+            // Check if super admin exists in IndexedDB
+            const allUsers = await window.db.getAll(window.DB_STORES.USERS);
+            const superAdmins = allUsers.filter(user => user.role === 'super-admin');
             
             if (superAdmins.length === 0) {
                 // Show setup notice
                 const setupNotice = document.createElement('div');
-                setupNotice.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: #fff3cd;
-                    border: 1px solid #ffeaa7;
-                    color: #856404;
-                    padding: 15px;
-                    border-radius: 8px;
-                    z-index: 1000;
-                    max-width: 300px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                `;
+                setupNotice.style.cssText = `position: fixed; top: 10px; right: 10px; left: 10px; margin: auto; max-width: 400px; background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 8px; z-index: 2000; box-shadow: 0 4px 12px rgba(0,0,0,0.1);`;
                 setupNotice.innerHTML = `
                     <strong>🔧 First Time Setup Required</strong><br>
                     No Super Administrator account found.<br>

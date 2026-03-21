@@ -6,7 +6,7 @@ function getTimeAgo(timestamp) {
     const now = new Date();
     const past = new Date(timestamp);
     const diffInSeconds = Math.floor((now - past) / 1000);
-    
+
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
@@ -80,13 +80,13 @@ function sortBy(array, key, order = 'asc') {
     return [...array].sort((a, b) => {
         let aVal = a[key];
         let bVal = b[key];
-        
+
         // Handle numeric values
         if (!isNaN(aVal) && !isNaN(bVal)) {
             aVal = parseFloat(aVal);
             bVal = parseFloat(bVal);
         }
-        
+
         if (order === 'desc') {
             return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
         }
@@ -99,13 +99,13 @@ function filterBy(array, filters) {
         return Object.keys(filters).every(key => {
             const filterValue = filters[key];
             const itemValue = item[key];
-            
+
             if (!filterValue) return true;
-            
+
             if (typeof filterValue === 'string') {
                 return itemValue && itemValue.toLowerCase().includes(filterValue.toLowerCase());
             }
-            
+
             return itemValue === filterValue;
         });
     });
@@ -132,7 +132,101 @@ function validateRequired(value) {
     return value && value.toString().trim().length > 0;
 }
 
-// Storage Utilities
+// Migration and Sync Utilities
+async function migrateToIndexedDB() {
+    if (!window.db) return false;
+
+    try {
+        const migrationKey = 'indexeddb_migration_complete';
+        if (localStorage.getItem(migrationKey)) return false;
+
+        console.log('Starting migration from localStorage to IndexedDB...');
+
+        const storesMap = {
+            'users': window.DB_STORES.USERS,
+            'admissions': window.DB_STORES.ADMISSIONS,
+            'staff': window.DB_STORES.STAFF,
+            'attendance': window.DB_STORES.ATTENDANCE,
+            'assessments': window.DB_STORES.ASSESSMENTS,
+            'financialData': window.DB_STORES.FINANCIAL,
+            'auditLogs': window.DB_STORES.AUDIT_LOGS,
+            'notifications': window.DB_STORES.NOTIFICATIONS,
+            'messages': window.DB_STORES.MESSAGES
+        };
+
+        for (const [lsKey, storeName] of Object.entries(storesMap)) {
+            const data = JSON.parse(localStorage.getItem(lsKey) || '[]');
+            if (Array.isArray(data)) {
+                for (const item of data) {
+                    await window.db.put(storeName, item);
+                }
+            } else if (data && typeof data === 'object') {
+                await window.db.put(storeName, data);
+            }
+        }
+
+        // Handle legacy systemUsers
+        const systemUsers = JSON.parse(localStorage.getItem('systemUsers') || '[]');
+        for (const user of systemUsers) {
+            await window.db.put(window.DB_STORES.USERS, {
+                ...user,
+                id: user.id || Date.now() + Math.random(),
+                status: user.status || 'active'
+            });
+        }
+
+        localStorage.setItem(migrationKey, 'true');
+        console.log('Migration to IndexedDB completed successfully.');
+        return true;
+    } catch (error) {
+        console.error('Error during IndexedDB migration:', error);
+        return false;
+    }
+}
+
+async function syncEntityToUser(entityData, role) {
+    try {
+        if (!window.db) return null;
+
+        const allUsers = await window.db.getAll(window.DB_STORES.USERS);
+        const nameField = entityData.fullName || entityData.studentName || entityData.name;
+        const username = entityData.username || (nameField ? nameField.replace(/\s+/g, '').toLowerCase() : null);
+
+        if (!username) return null;
+
+        let userIndex = allUsers.findIndex(u => u.username && u.username.toLowerCase() === username.toLowerCase());
+
+        let userData;
+        if (userIndex !== -1) {
+            userData = {
+                ...allUsers[userIndex],
+                ...entityData,
+                role: role, // Ensure role is updated/set
+                lastActivity: new Date().toISOString()
+            };
+        } else {
+            userData = {
+                id: entityData.id || Date.now() + Math.random(),
+                username: username,
+                fullName: entityData.fullName || entityData.studentName || entityData.name,
+                email: entityData.email || '',
+                role: role,
+                status: entityData.status || 'active',
+                password: entityData.password || btoa('0000'), // Default password if not provided
+                lastActivity: new Date().toISOString(),
+                ...entityData
+            };
+        }
+
+        await window.db.put(window.DB_STORES.USERS, userData);
+        return userData;
+    } catch (error) {
+        console.error('Error syncing entity to user:', error);
+        return null;
+    }
+}
+
+// Storage Utilities (Keep for small settings, but mostly replaced by IndexedDB)
 function saveToStorage(key, data) {
     try {
         localStorage.setItem(key, JSON.stringify(data));
@@ -242,49 +336,14 @@ function throttle(func, limit) {
 // Export utilities for use in modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        // Time utilities
-        getTimeAgo,
-        formatDate,
-        formatDateTime,
-        formatTime,
-        
-        // String utilities
-        capitalizeFirst,
-        truncateText,
-        sanitizeInput,
-        
-        // Number utilities
-        formatCurrency,
-        formatPercentage,
-        roundToDecimal,
-        
-        // Array utilities
-        groupBy,
-        sortBy,
-        filterBy,
-        
-        // Validation utilities
-        validateEmail,
-        validatePhone,
-        validatePassword,
-        validateRequired,
-        
-        // Storage utilities
-        saveToStorage,
-        loadFromStorage,
-        removeFromStorage,
-        clearStorage,
-        
-        // DOM utilities
-        createElement,
-        addClass,
-        removeClass,
-        toggleClass,
-        showElement,
-        hideElement,
-        
-        // Event utilities
-        debounce,
-        throttle
+        getTimeAgo, formatDate, formatDateTime, formatTime,
+        capitalizeFirst, truncateText, sanitizeInput,
+        formatCurrency, formatPercentage, roundToDecimal,
+        groupBy, sortBy, filterBy,
+        validateEmail, validatePhone, validatePassword, validateRequired,
+        migrateToIndexedDB, syncEntityToUser,
+        saveToStorage, loadFromStorage, removeFromStorage, clearStorage,
+        createElement, addClass, removeClass, toggleClass, showElement, hideElement,
+        debounce, throttle
     };
 }

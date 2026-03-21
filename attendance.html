@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <title>Attendance Management</title>
+  <script src="shared-db.js"></script>
   <script src="shared-auth.js"></script>
+  <script src="shared-utils.js"></script>
   <script>
     // Authentication check - using shared function
-    function checkAuth() {
-      return window.checkAuth('staff', 'Standard');
-    }
+    async function checkAuth() { if (!window.db) await window.db.init(); return await window.checkAuth("staff"); }
     
     // Check auth on page load
-    window.onload = function() {
-      if (checkAuth()) {
-        // Continue with page initialization
+    window.onload = async function() {
+      if (await checkAuth()) {
+        if (window.db) { await window.db.init(); loadAll(); }
       }
     };
   </script>
@@ -74,13 +74,14 @@
       color: white;
     }
   </style>
+    <link rel="stylesheet" href="shared-styles.css">
 </head>
 <body>
   <div class="container">
     <div class="header">
       
       <div class="header-content">
-        <button onclick="goToDashboard()" class="btn-back">← Back to Dashboard</button>
+        <button onclick="window.goToDashboard()" class="btn-back">← Back to Dashboard</button>
         <h1>Attendance Management</h1>
       </div>
     </div>
@@ -108,177 +109,39 @@
     <div id="attendanceRecords"></div>
   </div>
   <script>
-    // Function to go to dashboard based on user role
-    function goToDashboard() {
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-        const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
-        
-        if (currentUser && currentUser.role) {
-            switch (currentUser.role) {
-                case 'super-admin':
-                case 'school-manager':
-                case 'staff':
-                    window.location.href = 'Enhanced_School_Management_Portal.html';
-                    break;
-                case 'student':
-                    window.location.href = 'student_dashboard.html';
-                    break;
-                case 'parent':
-                    window.location.href = 'parent_dashboard.html';
-                    break;
-                default:
-                    window.location.href = 'index.html';
-            }
-        } else if (loginCredentials && loginCredentials.role) {
-            switch (loginCredentials.role) {
-                case 'super-admin':
-                case 'school-manager':
-                case 'staff':
-                    window.location.href = 'Enhanced_School_Management_Portal.html';
-                    break;
-                case 'student':
-                    window.location.href = 'student_dashboard.html';
-                    break;
-                case 'parent':
-                    window.location.href = 'parent_dashboard.html';
-                    break;
-                default:
-                    window.location.href = 'index.html';
-            }
-        } else {
-            window.location.href = 'index.html';
-        }
-    }
-
-    // --- IndexedDB/localStorage Fallback Setup ---
-    let db, useLocalStorage = false, dbInitialized = false;
-    function initializeDatabase() {
-      const request = indexedDB.open("SchoolDB", 2);
-      request.onerror = () => { useLocalStorage = true; dbInitialized = true; loadAll(); };
-      request.onsuccess = e => { db = e.target.result; dbInitialized = true; loadAll(); };
-      request.onupgradeneeded = e => {
-        db = e.target.result;
-        if (!db.objectStoreNames.contains("admissions")) db.createObjectStore("admissions", { keyPath: "admissionNo" });
-        if (!db.objectStoreNames.contains("staff")) db.createObjectStore("staff", { keyPath: "staffId" });
-        if (!db.objectStoreNames.contains("attendance")) db.createObjectStore("attendance", { keyPath: "id", autoIncrement: true });
-      };
-    }
-    function getAllFromStore(storeName) {
-      return new Promise((resolve, reject) => {
-        if (useLocalStorage) {
-          const data = JSON.parse(localStorage.getItem(storeName) || '[]');
-          resolve(data);
-        } else {
-          try {
-            const tx = db.transaction(storeName, "readonly");
-            const store = tx.objectStore(storeName);
-            const req = store.getAll();
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-          } catch (e) { useLocalStorage = true; resolve(JSON.parse(localStorage.getItem(storeName) || '[]')); }
-        }
-      });
-    }
-    function saveAttendanceRecord(record) {
-      return new Promise((resolve, reject) => {
-        // First check if attendance already exists for this class and date
-        getAllFromStore('attendance').then(existingRecords => {
-          const existingRecord = existingRecords.find(r => 
-            r.class === record.class && r.date === record.date
-          );
-          
-          if (existingRecord) {
-            // Check if any student already has attendance for this date
-            const duplicateStudents = [];
-            Object.keys(record.statuses).forEach(admissionNo => {
-              if (existingRecord.statuses[admissionNo]) {
-                duplicateStudents.push(admissionNo);
-              }
-            });
-            
-            if (duplicateStudents.length > 0) {
-              const studentNames = duplicateStudents.map(admNo => {
-                const student = admissions.find(a => a.admissionNo === admNo);
-                return student ? student.studentName : admNo;
-              }).join(', ');
-              
-              alert(`Attendance already exists for ${record.date} in ${record.class}. The following students already have attendance records: ${studentNames}. Please update the existing record instead.`);
-              reject(new Error('Duplicate attendance record'));
-              return;
-            }
-          }
-          
-          // If no duplicates, proceed with saving
-          if (useLocalStorage) {
-            const arr = JSON.parse(localStorage.getItem('attendance') || '[]');
-            arr.push(record);
-            localStorage.setItem('attendance', JSON.stringify(arr));
-            resolve();
-          } else {
-            try {
-              const tx = db.transaction("attendance", "readwrite");
-              const store = tx.objectStore("attendance");
-              store.add(record).onsuccess = () => resolve();
-            } catch (e) { 
-              useLocalStorage = true; 
-              saveAttendanceRecord(record).then(resolve); 
-            }
-          }
-        }).catch(reject);
-      });
+    // --- Data Management ---
+    async function saveAttendanceRecord(record) {
+        return await window.db.put(window.DB_STORES.ATTENDANCE, record);
     }
     
-    function updateAttendanceRecord(record) {
-      return new Promise((resolve, reject) => {
-        getAllFromStore('attendance').then(existingRecords => {
-          const existingRecord = existingRecords.find(r => 
-            r.class === record.class && r.date === record.date
-          );
-          
-          if (!existingRecord) {
-            reject(new Error('No existing record to update'));
-            return;
-          }
-          
-          // Merge the new statuses with existing ones
-          const updatedRecord = {
-            ...existingRecord,
-            statuses: { ...existingRecord.statuses, ...record.statuses },
-            attendanceDetails: [...existingRecord.attendanceDetails, ...record.attendanceDetails],
-            updatedAt: new Date().toISOString(),
-            updatedBy: currentRole === 'teacher' && currentUser ? currentUser.staffId : 'admin'
-          };
-          
-          if (useLocalStorage) {
-            const arr = JSON.parse(localStorage.getItem('attendance') || '[]');
-            const index = arr.findIndex(r => r.class === record.class && r.date === record.date);
-            if (index !== -1) {
-              arr[index] = updatedRecord;
-              localStorage.setItem('attendance', JSON.stringify(arr));
-              resolve();
-            } else {
-              reject(new Error('Record not found for update'));
-            }
-          } else {
-            try {
-              const tx = db.transaction("attendance", "readwrite");
-              const store = tx.objectStore("attendance");
-              store.put(updatedRecord).onsuccess = () => resolve();
-            } catch (e) { 
-              useLocalStorage = true; 
-              updateAttendanceRecord(record).then(resolve); 
-            }
-          }
-        }).catch(reject);
-      });
+    async function updateAttendanceRecord(record) {
+      const existingRecords = await window.db.getAll(window.DB_STORES.ATTENDANCE);
+      const existingRecord = existingRecords.find(r =>
+        r.class === record.class && r.date === record.date
+      );
+
+      if (!existingRecord) {
+        throw new Error('No existing record to update');
+      }
+
+      // Merge the new statuses with existing ones
+      const updatedRecord = {
+        ...existingRecord,
+        statuses: { ...existingRecord.statuses, ...record.statuses },
+        attendanceDetails: [...existingRecord.attendanceDetails, ...record.attendanceDetails],
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentRole === 'teacher' && currentUser ? currentUser.staffId : 'admin'
+      };
+
+      return await window.db.put(window.DB_STORES.ATTENDANCE, updatedRecord);
     }
     
     // --- UI/Logic ---
     let admissions = [], staff = [], currentUser = null, currentRole = 'admin';
     function loadAll() {
       Promise.all([
-        getAllFromStore('admissions'),
-        getAllFromStore('staff')
+        window.db.getAll(window.DB_STORES.ADMISSIONS),
+        window.db.getAll(window.DB_STORES.STAFF)
       ]).then(([adms, stf]) => {
         admissions = adms;
         staff = stf;
@@ -308,7 +171,7 @@
         userRole = 'Teacher';
         currentRole = 'teacher';
         // For teachers, try to get their assigned class
-        getAllFromStore('staff').then(staffList => {
+        window.db.getAll(window.DB_STORES.STAFF).then(staffList => {
           const teacher = staffList.find(s => s.username === loginCredentials.username);
           if (teacher && teacher.class) {
             displayName = `${teacher.fullName} (${teacher.class})`;
@@ -427,9 +290,9 @@
           <span class="detail-value">${student.studentName} (${student.admissionNo})</span>
         </div>`;
       });
-      html += '</div></div>';
+      html += '</div>';
       
-      html += '<table class="attendance-table"><thead><tr><th>Admission No</th><th>Student Name</th><th>Parent/Guardian</th><th>Contact</th><th>Status</th></tr></thead><tbody>';
+      html += '<div class="responsive-table-container"><table class="attendance-table"><thead><tr><th>Admission No</th><th>Student Name</th><th>Parent/Guardian</th><th>Contact</th><th>Status</th></tr></thead><tbody>';
       students.forEach(s => {
         html += `<tr>
           <td>${s.admissionNo}</td>
@@ -446,7 +309,7 @@
           </td>
         </tr>`;
       });
-      html += '</tbody></table>';
+      html += '</tbody></table></div>';
       container.innerHTML = html;
       
       // Load existing attendance if date is selected
@@ -465,7 +328,7 @@
     }
     
     function loadExistingAttendance(className, date) {
-      getAllFromStore('attendance').then(records => {
+      window.db.getAll(window.DB_STORES.ATTENDANCE).then(records => {
         const existingRecord = records.find(r => r.class === className && r.date === date);
         
         if (existingRecord) {
@@ -566,7 +429,7 @@
       };
       
       // Check if attendance already exists for this class and date
-      getAllFromStore('attendance').then(existingRecords => {
+      window.db.getAll(window.DB_STORES.ATTENDANCE).then(existingRecords => {
         console.log('Existing records found:', existingRecords.length);
         
         const existingRecord = existingRecords.find(r => 
@@ -635,7 +498,7 @@
       });
     }
     function loadAttendanceRecords() {
-      getAllFromStore('attendance').then(records => {
+      window.db.getAll(window.DB_STORES.ATTENDANCE).then(records => {
         const className = document.getElementById('classSelect').value;
         const date = document.getElementById('attendanceDate').value;
         let filtered = records;
@@ -657,7 +520,7 @@
               <strong>Absent:</strong> ${Object.values(r.statuses).filter(s => s === 'Absent').length} |
               <strong>Late:</strong> ${Object.values(r.statuses).filter(s => s === 'Late').length} |
               <strong>Excused:</strong> ${Object.values(r.statuses).filter(s => s === 'Excused').length}
-              <br><table class="attendance-table"><thead><tr><th>Admission No</th><th>Student Name</th><th>Status</th></tr></thead><tbody>`;
+              <br><div class="responsive-table-container"><table class="attendance-table"><thead><tr><th>Admission No</th><th>Student Name</th><th>Status</th></tr></thead><tbody>`;
             
             Object.entries(r.statuses).forEach(([admNo, status]) => {
               const student = admissions.find(a => a.admissionNo === admNo);
@@ -672,7 +535,14 @@
     }
     
     // --- Init ---
-    initializeDatabase();
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (window.db) {
+            await window.db.init();
+            if (await checkAuth()) {
+                loadAll();
+            }
+        }
+    });
   </script>
 </body>
 </html> 

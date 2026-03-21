@@ -6,15 +6,23 @@ const SECURITY_INDICATORS = {
     WEAK_PASSWORDS: ['password', '123456', 'admin', 'test', 'demo', 'user']
 };
 
+// Helper to migrate session data to IndexedDB if needed
+async function syncSessionToDB() {
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+    if(currentUser && window.db) {
+        await window.db.put(window.DB_STORES.USERS, currentUser);
+    }
+}
+
 // Enhanced authentication check with security validation
-function checkAuth(requiredRole = null, requiredAccessLevel = null) {
+async function checkAuth(requiredRole = null, requiredAccessLevel = null) {
     console.log('Enhanced checkAuth called with:', { requiredRole, requiredAccessLevel });
     
     // Check if user is authenticated
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
     const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
     
-    if (!currentUser || !loginCredentials) {
+    if(!currentUser || !loginCredentials) {
         console.log('No user session found');
         showNotification('Session expired. Please login again.', 'error');
         setTimeout(() => {
@@ -38,11 +46,16 @@ function checkAuth(requiredRole = null, requiredAccessLevel = null) {
         return false;
     }
     
-    // Role-based access control
-    if (requiredRole && currentUser.role !== requiredRole) {
-        console.log('Insufficient role permissions');
-        showNotification('Access denied. Insufficient permissions.', 'error');
-        return false;
+    // Role-based access control with hierarchy
+    if (requiredRole) {
+        const userLevel = getAccessLevel(currentUser.role);
+        const requiredLevel = getAccessLevel(requiredRole);
+
+        if (userLevel < requiredLevel) {
+            console.log('Insufficient role permissions: ' + currentUser.role + ' < ' + requiredRole);
+            showNotification('Access denied. Insufficient permissions.', 'error');
+            return false;
+        }
     }
     
     // Access level validation
@@ -70,38 +83,84 @@ function checkAuth(requiredRole = null, requiredAccessLevel = null) {
     return true;
 }
 
+// Centralized Redirection Logic
+async function redirectToDashboard(role) {
+    console.log('Redirecting to dashboard for role:', role);
+
+    let redirectUrl = 'index.html';
+    const standardizedRole = role ? role.toLowerCase() : '';
+
+    switch (standardizedRole) {
+        case 'super-admin':
+        case 'school-manager':
+        case 'staff':
+        case 'teacher':
+            redirectUrl = 'Enhanced_School_Management_Portal.html';
+            break;
+        case 'student':
+            redirectUrl = 'student_dashboard.html';
+            break;
+        case 'parent':
+            redirectUrl = 'parent_dashboard.html';
+            break;
+        default:
+            console.warn('Unknown role for redirection:', role);
+            redirectUrl = 'index.html';
+    }
+
+    console.log('Final redirect URL:', redirectUrl);
+    window.location.href = redirectUrl;
+}
+
+function goToDashboard() {
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+    const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
+
+    const userRole = (currentUser && currentUser.role) || (loginCredentials && loginCredentials.role);
+
+    if (userRole) {
+        redirectToDashboard(userRole);
+    } else {
+        window.location.href = 'index.html';
+    }
+}
+
 // Enhanced logout function
-function logout() {
+async function logout() {
+    console.log('Logout initiated');
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
     
     if (currentUser) {
         // Add audit log
-        addAuditLog('logout', `User ${currentUser.username} logged out`, currentUser);
-        
-        // Update last activity
-        currentUser.lastActivity = new Date().toISOString();
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const userIndex = users.findIndex(u => u.id === currentUser.id);
-        if (userIndex !== -1) {
-            users[userIndex] = currentUser;
-            localStorage.setItem('users', JSON.stringify(users));
+        try {
+            await addAuditLog('logout', `User ${currentUser.username} logged out`, currentUser);
+
+            // Update last activity in unified storage
+            if(window.db) {
+                const user = await window.db.get(window.DB_STORES.USERS, currentUser.username);
+                if (user) {
+                    user.lastActivity = new Date().toISOString();
+                    await window.db.put(window.DB_STORES.USERS, user);
+                }
+            }
+        } catch (e) {
+            console.error('Error during logout logging:', e);
         }
     }
     
-    // Clear session data
-    sessionStorage.removeItem('currentUser');
-    sessionStorage.removeItem('loginCredentials');
+    // Clear all session data
+    sessionStorage.clear();
     
     // Redirect to login page
     window.location.href = 'index.html';
 }
 
 // Handle failed login attempts
-function handleFailedLogin(username) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
+async function handleFailedLogin(username) {
+    const users = await window.db.getAll(window.DB_STORES.USERS);
     const user = users.find(u => u.username === username);
     
-    if (user) {
+    if(user) {
         user.failedAttempts = (user.failedAttempts || 0) + 1;
         
         // Lock account after 5 failed attempts
@@ -115,7 +174,7 @@ function handleFailedLogin(username) {
         const userIndex = users.findIndex(u => u.username === username);
         if (userIndex !== -1) {
             users[userIndex] = user;
-            localStorage.setItem('users', JSON.stringify(users));
+            await Promise.all(users.map(u => window.db.put(window.DB_STORES.USERS, u)));
         }
         
         // Add audit log
@@ -124,9 +183,8 @@ function handleFailedLogin(username) {
 }
 
 // Enhanced audit logging with security monitoring
-function addAuditLog(event, details, user = null, additionalData = {}) {
+async function addAuditLog(event, details, user = null, additionalData = {}) {
     try {
-        const auditLogs = JSON.parse(localStorage.getItem('auditLogs') || '[]');
         const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
         
         const logEntry = {
@@ -143,30 +201,29 @@ function addAuditLog(event, details, user = null, additionalData = {}) {
             ...additionalData
         };
         
-        auditLogs.push(logEntry);
-        
-        // Keep only last 1000 audit logs
-        if (auditLogs.length > 1000) {
-            auditLogs.splice(0, auditLogs.length - 1000);
+        if(window.db) {
+            await window.db.put(window.DB_STORES.AUDIT_LOGS, logEntry);
+        } else {
+            // Fallback to localStorage if DB not initialized
+            const auditLogs = JSON.parse(localStorage.getItem('auditLogs') || '[]');
+            auditLogs.push(logEntry);
+            if (auditLogs.length > 1000) auditLogs.shift();
+            localStorage.setItem('auditLogs', JSON.stringify(auditLogs));
         }
-        
-        localStorage.setItem('auditLogs', JSON.stringify(auditLogs));
         
         // Real-time security monitoring for critical events
         if (event.includes('login') || event.includes('security') || event.includes('account') || event.includes('access')) {
-            monitorSecurityEvents(logEntry);
+            await monitorSecurityEvents(logEntry);
         }
         
         // Update user activity tracking
-        if (logEntry.user && logEntry.user !== 'system') {
-            updateUserActivity(logEntry.user, event);
+        if(logEntry.user && logEntry.user !== 'system') {
+            await updateUserActivity(logEntry.user, event);
         }
         
         console.log('Enhanced audit log added:', {
             event: logEntry.event,
-            user: logEntry.user,
-            accountType: logEntry.accountType,
-            securityLevel: logEntry.securityLevel
+            user: logEntry.user
         });
     } catch (error) {
         console.error('Error adding audit log:', error);
@@ -174,9 +231,10 @@ function addAuditLog(event, details, user = null, additionalData = {}) {
 }
 
 // Real-time security monitoring system
-function monitorSecurityEvents(auditEntry) {
-    const recentEvents = JSON.parse(localStorage.getItem('auditLogs') || '[]')
-        .filter(log => new Date(log.timestamp) > new Date(Date.now() - 300000)); // Last 5 minutes
+async function monitorSecurityEvents(auditEntry) {
+    if (!window.db) return;
+    const allLogs = await window.db.getAll(window.DB_STORES.AUDIT_LOGS);
+    const recentEvents = allLogs.filter(log => new Date(log.timestamp) > new Date(Date.now() - 300000)); // Last 5 minutes
     
     const failedLogins = recentEvents.filter(log => 
         log.event === 'login_failed' || log.event === 'account_locked'
@@ -206,7 +264,7 @@ function monitorSecurityEvents(auditEntry) {
 }
 
 // Enhanced user activity tracking
-function updateUserActivity(username, event) {
+async function updateUserActivity(username, event) {
     try {
         const userActivity = JSON.parse(localStorage.getItem('userActivity') || '{}');
         
@@ -243,6 +301,7 @@ function getAccessLevel(role) {
         'super-admin': 4,
         'school-manager': 3,
         'staff': 2,
+        'teacher': 2,
         'student': 1,
         'parent': 1
     };
@@ -391,6 +450,8 @@ function showNotification(message, type = 'info') {
 // Export functions for use in other files
 window.checkAuth = checkAuth;
 window.logout = logout;
+window.redirectToDashboard = redirectToDashboard;
+window.goToDashboard = goToDashboard;
 window.addAuditLog = addAuditLog;
 window.validateRealAccountCreation = validateRealAccountCreation;
 window.showNotification = showNotification; 
