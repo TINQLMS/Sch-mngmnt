@@ -340,19 +340,23 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                <a href="Enhanced_School_Management_Portal.html" class="btn btn-secondary">← Back to Dashboard</a>
+                <button class="btn btn-danger" onclick="window.logout()">Logout</button>
+            </div>
             <h1>👥 Staff Management System</h1>
             <p>Comprehensive staff management with advanced analytics and performance tracking</p>
         </div>
 
         <!-- Navigation Tabs -->
         <div class="nav-tabs">
-            <button class="nav-tab active" onclick="showTab('onboarding')">🚀 Onboarding</button>
-            <button class="nav-tab" onclick="showTab('management')">👥 Staff Management</button>
-            <button class="nav-tab" onclick="showTab('performance')">📈 Performance</button>
-            <button class="nav-tab" onclick="showTab('scheduling')">📅 Scheduling</button>
-            <button class="nav-tab" onclick="showTab('offers')">📄 Offer Letters</button>
-            <button class="nav-tab" onclick="showTab('analytics')">📊 Analytics</button>
-            <button class="nav-tab" onclick="showTab('messaging')">💬 Messaging</button>
+            <button class="nav-tab active" onclick="showTab('onboarding', event)">🚀 Onboarding</button>
+            <button class="nav-tab" onclick="showTab('management', event)">👥 Staff Management</button>
+            <button class="nav-tab" onclick="showTab('performance', event)">📈 Performance</button>
+            <button class="nav-tab" onclick="showTab('scheduling', event)">📅 Scheduling</button>
+            <button class="nav-tab" onclick="showTab('offers', event)">📄 Offer Letters</button>
+            <button class="nav-tab" onclick="showTab('analytics', event)">📊 Analytics</button>
+            <button class="nav-tab" onclick="showTab('messaging', event)">💬 Messaging</button>
         </div>
 
         <!-- Notification Container -->
@@ -1124,7 +1128,7 @@
                             <tr>
                                 <td>${offer.candidateName}</td>
                                 <td>${offer.position}</td>
-                                <td>₵${offer.salary.toLocaleString()}</td>
+                                <td>₵${(offer.salary || 0).toLocaleString()}</td>
                                 <td>${new Date(offer.startDate).toLocaleDateString()}</td>
                                 <td><span class="status-${offer.status}">${offer.status}</span></td>
                                 <td>
@@ -1379,6 +1383,7 @@
                 if (!editingStaffId) {
                     userData.password = btoa(password);
                     userData.createdAt = new Date().toISOString();
+                    userData.forcePasswordChange = true;
                     // If emailVerification is checked, it means we SHOULD send verification, so emailVerified starts as false.
                     userData.emailVerified = formData.get('emailVerification') !== 'on';
                 } else if (password) {
@@ -1417,7 +1422,7 @@
             try {
                 const formData = new FormData(document.getElementById('performanceForm'));
                 const performanceData = {
-                    id: Date.now() + Math.random(),
+                    id: (Date.now() + Math.random()).toString(),
                     staffId: formData.get('performanceStaff'),
                     staffName: document.getElementById('performanceStaff').options[document.getElementById('performanceStaff').selectedIndex].text,
                     period: formData.get('reviewPeriod'),
@@ -1452,7 +1457,7 @@
             try {
                 const formData = new FormData(document.getElementById('schedulingForm'));
                 const scheduleData = {
-                    id: Date.now() + Math.random(),
+                    id: (Date.now() + Math.random()).toString(),
                     staffId: formData.get('scheduleStaff'),
                     staffName: document.getElementById('scheduleStaff').options[document.getElementById('scheduleStaff').selectedIndex].text,
                     date: formData.get('scheduleDate'),

@@ -15,8 +15,9 @@
 
         window.onload = async function() {
             if (await checkAuthPage()) {
-                if (typeof initializeDatabase === 'function') if (window.db) await window.db.init();
+                if (window.db) await window.db.init();
                 await loadParentData();
+                await loadMessages();
             }
         };
     </script>
@@ -128,6 +129,41 @@
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
+            display: none; /* Hidden by default, shown if student selected */
+        }
+
+        .student-selector-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .student-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .student-chip {
+            padding: 10px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .student-chip:hover {
+            background: #f0f4ff;
+        }
+
+        .student-chip.active {
+            background: #667eea;
+            color: white;
         }
 
         .progress-bar {
@@ -232,13 +268,20 @@
     <div class="container">
         <div class="welcome-message">
             <h2>Welcome, <span id="parentName">Parent</span>!</h2>
-            <p>Monitor your child's academic progress and attendance</p>
+            <p>Monitor your children's academic progress and attendance</p>
         </div>
 
-        <div class="child-info">
-            <h3>Child Information</h3>
+        <div class="student-selector-card" id="studentSelectorCard">
+            <h3>Select a Student</h3>
+            <div class="student-grid" id="studentGrid">
+                <!-- Chips for each student -->
+            </div>
+        </div>
+
+        <div class="child-info" id="childInfoPanel">
+            <h3>Student Profile</h3>
             <div class="info-item">
-                <span>Child's Name:</span>
+                <span>Name:</span>
                 <span id="childName">-</span>
             </div>
             <div class="info-item">
@@ -251,7 +294,14 @@
             </div>
         </div>
 
-        <div class="dashboard-grid">
+        <div class="dashboard-grid" id="statsGrid" style="display: none;">
+            <div class="card">
+                <h3>Academic Reports</h3>
+                <div id="reportsList">
+                    <p>No reports available yet.</p>
+                </div>
+            </div>
+
             <div class="card">
                 <h3>Attendance Overview</h3>
                 <div id="attendanceOverview">
@@ -304,7 +354,7 @@
         </div>
 
         <!-- Messaging Section -->
-        <div class="message-section">
+        <div class="message-section" id="messages">
             <h3>Messages</h3>
             <button class="compose-btn" onclick="showComposeForm()">Compose Message</button>
             <div id="messageList">
@@ -338,48 +388,62 @@
     </div>
 
     <script>
-        let db, useLocalStorage = false;
-
-        ;
-        }
-
-
-
         async function loadParentData() {
             const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
             if (!currentUser) return;
 
-            // Set parent name
-            document.getElementById('parentName').textContent = currentUser.parentName || currentUser.username;
+            document.getElementById('parentName').textContent = currentUser.fullName || currentUser.username;
 
-            // Load child information
-            window.db.getAll(window.DB_STORES.ADMISSIONS).then(admissions => {
-                const child = admissions.find(a => a.admissionNo === currentUser.admissionNo);
-                if (child) {
-                    document.getElementById('childName').textContent = child.studentName;
-                    document.getElementById('childClass').textContent = child.classAdmitted;
-                    document.getElementById('admissionNo').textContent = child.admissionNo;
-                    document.getElementById('currentClass').textContent = child.classAdmitted;
-                    document.getElementById('admissionDate').textContent = new Date(child.createdAt).toLocaleDateString();
+            const studentIds = currentUser.studentIds || (currentUser.admissionNo ? [currentUser.admissionNo] : []);
+            const admissions = await window.db.getAll(window.DB_STORES.ADMISSIONS);
+            const children = admissions.filter(a => studentIds.includes(a.admissionNo));
 
-                    // Calculate days enrolled
-                    const admissionDate = new Date(child.createdAt);
-                    const today = new Date();
-                    const daysEnrolled = Math.ceil((today - admissionDate) / (1000 * 60 * 60 * 24));
-                    document.getElementById('daysEnrolled').textContent = daysEnrolled + ' days';
-                }
-            });
+            const grid = document.getElementById('studentGrid');
+            grid.innerHTML = children.map(child => `
+                <div class="student-chip" onclick="selectStudent('${child.admissionNo}')" id="chip-${child.admissionNo}">
+                    ${child.studentName}<br>
+                    <small>${child.classAdmitted}</small>
+                </div>
+            `).join('');
 
-            // Load attendance data
-            window.db.getAll(window.DB_STORES.ATTENDANCE).then(attendanceRecords => {
+            if (children.length === 1) {
+                selectStudent(children[0].admissionNo);
+            }
+        }
+
+        async function selectStudent(studentId) {
+            document.querySelectorAll('.student-chip').forEach(c => c.classList.remove('active'));
+            const chip = document.getElementById(`chip-${studentId}`);
+            if (chip) chip.classList.add('active');
+
+            const admissions = await window.db.getAll(window.DB_STORES.ADMISSIONS);
+            const child = admissions.find(a => a.admissionNo === studentId);
+
+            if (child) {
+                document.getElementById('childInfoPanel').style.display = 'block';
+                document.getElementById('statsGrid').style.display = 'grid';
+
+                document.getElementById('childName').textContent = child.studentName;
+                document.getElementById('childClass').textContent = child.classAdmitted;
+                document.getElementById('admissionNo').textContent = child.admissionNo;
+                document.getElementById('currentClass').textContent = child.classAdmitted;
+                document.getElementById('admissionDate').textContent = new Date(child.createdAt).toLocaleDateString();
+
+                const admissionDate = new Date(child.createdAt);
+                const today = new Date();
+                const daysEnrolled = Math.ceil((today - admissionDate) / (1000 * 60 * 60 * 24));
+                document.getElementById('daysEnrolled').textContent = daysEnrolled + ' days';
+
+                // Load attendance for this student
+                const attendanceRecords = await window.db.getAll(window.DB_STORES.ATTENDANCE);
                 const childAttendance = attendanceRecords.filter(record =>
-                    record.statuses && record.statuses[currentUser.admissionNo]
+                    record.statuses && record.statuses[studentId]
                 );
 
                 if (childAttendance.length > 0) {
                     const totalDays = childAttendance.length;
                     const presentDays = childAttendance.filter(record =>
-                        record.statuses[currentUser.admissionNo] === 'Present'
+                        record.statuses[studentId] === 'Present'
                     ).length;
                     const absentDays = totalDays - presentDays;
                     const attendanceRate = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(1) : 0;
@@ -390,21 +454,48 @@
                     document.getElementById('attendanceRate').textContent = attendanceRate + '%';
                     document.getElementById('attendanceProgress').style.width = attendanceRate + '%';
 
-                    // Show recent attendance
                     const recentAttendance = childAttendance.slice(-5).reverse();
                     let html = '<div class="responsive-table-container"><table class="attendance-table">';
                     html += '<thead><tr><th>Date</th><th>Status</th></tr></thead><tbody>';
                     recentAttendance.forEach(record => {
-                        const status = record.statuses[currentUser.admissionNo];
+                        const status = record.statuses[studentId];
                         const statusClass = status === 'Present' ? 'status-present' : 'status-absent';
                         html += `<tr><td>${record.date}</td><td class="${statusClass}">${status}</td></tr>`;
                     });
                     html += '</tbody></table></div>';
                     document.getElementById('recentAttendance').innerHTML = html;
                 } else {
+                    document.getElementById('totalDays').textContent = '0';
+                    document.getElementById('presentDays').textContent = '0';
+                    document.getElementById('absentDays').textContent = '0';
+                    document.getElementById('attendanceRate').textContent = '0%';
+                    document.getElementById('attendanceProgress').style.width = '0%';
                     document.getElementById('recentAttendance').innerHTML = '<p>No attendance records found.</p>';
                 }
-            });
+
+                // Load Academic Reports
+                const reports = await window.db.getAll(window.DB_STORES.REPORTS);
+                const studentReport = reports.find(r => r.id === studentId);
+                const reportsList = document.getElementById('reportsList');
+
+                if (studentReport) {
+                    reportsList.innerHTML = `
+                        <div style="padding: 15px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+                            <strong>${studentReport.term} Report Card</strong><br>
+                            <small>Generated on ${new Date(studentReport.timestamp).toLocaleDateString()}</small><br><br>
+                            <button class="compose-btn" onclick="viewReportCard('${studentId}')">View Report Card</button>
+                        </div>
+                    `;
+                } else {
+                    reportsList.innerHTML = '<p>No reports available yet for this student.</p>';
+                }
+            }
+        }
+
+        function viewReportCard(studentId) {
+            // We can't easily open termly_report_card.html in read-only mode without changes
+            // For now, redirect or just show a message. Ideally, we'd have a viewer.
+            window.location.href = `termly_report_card.html?studentId=${studentId}&viewOnly=true`;
         }
 
 
@@ -576,8 +667,10 @@
         }
 
         // Initialize
-        if (window.db) await window.db.init();
-        loadMessages();
+        (async () => {
+            if (window.db) await window.db.init();
+            await loadMessages();
+        })();
     </script>
 </body>
 </html> 

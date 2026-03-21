@@ -1190,22 +1190,22 @@
     const ACCESS_LEVELS = { 'Super Admin': 4, 'Admin': 3, 'Standard': 2, 'Basic': 1 };
     const MODULES = {
       // Super Admin Level
-      userManagement: { name: 'User Management', icon: '👥', description: 'Full system administration', accessLevel: 'Super Admin', roles: ['super-admin', 'school-manager'], href: 'user-management.html' },
+      userManagement: { name: 'User Management', icon: '👥', description: 'Full system administration', accessLevel: 'Super Admin', roles: ['super-admin'], href: 'user-management.html' },
 
       // Admin Level
-      staff: { name: 'Staff Management', icon: '👨‍🏫', description: 'Manage staff accounts', accessLevel: 'Admin', roles: ['super-admin', 'school-manager'], href: 'Completed_Staff_Management_System.html' },
+      staff: { name: 'Staff Management', icon: '👨‍🏫', description: 'Manage staff and operations', accessLevel: 'Admin', roles: ['super-admin', 'school-manager', 'teacher'], href: 'Completed_Staff_Management_System.html' },
       financial: { name: 'Financials', icon: '💰', description: 'Access financial reports', accessLevel: 'Admin', roles: ['super-admin', 'school-manager'], href: 'financial-management.html' },
 
       // Standard Level
-      admissions: { name: 'Students', icon: '📝', description: 'Manage student records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'admission.html' },
-      assessment: { name: 'Assessment', icon: '📊', description: 'Create assessment records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'assessment.html' },
-      results: { name: 'Reports', icon: '📈', description: 'View school-wide reports', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'termly_report_card.html' },
-      archives: { name: 'Archives', icon: '📜', description: 'View historical records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'archives.html' },
+      admissions: { name: 'Student Management', icon: '📝', description: 'Manage student records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'teacher', 'staff'], href: 'admission.html' },
+      assessment: { name: 'Assessment Module', icon: '📊', description: 'Create assessment records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'teacher', 'staff'], href: 'assessment.html' },
+      results: { name: 'Reports Module', icon: '📈', description: 'View school-wide reports', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'teacher', 'staff'], href: 'termly_report_card.html' },
+      archives: { name: 'Archives', icon: '📜', description: 'View historical records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'teacher', 'staff'], href: 'archives.html' },
 
       // Basic Level
-      attendance: { name: 'Attendance', icon: '📅', description: 'Mark attendance for assigned classes', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'student', 'parent'], href: 'attendance.html' },
-      messaging: { name: 'Messaging', icon: '💬', description: 'Access communication tools', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'parent', 'student'], href: 'parent_dashboard.html' },
-      profile: { name: 'My Dashboard', icon: '🏠', description: 'Overview and personal records', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'student', 'parent'], href: 'Enhanced_School_Management_Portal.html' }
+      attendance: { name: 'Attendance Module', icon: '📅', description: 'Mark attendance for assigned classes', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'teacher', 'staff', 'student', 'parent'], href: 'attendance.html' },
+      messaging: { name: 'Messaging', icon: '💬', description: 'Access communication tools', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'teacher', 'staff', 'parent', 'student'], href: 'messaging-router.html' },
+      profile: { name: 'My Dashboard', icon: '🏠', description: 'Overview and personal records', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'teacher', 'staff', 'student', 'parent'], href: 'dashboard-router.html' }
     };
 
     async function checkAuth() {

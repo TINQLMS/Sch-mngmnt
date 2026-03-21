@@ -431,6 +431,27 @@ function validateRealAccountCreation(userData) {
     };
 }
 
+function checkPasswordStrength(password) {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
+
+    return {
+        score: strength,
+        isStrong: strength >= 4,
+        requirements: [
+            { label: '8+ characters', met: password.length >= 8 },
+            { label: 'Uppercase letter', met: /[A-Z]/.test(password) },
+            { label: 'Lowercase letter', met: /[a-z]/.test(password) },
+            { label: 'Number', met: /[0-9]/.test(password) },
+            { label: 'Special character', met: /[!@#$%^&*(),.?":{}|<>]/.test(password) }
+        ]
+    };
+}
+
 // Enhanced notification system
 function showNotification(message, type = 'info') {
     // Create notification element
