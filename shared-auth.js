@@ -93,8 +93,12 @@ async function redirectToDashboard(role) {
     switch (standardizedRole) {
         case 'super-admin':
         case 'school-manager':
+            // High-level administrators
+            redirectUrl = 'Enhanced_School_Management_Portal.html';
+            break;
         case 'staff':
         case 'teacher':
+            // Operational staff
             redirectUrl = 'Enhanced_School_Management_Portal.html';
             break;
         case 'student':
@@ -295,9 +299,62 @@ async function updateUserActivity(username, event) {
     }
 }
 
+// RBAC: Access Level Definitions
+const ACCESS_LEVEL_DEFINITIONS = {
+    'Super Admin': {
+        level: 4,
+        description: 'Full system access and control',
+        permissions: [
+            'All Administrator permissions',
+            'Complete system administration',
+            'Create administrator accounts',
+            'System-wide configuration',
+            'Full audit and security access'
+        ],
+        roles: ['super-admin']
+    },
+    'Admin': {
+        level: 3,
+        description: 'Advanced access for administrative staff',
+        permissions: [
+            'All Standard permissions',
+            'Manage staff accounts',
+            'Create and edit school policies',
+            'Access financial reports',
+            'System configuration access',
+            'User management capabilities'
+        ],
+        roles: ['school-manager']
+    },
+    'Standard': {
+        level: 2,
+        description: 'Standard access for regular staff members',
+        permissions: [
+            'All Basic permissions',
+            'Create and edit assessment records',
+            'View school-wide reports',
+            'Manage student records',
+            'Access to communication tools'
+        ],
+        roles: ['staff', 'teacher']
+    },
+    'Basic': {
+        level: 1,
+        description: 'Limited system access for new staff members',
+        permissions: [
+            'View assigned classes and students',
+            'Mark attendance for assigned classes',
+            'Basic profile management',
+            'View personal performance reports'
+        ],
+        roles: ['student', 'parent']
+    }
+};
+
 // Access level management
-function getAccessLevel(role) {
-    const accessLevels = {
+function getAccessLevel(roleOrLevel) {
+    // Map roles to numeric levels
+    const roleMap = {
         'super-admin': 4,
         'school-manager': 3,
         'staff': 2,
@@ -305,8 +362,16 @@ function getAccessLevel(role) {
         'student': 1,
         'parent': 1
     };
+
+    // Map level names to numeric levels
+    const levelMap = {
+        'Super Admin': 4,
+        'Admin': 3,
+        'Standard': 2,
+        'Basic': 1
+    };
     
-    return accessLevels[role] || 1;
+    return roleMap[roleOrLevel] || levelMap[roleOrLevel] || 1;
 }
 
 // Account creation validation

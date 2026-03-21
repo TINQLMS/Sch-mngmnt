@@ -8,7 +8,8 @@
   <script src="shared-utils.js"></script>
   <script>
     // Authentication check - using shared function
-    async function checkAuth() { if (!window.db) await window.db.init(); return await window.checkAuth("staff"); }
+    // Attendance is a Basic permission
+    async function checkAuth() { if (!window.db) await window.db.init(); return await window.checkAuth("student"); }
     
     // Check auth on page load
     window.onload = async function() {
