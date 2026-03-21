@@ -4,10 +4,12 @@
   <meta charset="UTF-8">
   <title>Admission Management</title>
   <script src="shared-auth.js"></script>
+  <script src="shared-db.js"></script>
   <script>
     // Authentication check - using shared function
-    function checkAuth() {
-      return window.checkAuth('staff', 'Standard');
+    async function checkPageAuth() {
+      if (window.db) await window.db.init();
+      return await window.checkAuth('staff', 'Standard');
     }
 
     // Function to go to dashboard based on user role
@@ -52,12 +54,6 @@
         }
     }
     
-    // Check auth on page load
-    window.onload = function() {
-      if (checkAuth()) {
-        // Continue with page initialization
-      }
-    };
   </script>
   <style>
     * { box-sizing: border-box; }
@@ -157,7 +153,7 @@
   <header>
     
     <div class="header-content">
-              <button onclick="goToDashboard()" class="btn-back">← Back to Dashboard</button>
+              <button onclick="window.goToDashboard()" class="btn-back">← Back to Dashboard</button>
       <h1>Admissions Management System</h1>
       <p>Comprehensive student admission management with multi-step forms and advanced features</p>
     </div>
@@ -1586,11 +1582,16 @@ function displayCredentials(credentials, studentName) {
 }
 
 // --- Init ---
-initializeDatabase(); // Initialize database on load
-showTab(0);
-renderTabHeaders();
-renderShowColumnsSelect();
-loadFilters();
+async function init() {
+  if (await checkPageAuth()) {
+    initializeDatabase();
+    showTab(0);
+    renderTabHeaders();
+    renderShowColumnsSelect();
+    loadFilters();
+  }
+}
+window.onload = init;
 })();
   </script>
 </body>

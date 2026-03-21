@@ -47,25 +47,18 @@ async function checkAuth(requiredRole = null, requiredAccessLevel = null) {
     }
     
     // Role-based access control with hierarchy
-    if (requiredRole) {
+    if (requiredRole || requiredAccessLevel) {
         const userLevel = getAccessLevel(currentUser.role);
-        const requiredLevel = getAccessLevel(requiredRole);
-
-        if (userLevel < requiredLevel) {
-            console.log('Insufficient role permissions: ' + currentUser.role + ' < ' + requiredRole);
-            showNotification('Access denied. Insufficient permissions.', 'error');
-            return false;
-        }
-    }
-    
-    // Access level validation
-    if (requiredAccessLevel) {
-        const userLevel = getAccessLevel(currentUser.role);
-        const requiredLevel = getAccessLevel(requiredAccessLevel);
+        const reqRoleLevel = requiredRole ? getAccessLevel(requiredRole) : 0;
+        const reqAccessLevel = requiredAccessLevel ? getAccessLevel(requiredAccessLevel) : 0;
+        const requiredLevel = Math.max(reqRoleLevel, reqAccessLevel);
         
         if (userLevel < requiredLevel) {
-            console.log('Insufficient access level');
-            showNotification('Access denied. Insufficient access level.', 'error');
+            console.log('Insufficient permissions: ' + currentUser.role + ' (level ' + userLevel + ') < required (level ' + requiredLevel + ')');
+            showNotification('Access denied. Redirecting to your dashboard...', 'error');
+            setTimeout(() => {
+                redirectToDashboard(currentUser.role);
+            }, 2000);
             return false;
         }
     }
@@ -88,28 +81,18 @@ async function redirectToDashboard(role) {
     console.log('Redirecting to dashboard for role:', role);
 
     let redirectUrl = 'index.html';
-    const standardizedRole = role ? role.toLowerCase() : '';
+    const standardizedRole = role ? role.toLowerCase().trim() : '';
 
-    switch (standardizedRole) {
-        case 'super-admin':
-        case 'school-manager':
-            // High-level administrators
-            redirectUrl = 'Enhanced_School_Management_Portal.html';
-            break;
-        case 'staff':
-        case 'teacher':
-            // Operational staff
-            redirectUrl = 'Enhanced_School_Management_Portal.html';
-            break;
-        case 'student':
-            redirectUrl = 'student_dashboard.html';
-            break;
-        case 'parent':
-            redirectUrl = 'parent_dashboard.html';
-            break;
-        default:
-            console.warn('Unknown role for redirection:', role);
-            redirectUrl = 'index.html';
+    if (standardizedRole === 'super-admin' || standardizedRole === 'school-manager' ||
+        standardizedRole === 'staff' || standardizedRole === 'teacher') {
+        redirectUrl = 'Enhanced_School_Management_Portal.html';
+    } else if (standardizedRole === 'student') {
+        redirectUrl = 'student_dashboard.html';
+    } else if (standardizedRole === 'parent') {
+        redirectUrl = 'parent_dashboard.html';
+    } else {
+        console.warn('Unknown or missing role for redirection:', role);
+        redirectUrl = 'index.html';
     }
 
     console.log('Final redirect URL:', redirectUrl);
@@ -353,6 +336,9 @@ const ACCESS_LEVEL_DEFINITIONS = {
 
 // Access level management
 function getAccessLevel(roleOrLevel) {
+    if (!roleOrLevel) return 1;
+    const normalized = roleOrLevel.toString().toLowerCase().trim();
+
     // Map roles to numeric levels
     const roleMap = {
         'super-admin': 4,
@@ -365,13 +351,15 @@ function getAccessLevel(roleOrLevel) {
 
     // Map level names to numeric levels
     const levelMap = {
-        'Super Admin': 4,
-        'Admin': 3,
-        'Standard': 2,
-        'Basic': 1
+        'super admin': 4,
+        'admin': 3,
+        'standard': 2,
+        'basic': 1,
+        'super administrator': 4,
+        'administrator': 3
     };
     
-    return roleMap[roleOrLevel] || levelMap[roleOrLevel] || 1;
+    return roleMap[normalized] || levelMap[normalized] || 1;
 }
 
 // Account creation validation

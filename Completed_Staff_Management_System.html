@@ -341,7 +341,7 @@
         <!-- Header -->
         <div class="header">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                <a href="Enhanced_School_Management_Portal.html" class="btn btn-secondary">← Back to Dashboard</a>
+                <button class="btn btn-secondary" onclick="window.goToDashboard()">← Back to Dashboard</button>
                 <button class="btn btn-danger" onclick="window.logout()">Logout</button>
             </div>
             <h1>👥 Staff Management System</h1>
@@ -809,7 +809,7 @@
     <script>
         let editingStaffId = null;
 
-    async function checkAuthPage() {
+    async function checkPageAuth() {
         if (!window.db) await window.db.init();
         return await window.checkAuth('school-manager');
     }
@@ -1743,7 +1743,7 @@
         async function initializeSystem() {
             try {
                 await window.db.init();
-                if (!(await checkAuthPage())) return;
+                if (!(await checkPageAuth())) return;
                 const activeTab = document.querySelector('.tab-content.active');
                 if (activeTab) {
                     const tabId = activeTab.id;

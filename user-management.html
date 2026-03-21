@@ -167,7 +167,7 @@
       <h1>User Management System</h1>
       <p>Securely manage accounts, roles, and permissions</p>
       <div style="margin-top: 20px;">
-        <a href="Enhanced_School_Management_Portal.html" class="btn btn-secondary">← Back to Dashboard</a>
+        <button class="btn btn-secondary" onclick="window.goToDashboard()">← Back to Dashboard</button>
         <button class="btn btn-danger" onclick="window.logout()">Logout</button>
       </div>
     </header>
@@ -688,12 +688,12 @@
     }
 
     // Startup
-    document.addEventListener('DOMContentLoaded', async () => {
+    window.onload = async () => {
       const authorized = await checkPageAuth();
       if (authorized) {
         loadUsers();
       }
-    });
+    };
 
     window.onclick = function(event) {
       if (event.target.classList.contains('modal')) {

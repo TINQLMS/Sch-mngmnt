@@ -419,7 +419,7 @@
     <div class="container">
         <div class="header">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                <a href="Enhanced_School_Management_Portal.html" class="btn btn-secondary">← Back to Dashboard</a>
+                <button class="btn btn-secondary" onclick="window.goToDashboard()">← Back to Dashboard</button>
                 <button class="btn btn-danger" onclick="window.logout()">Logout</button>
             </div>
             <h1>💰 Financial Management System</h1>
@@ -1474,11 +1474,18 @@
             }
         }
 
+        async function checkPageAuth() {
+            if (!window.db) await window.db.init();
+            return await window.checkAuth('school-manager');
+        }
+
         // Initialize on page load
         window.onload = async function() {
-            await financialSystem.init();
-            await loadDashboardData();
-            if (window.showNotification) window.showNotification('system', 'System Ready', 'Financial Management System initialized with cedis currency');
+            if (await checkPageAuth()) {
+                await financialSystem.init();
+                await loadDashboardData();
+                if (window.showNotification) window.showNotification('system', 'System Ready', 'Financial Management System initialized with cedis currency');
+            }
         };
 
         // Close modal when clicking outside

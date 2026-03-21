@@ -119,7 +119,7 @@
 </head>
 <body>
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; max-width: 1000px; margin: 0 auto 20px auto;">
-      <a href="Enhanced_School_Management_Portal.html" class="btn btn-secondary">← Back to Dashboard</a>
+      <button class="btn btn-secondary" onclick="window.goToDashboard()">← Back to Dashboard</button>
       <button class="btn btn-danger" onclick="window.logout()">Logout</button>
   </div>
   <!-- Access Control Check -->
@@ -230,7 +230,6 @@
       <button onclick="loadFromIndexedDB()">📂 Load</button>
       <button onclick="printReport()">🖨️ Print</button>
       <button onclick="exportPDF()">📄 Export PDF</button>
-      <button onclick="window.goToDashboard()" style="background: #667eea; color: white;">🏠 Back to Dashboard</button>
     </div>
   </div>
   <script>
@@ -243,7 +242,7 @@
     };
 
     // Function to get user's access level
-    function getUserAccessLevel() {
+    window.getUserAccessLevel = function() {
       const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
       if (!loginCredentials) return null;
       
@@ -259,13 +258,13 @@
     }
 
     // Function to get user's role
-    function getUserRole() {
+    window.getUserRole = function() {
       const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
       return loginCredentials ? loginCredentials.role : null;
     }
 
     // Function to check if user has access to this module
-    function hasModuleAccess() {
+    window.hasModuleAccess = function() {
       const userRole = getUserRole();
       const userAccessLevel = getUserAccessLevel();
       const urlParams = new URLSearchParams(window.location.search);
@@ -299,12 +298,12 @@
     }
 
     // Function to check authentication - using shared function
-    async function checkAuthPage() {
+    async function checkPageAuth() {
       return await window.checkAuth('staff', 'Standard');
     }
 
     // Function to display user info
-    function displayUserInfo() {
+    window.displayUserInfo = function() {
       const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
       const userInfo = document.getElementById('userInfo');
       
@@ -317,12 +316,12 @@
     }
 
     // Function to go to login
-    function goToLogin() {
+    window.goToLogin = function() {
       window.location.href = 'index.html';
     }
 
     // Function to go to dashboard
-    function goToDashboard() {
+    window.goToDashboard = function() {
       const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
       if (loginCredentials) {
         if (loginCredentials.role === 'parent') {
@@ -337,7 +336,7 @@
 
     // Initialize access control
     async function initializeAccessControl() {
-      if (!window.db) await window.db.init(); if (!(await checkAuthPage())) return;
+      if (!window.db) await window.db.init(); if (!(await checkPageAuth())) return;
       
       if (!hasModuleAccess()) {
         document.getElementById('accessControl').style.display = 'block';
@@ -375,29 +374,30 @@
       } else {
         populateStudentSelector();
       }
-    const subjects = [
-      'Eng. Language', 'Literacy', 'Mathematics', 'Numeracy', 'Creative Art and Design', 'Science',
-      'R.M.E', 'History', 'Asante Twi', 'Computing', 'Social Studies', 'Career Technology'
-    ];
 
-    const table = document.getElementById('subjectTable');
-    table.innerHTML = '';
-    subjects.forEach((sub, index) => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${sub}</td>
-        <td><input type="number" class="class-score" oninput="calculateTotal(this)"></td>
-        <td><input type="number" class="exam-score" oninput="calculateTotal(this)"></td>
-        <td><input type="number" class="total-score" readonly></td>
-        <td class="position"></td>
-        <td class="grade"></td>
-        <td class="proficiency"></td>
-      `;
-      table.appendChild(row);
-    });
+      const subjects = [
+        'Eng. Language', 'Literacy', 'Mathematics', 'Numeracy', 'Creative Art and Design', 'Science',
+        'R.M.E', 'History', 'Asante Twi', 'Computing', 'Social Studies', 'Career Technology'
+      ];
+
+      const table = document.getElementById('subjectTable');
+      table.innerHTML = '';
+      subjects.forEach((sub, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${sub}</td>
+          <td><input type="number" class="class-score" oninput="calculateTotal(this)"></td>
+          <td><input type="number" class="exam-score" oninput="calculateTotal(this)"></td>
+          <td><input type="number" class="total-score" readonly></td>
+          <td class="position"></td>
+          <td class="grade"></td>
+          <td class="proficiency"></td>
+        `;
+        table.appendChild(row);
+      });
     }
 
-    function calculateTotal(input) {
+    window.calculateTotal = function(input) {
       const row = input.parentElement.parentElement;
       const classScore = parseFloat(row.cells[1].children[0].value) || 0;
       const examScore = parseFloat(row.cells[2].children[0].value) || 0;
@@ -430,7 +430,7 @@
       });
     }
 
-    async function saveToIndexedDB() {
+    window.saveToIndexedDB = async function() {
       const studentId = document.getElementById('studentSelector').value || document.getElementById('studentIdInput').value;
       if (!studentId) return alert("Please select or enter a Student ID.");
 
@@ -505,7 +505,7 @@
         // Note: In a real system, we might want to clear assessments for the new term here.
     }
 
-    async function loadFromIndexedDB() {
+    window.loadFromIndexedDB = async function() {
       const studentId = document.getElementById('studentSelector').value;
       if (!studentId) return alert("Please select a student first.");
 
@@ -532,7 +532,7 @@
       }
     }
 
-    async function loadStudentData(studentId) {
+    window.loadStudentData = async function(studentId) {
         if (!studentId) return;
 
         // Auto-calculate Number on Roll
@@ -626,11 +626,11 @@
         });
     }
 
-    function printReport() {
+    window.printReport = function() {
       window.print();
     }
 
-    function exportPDF() {
+    window.exportPDF = function() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF('p', 'pt', 'a4');
       doc.html(document.getElementById('reportCard'), {
