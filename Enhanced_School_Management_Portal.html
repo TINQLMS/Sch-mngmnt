@@ -1189,22 +1189,28 @@
   <script>
     const ACCESS_LEVELS = { 'Super Admin': 4, 'Admin': 3, 'Standard': 2, 'Basic': 1 };
     const MODULES = {
-      dashboard: { name: 'Dashboard', icon: '📊', description: 'Overview and analytics', accessLevel: 'Basic', url: '#dashboard', roles: ['super-admin', 'school-manager', 'staff', 'student', 'parent'], href: 'index.html' },
-      admissions: { name: 'Admissions', icon: '📝', description: 'Student registration and management', accessLevel: 'Admin', url: '#admissions', roles: ['super-admin', 'school-manager'], href: 'admission.html' },
-      attendance: { name: 'Attendance', icon: '📅', description: 'Track student attendance', accessLevel: 'Standard', url: '#attendance', roles: ['super-admin', 'school-manager', 'staff'], href: 'attendance.html' },
-      staff: { name: 'Staff Management', icon: '👨‍🏫', description: 'Staff directory and management', accessLevel: 'Admin', url: '#staff', roles: ['super-admin', 'school-manager'], href: 'Completed_Staff_Management_System.html' },
-      results: { name: 'Results', icon: '📈', description: 'Academic results and reports', accessLevel: 'Standard', url: '#results', roles: ['super-admin', 'school-manager', 'staff', 'student', 'parent'], href: 'termly_report_card.html' },
-      archives: { name: 'Archives', icon: '📜', description: 'Historical student records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'archives.html' },
-      assessment: { name: 'Assessment', icon: '📊', description: 'Student assessment and evaluation', accessLevel: 'Standard', url: '#assessment', roles: ['super-admin', 'school-manager', 'staff'], href: 'assessment.html' },
-      financial: { name: 'Financial Management', icon: '💰', description: 'Financial management', accessLevel: 'Admin', url: '#financial', roles: ['super-admin', 'school-manager'], href: 'financial-management.html' },
-      messaging: { name: 'Messaging', icon: '💬', description: 'Communication center', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'parent', 'student'], href: 'parent_dashboard.html' },
-      userManagement: { name: 'User Management', icon: '👥', accessLevel: 'Super Admin', roles: ['super-admin'], href: 'user-management.html' }
+      // Super Admin Level
+      userManagement: { name: 'User Management', icon: '👥', description: 'Full system administration', accessLevel: 'Super Admin', roles: ['super-admin', 'school-manager'], href: 'user-management.html' },
+
+      // Admin Level
+      staff: { name: 'Staff Management', icon: '👨‍🏫', description: 'Manage staff accounts', accessLevel: 'Admin', roles: ['super-admin', 'school-manager'], href: 'Completed_Staff_Management_System.html' },
+      financial: { name: 'Financials', icon: '💰', description: 'Access financial reports', accessLevel: 'Admin', roles: ['super-admin', 'school-manager'], href: 'financial-management.html' },
+
+      // Standard Level
+      admissions: { name: 'Students', icon: '📝', description: 'Manage student records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'admission.html' },
+      assessment: { name: 'Assessment', icon: '📊', description: 'Create assessment records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'assessment.html' },
+      results: { name: 'Reports', icon: '📈', description: 'View school-wide reports', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'termly_report_card.html' },
+      archives: { name: 'Archives', icon: '📜', description: 'View historical records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'archives.html' },
+
+      // Basic Level
+      attendance: { name: 'Attendance', icon: '📅', description: 'Mark attendance for assigned classes', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'student', 'parent'], href: 'attendance.html' },
+      messaging: { name: 'Messaging', icon: '💬', description: 'Access communication tools', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'parent', 'student'], href: 'parent_dashboard.html' },
+      profile: { name: 'My Dashboard', icon: '🏠', description: 'Overview and personal records', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'student', 'parent'], href: 'Enhanced_School_Management_Portal.html' }
     };
 
-    function checkAuth() {
-      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-      if (!currentUser) { window.location.href = 'index.html'; return false; }
-      return true;
+    async function checkAuth() {
+      if (!window.db) await window.db.init();
+      return await window.checkAuth('student'); // All registered users have basic dashboard access
     }
 
     function getUserRole() {
@@ -1222,17 +1228,59 @@
         .join('');
     }
 
+    function renderModuleGrid() {
+      const role = getUserRole();
+      const mainContent = document.getElementById('mainContent');
+      if (!mainContent) return;
+
+      const allowedModules = Object.entries(MODULES).filter(([k, m]) => m.roles.includes(role));
+
+      let html = '<div class="modules-grid">';
+      allowedModules.forEach(([k, m]) => {
+        if (k === 'dashboard') return; // Don't show dashboard link in the grid
+        html += `
+          <a href="${m.href}" class="module-card" style="text-decoration: none; color: inherit;">
+            <div class="module-icon">${m.icon}</div>
+            <div class="module-info">
+              <h3>${m.name}</h3>
+              <p class="module-description">${m.description}</p>
+              <span class="module-access">${m.accessLevel} Access</span>
+            </div>
+          </a>
+        `;
+      });
+      html += '</div>';
+
+      mainContent.innerHTML = html;
+    }
+
     async function loadDashboardData() {
       if (!window.db) return;
-      const users = await window.db.getAll(window.DB_STORES.USERS);
-      console.log('Dashboard data loaded:', users.length, 'users');
+      // Populate some stats
+      const [users, students, staff] = await Promise.all([
+          window.db.getAll(window.DB_STORES.USERS),
+          window.db.getAll(window.DB_STORES.ADMISSIONS),
+          window.db.getAll(window.DB_STORES.STAFF)
+      ]);
+
+      const mainContent = document.getElementById('mainContent');
+      const statsHtml = `
+        <div class="dashboard-stats">
+          <div class="stat-card"><h3>Users</h3><p>${users.length}</p></div>
+          <div class="stat-card"><h3>Students</h3><p>${students.length}</p></div>
+          <div class="stat-card"><h3>Staff</h3><p>${staff.length}</p></div>
+        </div>
+      `;
+
+      mainContent.insertAdjacentHTML('afterbegin', statsHtml);
     }
 
     window.onload = async function() {
-      if (window.db) await window.db.init();
-      if (!checkAuth()) return;
-      renderModuleNavigation();
-      await loadDashboardData();
+      if (await checkAuth()) {
+        renderModuleNavigation();
+        renderModuleGrid();
+        await loadDashboardData();
+      }
     };
   </script>
     </body></html>
