@@ -20,6 +20,8 @@
                 await loadMessages();
             }
         };
+
+        // Redundant init block in the script section to be removed/merged
     </script>
     <style>
         * {
@@ -666,11 +668,6 @@
             return window.getTimeAgo(timestamp);
         }
 
-        // Initialize
-        (async () => {
-            if (window.db) await window.db.init();
-            await loadMessages();
-        })();
     </script>
 </body>
 </html> 

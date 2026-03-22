@@ -81,14 +81,14 @@ async function redirectToDashboard(role) {
     console.log('Redirecting to dashboard for role:', role);
 
     let redirectUrl = 'index.html';
-    const standardizedRole = role ? role.toLowerCase().trim() : '';
+    const stdRole = standardizeRole(role);
 
-    if (standardizedRole === 'super-admin' || standardizedRole === 'school-manager' ||
-        standardizedRole === 'staff' || standardizedRole === 'teacher') {
+    if (stdRole === 'super-admin' || stdRole === 'school-manager' ||
+        stdRole === 'staff' || stdRole === 'teacher') {
         redirectUrl = 'Enhanced_School_Management_Portal.html';
-    } else if (standardizedRole === 'student') {
+    } else if (stdRole === 'student') {
         redirectUrl = 'student_dashboard.html';
-    } else if (standardizedRole === 'parent') {
+    } else if (stdRole === 'parent') {
         redirectUrl = 'parent_dashboard.html';
     } else {
         console.warn('Unknown or missing role for redirection:', role);
@@ -334,32 +334,38 @@ const ACCESS_LEVEL_DEFINITIONS = {
     }
 };
 
+// Helper to standardize role strings
+function standardizeRole(role) {
+    if (!role) return '';
+    const r = role.toString().toLowerCase().trim().replace(/[\s_]/g, '-');
+    // Map 'teacher' back to 'staff' if needed for standardized routing/checks
+    if (r === 'teacher') return 'staff';
+    // Map 'school-manager' to 'admin' for easier level matching if needed,
+    // but keep school-manager for routing.
+    return r;
+}
+
 // Access level management
 function getAccessLevel(roleOrLevel) {
     if (!roleOrLevel) return 1;
-    const normalized = roleOrLevel.toString().toLowerCase().trim();
+    const normalized = standardizeRole(roleOrLevel);
 
     // Map roles to numeric levels
     const roleMap = {
         'super-admin': 4,
+        'super-administrator': 4,
         'school-manager': 3,
+        'admin': 3,
+        'administrator': 3,
         'staff': 2,
         'teacher': 2,
-        'student': 1,
-        'parent': 1
-    };
-
-    // Map level names to numeric levels
-    const levelMap = {
-        'super admin': 4,
-        'admin': 3,
         'standard': 2,
-        'basic': 1,
-        'super administrator': 4,
-        'administrator': 3
+        'student': 1,
+        'parent': 1,
+        'basic': 1
     };
     
-    return roleMap[normalized] || levelMap[normalized] || 1;
+    return roleMap[normalized] || 1;
 }
 
 // Account creation validation
@@ -528,4 +534,5 @@ window.redirectToDashboard = redirectToDashboard;
 window.goToDashboard = goToDashboard;
 window.addAuditLog = addAuditLog;
 window.validateRealAccountCreation = validateRealAccountCreation;
-window.showNotification = showNotification; 
+window.showNotification = showNotification;
+window.standardizeRole = standardizeRole;

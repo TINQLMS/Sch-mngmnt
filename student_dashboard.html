@@ -15,8 +15,9 @@
 
         window.onload = async function() {
             if (await checkAuthPage()) {
-                if (typeof initializeDatabase === 'function') if (window.db) await window.db.init();
+                if (window.db) await window.db.init();
                 await loadStudentData();
+                await loadMessages();
             }
         };
     </script>
@@ -545,12 +546,6 @@
             return window.getTimeAgo(timestamp);
         }
 
-        // Initialize
-        (async () => {
-            if (window.db) await window.db.init();
-            await loadStudentData();
-            await loadMessages();
-        })();
     </script>
 </body>
 </html> 

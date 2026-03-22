@@ -689,7 +689,7 @@
         }
 
         async function completeLogin(user) {
-            const standardizedRole = user.role.toLowerCase();
+            const standardizedRole = standardizeRole(user.role);
             sessionStorage.setItem('selectedRole', standardizedRole);
 
             // Update user metadata
@@ -718,7 +718,7 @@
                 role: standardizedRole
             }));
 
-            await addAuditLog('login', `Successful login for ${user.username}`, user);
+            if (window.addAuditLog) await window.addAuditLog('login', `Successful login for ${user.username}`, user);
 
             // Redirect using shared logic
             redirectToDashboard(standardizedRole);

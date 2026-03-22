@@ -11,49 +11,6 @@
       if (window.db) await window.db.init();
       return await window.checkAuth('staff', 'Standard');
     }
-
-    // Function to go to dashboard based on user role
-    function goToDashboard() {
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-        const loginCredentials = JSON.parse(sessionStorage.getItem('loginCredentials') || 'null');
-        
-        if (currentUser && currentUser.role) {
-            switch (currentUser.role) {
-                case 'super-admin':
-                case 'school-manager':
-                case 'staff':
-                    window.location.href = 'Enhanced_School_Management_Portal.html';
-                    break;
-                case 'student':
-                    window.location.href = 'student_dashboard.html';
-                    break;
-                case 'parent':
-                    window.location.href = 'parent_dashboard.html';
-                    break;
-                default:
-                    window.location.href = 'index.html';
-            }
-        } else if (loginCredentials && loginCredentials.role) {
-            switch (loginCredentials.role) {
-                case 'super-admin':
-                case 'school-manager':
-                case 'staff':
-                    window.location.href = 'Enhanced_School_Management_Portal.html';
-                    break;
-                case 'student':
-                    window.location.href = 'student_dashboard.html';
-                    break;
-                case 'parent':
-                    window.location.href = 'parent_dashboard.html';
-                    break;
-                default:
-                    window.location.href = 'index.html';
-            }
-        } else {
-            window.location.href = 'index.html';
-        }
-    }
-    
   </script>
   <style>
     * { box-sizing: border-box; }
@@ -327,250 +284,35 @@ const admissionTabs = [
   }
 ];
 
-// --- IndexedDB Setup with localStorage fallback ---
-let db;
-let useLocalStorage = false;
-let dbInitialized = false;
+// --- Unified Database Integration ---
+// Using the central shared-db.js via window.db
 
-function initializeDatabase() {
-  const request = indexedDB.open('AdmissionsDB', 1);
-
-  request.onerror = () => {
-    console.log('IndexedDB failed to open, falling back to localStorage');
-    useLocalStorage = true;
-    dbInitialized = true;
-    refreshTable();
-    fillFilters();
-  };
-
-  request.onsuccess = () => {
-    db = request.result;
-    dbInitialized = true;
-    refreshTable();
-    fillFilters();
-  };
-
-  request.onupgradeneeded = e => {
-    db = e.target.result;
-    if (!db.objectStoreNames.contains('admissions')) {
-      db.createObjectStore('admissions', { keyPath: 'admissionNo' });
-    }
-    if (!db.objectStoreNames.contains('users')) {
-      db.createObjectStore('users', { keyPath: 'username' });
-    }
-  };
+async function saveToDatabase(data) {
+  await window.db.put(window.DB_STORES.ADMISSIONS, data);
 }
 
-// --- Database Operations with Fallback ---
-function saveToDatabase(data) {
-  if (useLocalStorage) {
-    return saveToLocalStorage(data);
-  } else {
-    return saveToIndexedDB(data);
-  }
+async function deleteFromDatabase(admissionNo) {
+  await window.db.delete(window.DB_STORES.ADMISSIONS, admissionNo);
 }
 
-function saveToIndexedDB(data) {
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction(['admissions'], 'readwrite');
-      const store = tx.objectStore('admissions');
-      const request = store.put(data);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    } catch (error) {
-      console.log('IndexedDB operation failed, falling back to localStorage');
-      useLocalStorage = true;
-      saveToLocalStorage(data).then(resolve).catch(reject);
-    }
-  });
+async function getAllFromDatabase() {
+  return await window.db.getAll(window.DB_STORES.ADMISSIONS);
 }
 
-function saveToLocalStorage(data) {
-  return new Promise((resolve, reject) => {
-    try {
-      const admissions = JSON.parse(localStorage.getItem('admissions') || '[]');
-      const existingIndex = admissions.findIndex(a => a.admissionNo === data.admissionNo);
-
-      if (existingIndex >= 0) {
-        admissions[existingIndex] = data;
-      } else {
-        admissions.push(data);
-      }
-
-      localStorage.setItem('admissions', JSON.stringify(admissions));
-      resolve();
-    } catch (error) {
-      reject(error);
-    }
-  });
+async function getFromDatabase(admissionNo) {
+  return await window.db.get(window.DB_STORES.ADMISSIONS, admissionNo);
 }
 
-function deleteFromDatabase(admissionNo) {
-  if (useLocalStorage) {
-    return deleteFromLocalStorage(admissionNo);
-  } else {
-    return deleteFromIndexedDB(admissionNo);
-  }
-}
+async function getNextAdmissionNumber() {
+  const admissions = await getAllFromDatabase();
+  const numbers = admissions
+    .map(a => a.admissionNo)
+    .filter(n => /^\d+$/.test(n))
+    .map(n => parseInt(n, 10));
 
-function deleteFromIndexedDB(admissionNo) {
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction(['admissions'], 'readwrite');
-      const store = tx.objectStore('admissions');
-      const request = store.delete(admissionNo);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    } catch (error) {
-      console.log('IndexedDB delete failed, falling back to localStorage');
-      useLocalStorage = true;
-      deleteFromLocalStorage(admissionNo).then(resolve).catch(reject);
-    }
-  });
-}
-
-function deleteFromLocalStorage(admissionNo) {
-  return new Promise((resolve, reject) => {
-    try {
-      const admissions = JSON.parse(localStorage.getItem('admissions') || '[]');
-      const filtered = admissions.filter(a => a.admissionNo !== admissionNo);
-      localStorage.setItem('admissions', JSON.stringify(filtered));
-      resolve();
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-function getAllFromDatabase() {
-  if (useLocalStorage) {
-    return getAllFromLocalStorage();
-  } else {
-    return getAllFromIndexedDB();
-  }
-}
-
-function getAllFromIndexedDB() {
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction(['admissions'], 'readonly');
-      const store = tx.objectStore('admissions');
-      const request = store.getAll();
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    } catch (error) {
-      console.log('IndexedDB getAll failed, falling back to localStorage');
-      useLocalStorage = true;
-      getAllFromLocalStorage().then(resolve).catch(reject);
-    }
-  });
-}
-
-function getAllFromLocalStorage() {
-  return new Promise((resolve, reject) => {
-    try {
-      const admissions = JSON.parse(localStorage.getItem('admissions') || '[]');
-      resolve(admissions);
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-function getFromDatabase(admissionNo) {
-  if (useLocalStorage) {
-    return getFromLocalStorage(admissionNo);
-  } else {
-    return getFromIndexedDB(admissionNo);
-  }
-}
-
-function getFromIndexedDB(admissionNo) {
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction(['admissions'], 'readonly');
-      const store = tx.objectStore('admissions');
-      const request = store.get(admissionNo);
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    } catch (error) {
-      console.log('IndexedDB get failed, falling back to localStorage');
-      useLocalStorage = true;
-      getFromLocalStorage(admissionNo).then(resolve).catch(reject);
-    }
-  });
-}
-
-function getFromLocalStorage(admissionNo) {
-  return new Promise((resolve, reject) => {
-    try {
-      const admissions = JSON.parse(localStorage.getItem('admissions') || '[]');
-      const admission = admissions.find(a => a.admissionNo === admissionNo);
-      resolve(admission);
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-function getNextAdmissionNumber() {
-  if (useLocalStorage) {
-    return getNextAdmissionNumberFromLocalStorage();
-  } else {
-    return getNextAdmissionNumberFromIndexedDB();
-  }
-}
-
-function getNextAdmissionNumberFromIndexedDB() {
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction(['admissions'], 'readonly');
-      const store = tx.objectStore('admissions');
-      const numbers = [];
-
-      store.openCursor().onsuccess = function(e) {
-        const cursor = e.target.result;
-        if (cursor) {
-          const n = cursor.key;
-          if (/^\d+$/.test(n)) numbers.push(parseInt(n,10));
-          cursor.continue();
-        } else {
-          let next = 1;
-          if (numbers.length) next = Math.max(...numbers) + 1;
-          const nextNo = (''+next).padStart(4,'0');
-          resolve(nextNo);
-        }
-      };
-    } catch (error) {
-      console.log('IndexedDB getNextAdmissionNumber failed, falling back to localStorage');
-      useLocalStorage = true;
-      getNextAdmissionNumberFromLocalStorage().then(resolve).catch(reject);
-    }
-  });
-}
-
-function getNextAdmissionNumberFromLocalStorage() {
-  return new Promise((resolve, reject) => {
-    try {
-      const admissions = JSON.parse(localStorage.getItem('admissions') || '[]');
-      const numbers = admissions
-        .map(a => a.admissionNo)
-        .filter(n => /^\d+$/.test(n))
-        .map(n => parseInt(n, 10));
-
-      let next = 1;
-      if (numbers.length) next = Math.max(...numbers) + 1;
-      const nextNo = (''+next).padStart(4,'0');
-      resolve(nextNo);
-    } catch (error) {
-      reject(error);
-    }
-  });
+  let next = 1;
+  if (numbers.length) next = Math.max(...numbers) + 1;
+  return (''+next).padStart(4,'0');
 }
 
 // --- Admission Form Logic ---
@@ -1484,29 +1226,30 @@ function createUserAccounts(admissionData) {
 
       const studentUser = {
         username: studentUsername,
-        password: studentPassword,
+        password: btoa(studentPassword),
         role: 'student',
         admissionNo: admissionData.admissionNo,
         studentName: admissionData.studentName,
         classAdmitted: admissionData.classAdmitted,
-        firstTimeLogin: true,
+        forcePasswordChange: true,
+        status: 'active',
         createdAt: new Date().toISOString()
       };
 
       // Create parent account
-      const parentUsername = admissionData.fatherName ?
-        admissionData.fatherName.replace(/\s+/g, '').toLowerCase() + admissionData.admissionNo :
-        admissionData.motherName.replace(/\s+/g, '').toLowerCase() + admissionData.admissionNo;
+      const parentBaseName = admissionData.parentName || admissionData.fatherName || admissionData.motherName || 'parent';
+      const parentUsername = parentBaseName.replace(/\s+/g, '').toLowerCase() + admissionData.admissionNo;
       const parentPassword = Math.random().toString(36).substring(2, 8);
 
       const parentUser = {
         username: parentUsername,
-        password: parentPassword,
+        password: btoa(parentPassword),
         role: 'parent',
         admissionNo: admissionData.admissionNo,
         studentName: admissionData.studentName,
-        parentName: admissionData.fatherName || admissionData.motherName,
-        firstTimeLogin: true,
+        parentName: parentBaseName,
+        forcePasswordChange: true,
+        status: 'active',
         createdAt: new Date().toISOString()
       };
 
@@ -1520,37 +1263,21 @@ function createUserAccounts(admissionData) {
         parent: {
           username: parentUsername,
           password: parentPassword,
-          name: admissionData.fatherName || admissionData.motherName
+          name: parentBaseName
         }
       };
 
-      // Save to users store
-      if (useLocalStorage) {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        users.push(studentUser, parentUser);
-        localStorage.setItem('users', JSON.stringify(users));
-
-        // Store credentials for later retrieval
-        const allCredentials = JSON.parse(localStorage.getItem('userCredentials') || '[]');
-        allCredentials.push(credentials);
-        localStorage.setItem('userCredentials', JSON.stringify(allCredentials));
-
-        resolve(credentials);
-      } else {
-        const tx = db.transaction("users", "readwrite");
-        const store = tx.objectStore("users");
-
-        Promise.all([
-          new Promise((res, rej) => store.add(studentUser).onsuccess = res),
-          new Promise((res, rej) => store.add(parentUser).onsuccess = res)
-        ]).then(() => {
-          // Store credentials in localStorage for easy access
+      // Save to users store using unified window.db
+      Promise.all([
+          window.db.put(window.DB_STORES.USERS, studentUser),
+          window.db.put(window.DB_STORES.USERS, parentUser)
+      ]).then(() => {
+          // Store credentials in localStorage for easy retrieval by Admin if needed
           const allCredentials = JSON.parse(localStorage.getItem('userCredentials') || '[]');
           allCredentials.push(credentials);
           localStorage.setItem('userCredentials', JSON.stringify(allCredentials));
           resolve(credentials);
-        }).catch(reject);
-      }
+      }).catch(reject);
     } catch (error) {
       reject(error);
     }
@@ -1584,7 +1311,6 @@ function displayCredentials(credentials, studentName) {
 // --- Init ---
 async function init() {
   if (await checkPageAuth()) {
-    initializeDatabase();
     showTab(0);
     renderTabHeaders();
     renderShowColumnsSelect();
