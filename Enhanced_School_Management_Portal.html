@@ -1188,56 +1188,61 @@
 
   <script>
     const ACCESS_LEVELS = { 'Super Admin': 4, 'Admin': 3, 'Standard': 2, 'Basic': 1 };
-    const MODULES = {
-      // Super Admin Level
-      userManagement: { name: 'User Management', icon: '👥', description: 'Full system administration', accessLevel: 'Super Admin', roles: ['super-admin'], href: 'user-management.html' },
 
-      // Admin Level
-      staff: { name: 'Staff Management', icon: '👨‍🏫', description: 'Manage staff and operations', accessLevel: 'Admin', roles: ['super-admin', 'school-manager', 'teacher'], href: 'Completed_Staff_Management_System.html' },
-      financial: { name: 'Financials', icon: '💰', description: 'Access financial reports', accessLevel: 'Admin', roles: ['super-admin', 'school-manager'], href: 'financial-management.html' },
+    // Modules configuration based on index.html guide
+    const MODULES = [
+      { name: 'Dashboard', icon: '📊', description: 'System overview and statistics', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'student', 'parent'], href: 'dashboard-router.html' },
+      { name: 'User Management', icon: '👥', description: 'Full system administration', accessLevel: 'Super Admin', roles: ['super-admin'], href: 'user-management.html' },
+      { name: 'System Configuration', icon: '⚙️', description: 'Manage system settings', accessLevel: 'Super Admin', roles: ['super-admin'], href: 'setup.html' },
+      { name: 'Staff Management', icon: '👨‍🏫', description: 'Manage staff and operations', accessLevel: 'Admin', roles: ['super-admin', 'school-manager'], href: 'Completed_Staff_Management_System.html' },
+      { name: 'Financials', icon: '💰', description: 'Access financial reports', accessLevel: 'Admin', roles: ['super-admin', 'school-manager'], href: 'financial-management.html' },
+      { name: 'Admissions', icon: '📝', description: 'Manage student admissions', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'admission.html' },
+      { name: 'Students', icon: '👨‍🎓', description: 'Manage student records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'admission.html' },
+      { name: 'Attendance', icon: '📅', description: 'Mark attendance for classes', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'student', 'parent'], href: 'attendance.html' },
+      { name: 'Assessment', icon: '📈', description: 'Create and edit assessment records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'assessment.html' },
+      { name: 'Results', icon: '📊', description: 'View student performance results', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'student', 'parent'], href: 'termly_report_card.html' },
+      { name: 'Termly Reports', icon: '📋', description: 'Generate and view termly reports', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'termly_report_card.html' },
+      { name: 'Archives', icon: '📜', description: 'View historical records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'staff'], href: 'archives.html' },
+      { name: 'Messaging', icon: '💬', description: 'Access communication tools', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'parent', 'student'], href: 'messaging-router.html' },
+      { name: 'Performance Tracker', icon: '🚀', description: 'Monitor academic progress', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'staff', 'student', 'parent'], href: 'dashboard-router.html' }
+    ];
 
-      // Standard Level
-      admissions: { name: 'Student Management', icon: '📝', description: 'Manage student records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'teacher', 'staff'], href: 'admission.html' },
-      assessment: { name: 'Assessment Module', icon: '📊', description: 'Create assessment records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'teacher', 'staff'], href: 'assessment.html' },
-      results: { name: 'Reports Module', icon: '📈', description: 'View school-wide reports', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'teacher', 'staff'], href: 'termly_report_card.html' },
-      archives: { name: 'Archives', icon: '📜', description: 'View historical records', accessLevel: 'Standard', roles: ['super-admin', 'school-manager', 'teacher', 'staff'], href: 'archives.html' },
-
-      // Basic Level
-      attendance: { name: 'Attendance Module', icon: '📅', description: 'Mark attendance for assigned classes', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'teacher', 'staff', 'student', 'parent'], href: 'attendance.html' },
-      messaging: { name: 'Messaging', icon: '💬', description: 'Access communication tools', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'teacher', 'staff', 'parent', 'student'], href: 'messaging-router.html' },
-      profile: { name: 'My Dashboard', icon: '🏠', description: 'Overview and personal records', accessLevel: 'Basic', roles: ['super-admin', 'school-manager', 'teacher', 'staff', 'student', 'parent'], href: 'dashboard-router.html' }
-    };
-
-    async function checkAuth() {
-      if (!window.db) await window.db.init();
-      return await window.checkAuth('staff'); // Management portal requires at least staff access
+    async function checkPageAuth() {
+      if (window.db) await window.db.init();
+      // Ensure we call the global checkAuth from shared-auth.js
+      return await window.checkAuth('staff');
     }
 
     function getUserRole() {
-      const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-      return currentUser ? currentUser.role : null;
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+        if (!currentUser || !currentUser.role) return null;
+        // Use standardization helper from shared-auth.js if available, else manual
+        return typeof window.standardizeRole === 'function' ?
+               window.standardizeRole(currentUser.role) :
+               currentUser.role.toLowerCase().trim().replace(/[\s_]/g, '-');
     }
 
     function renderModuleNavigation() {
       const role = getUserRole();
       const nav = document.getElementById('moduleNav');
-      if (!nav) return;
-      nav.innerHTML = Object.entries(MODULES)
-        .filter(([k, m]) => m.roles.includes(role))
-        .map(([k, m]) => `<a href="${m.href}" class="nav-item"><span>${m.icon}</span> <span>${m.name}</span></a>`)
+      if (!nav || !role) return;
+
+      nav.innerHTML = MODULES
+        .filter(m => m.roles.includes(role))
+        .map(m => `<a href="${m.href}" class="nav-item"><span>${m.icon}</span> <span>${m.name}</span></a>`)
         .join('');
     }
 
     function renderModuleGrid() {
       const role = getUserRole();
       const mainContent = document.getElementById('mainContent');
-      if (!mainContent) return;
+      if (!mainContent || !role) return;
 
-      const allowedModules = Object.entries(MODULES).filter(([k, m]) => m.roles.includes(role));
+      const allowedModules = MODULES.filter(m => m.roles.includes(role));
 
       let html = '<div class="modules-grid">';
-      allowedModules.forEach(([k, m]) => {
-        if (k === 'dashboard') return; // Don't show dashboard link in the grid
+      allowedModules.forEach(m => {
+        if (m.name === 'Dashboard') return;
         html += `
           <a href="${m.href}" class="module-card" style="text-decoration: none; color: inherit;">
             <div class="module-icon">${m.icon}</div>
@@ -1276,10 +1281,20 @@
     }
 
     window.onload = async function() {
-      if (await checkAuth()) {
+      if (await checkPageAuth()) {
         renderModuleNavigation();
         renderModuleGrid();
         await loadDashboardData();
+
+        // Display user info
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+        const userInfo = document.getElementById('userInfo');
+        if (userInfo) {
+            userInfo.innerHTML = `
+                <div><strong>${currentUser.fullName || currentUser.username}</strong></div>
+                <div style="font-size: 0.8em; opacity: 0.8;">${currentUser.role.toUpperCase()}</div>
+            `;
+        }
       }
     };
   </script>
